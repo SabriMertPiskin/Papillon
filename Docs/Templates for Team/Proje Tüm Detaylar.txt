@@ -1,0 +1,37 @@
+Proje:
+
+Bir kullanıcı olsun. SOC analist, yani siber güvenlik analisti. bu analist sisteme giriş yaparak şunları yapabilir:
+
+ÖNKOŞUL:
+	-> Öncelikle kullanıcı kişinin bir domain adresine sahip olması gereklidir. Bu domain'e yapılacak olan saldırıların, analizlerin, araştırmaların sonuç verebilmesi için gereklidir.
+
+ÖZELLİKLER:
+	-> Blacklist'e alınmış, yani yasaklanmış IP'leri görüntüleyebilsin. Bu görüntülemeyi hem ana sayfadaki grafiklerden, hem de solda bulunan "Blacklisted IP's" tarzında bir tab'a basarak erişebilsin. IP'ler manuel olarak da eklenebilir, çıkarılabilir. ExploitDB tarzı web uygulamalarının API'ları kullanılarak site içerisinden manuel olarak da IP taraması yapılabilmeli, sonuca göre de kara listeye alınıp alınmayacağı kullanıcıya bırakılmalı.
+	-> Ana sayfada en son güncellenmiş olan CVE kodlu zafiyetleri CVSS skorları, detayları ile birlikte görüntüleyebilsin. Aynı zamanda yine soldaki tablardan erişebilsin. Bu yeni zafiyetler NVD tarzı sitelerden otomatik olarak parse edilip çekilebilir. (Python Scapy kütüphanesi mesela)
+	-> Kendi alt domain alanlarının atak yüzey analizini yapabilsin. Yani portlarının açık olup olmadığını, SSL sertifikalarının geçerlilik süresini, vs. görüntüleyebilsin.
+	-> "Email harvester" tarzı tool'lar ile e-posta bilgilerinin internette sızdırılıp sızdırılmadığını kontrol edebilsin.
+	-> Kendisine ait bir domain varsa buraya atak simüle edebileceği bir platform'a girerek kendine saldırabilmeli(DoS, Brute Force, Port Scan, vs...).
+	-> Bir IDS(Intrusion Detection System) sistemine sahip olarak trafik akışını kontrol edebilmeli. Geliştirilmiş yapay zeka modelleri ile anomali tespitlerini inceleyebilmeli.
+	-> Kendi mail adresini sisteme bağlayarak mail'ler otomatik olarak phishing detection modeline sokulur, bu şekilde sahte olup olmadığının, içerisinde herhangi bir malware olup olmadığının tespiti yapılır, kontrolü sağlanabilir.
+	-> Kendi sisteminin güvenliği ile ilgili detaylı bilgileri PDF formatında export edebilsin.
+	-> Sitenin içerisinde ayriyetten kriptografi bölümü bulunmalıdır, kullanıcı istediği bir string değeri istediği algoritmayı kullanarak encrypt/decrypt edebilmelidir.
+
+KULLANICININ GÜVENLİĞİ:
+	-> 2FA sistemi entegre edilmelidir, herhangi bir 2FA yöntemi olabilir, ilk aşamada mail yolu mantıkldır. 
+	-> Session bilgilerinin TTL(time-to-live) değerleri ayarlanarak daima giriş yapılı şekilde tutulmaması gereklidir.
+	-> Database'de kullanıcı bilgileri tutulmalıdır. Password bilgisi hash'lenmiş biçimde geri çözülemez bir formatta tutulmalıdır.
+
+TEKNİK ALTYAPI:
+	-> Aylık 1 dolar olan domain'lerden almak gerekebilir, veya kendi testimiz için ücretsiz bir yol(belki Virtual Machine) bulunabilir.
+	-> Backend framework olarak Python Django kullanılacak.
+	-> DB için herkesin aşina olduğu bir tanesi uygundur. (MySQL?)
+	-> UI tasarımı için bilgim yok, front yapacaklar(Sabri, Mehmet) ortak karar verip ilerlersiniz.
+	-> Monolitik yapılı bir sistem olacaktır.
+
+KULLANICI DETAYLARI:
+	-> Uygulamayı kullanacak olan kullanıcının en az bir adet domain adresi bulunmalıdır şahsına ait. Birden fazla olduğu durumlarda ise istediği domain için gerekli işlemleri sürdürebilmeli.
+	-> Aynı zamanda bu kullanıcının en azından bir IT elemanı olması önem arz etmelidir çünkü sitede yer alan bilgileri okuyup anlayıp analiz yeteneğine sahip olacak birisi olmalıdır.
+	-> Tahmini kullanıcı sayısı henüz bilinmemektedir. 
+
+EK FİKİRLER:
+	-> Uygulama admin ve müşteri platformlarına ayrılmalı mı? Ayrılırsa admin tek tek tüm müşterilerinin durumlarını gözlemleyip bildirmeli mi veya admin olarak giriş yapıldığında tüm müşterilerinin üzerinde erişimi olmalı mı? Müşteri zaten yukarıdaki belirtilen işlemlerle sınırlı kalacak şekilde.
