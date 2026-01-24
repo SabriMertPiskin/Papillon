@@ -1,0 +1,1 @@
+frontned react kurulumları eklenecek
