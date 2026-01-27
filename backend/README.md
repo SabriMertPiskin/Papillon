@@ -31,12 +31,6 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-### Setup Django
-```bash
-django-admin startproject papillon
-cd papillon
-```
-
 ### Change the environtment file according to the .env.example
 ```env
 DEBUG=True
@@ -51,6 +45,7 @@ DB_PORT=3306
 
 ### Migrate and Run Server
 ```bash
+cd papillon
 python .\manage.py migrate 
 python .\manage.py runserver
 ```
