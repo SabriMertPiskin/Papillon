@@ -16,18 +16,25 @@ CREATE DATABASE papillon CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'papillon'@'localhost' IDENTIFIED BY 'YOUR_MYSQL_PASSWORD';
 GRANT ALL PRIVILEGES ON papillon.* TO 'papillon'@'localhost';
 FLUSH PRIVILEGES;
+
+# Connect to DB
+SHOW DATABASES;
+USE papillon;
+SHOW TABLES;
 ```
 
 ## For the Backend
 
 ### Create Python Virtual Environment
 ```bash
+# After clonning the repo, get to path:
+cd backend
+
+# Install Virtual Environment
 python -m venv venv
 .\venv\Scripts\activate
-```
 
-### Install requirements
-```bash
+# Install requirements
 pip install -r requirements.txt
 ```
 
@@ -45,7 +52,8 @@ DB_PORT=3306
 
 ### Migrate and Run Server
 ```bash
-cd papillon
+cd papillon 
+
 python .\manage.py migrate 
 python .\manage.py runserver
 ```
