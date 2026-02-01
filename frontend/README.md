@@ -1,1 +1,11 @@
-frontned react kurulumları eklenecek
+# Setup 
+
+## Install React App
+
+```bash
+# Install dependencies
+npm install
+
+# Start server
+npm start   # Runs on localhost:3000
+```
