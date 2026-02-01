@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Register from './pages/Register';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import CVEList from './pages/CVEList';
 import './App.css';
 
 function App() {
@@ -25,6 +26,11 @@ function App() {
         <Route 
           path="/dashboard" 
           element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />}
+        />
+        
+        <Route 
+          path="/cve" 
+          element={isAuthenticated ? <CVEList /> : <Navigate to="/login" replace />}
         />
         
         {/* Default route */}

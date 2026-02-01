@@ -1,0 +1,149 @@
+.cve-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.cve-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.cve-header h1 {
+  color: white;
+  font-size: 32px;
+}
+
+.back-btn {
+  background: white;
+  color: #667eea;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.back-btn:hover {
+  background: #f0f0f0;
+}
+
+.loading {
+  text-align: center;
+  color: white;
+  font-size: 20px;
+  margin-top: 50px;
+}
+
+.error-message {
+  background: #ffe6e6;
+  color: #c0392b;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+.cve-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+}
+
+.cve-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.cve-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 10px;
+}
+
+.cve-card-header h3 {
+  color: #333;
+  margin: 0;
+  font-size: 18px;
+}
+
+.severity-badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+}
+
+.severity-critical {
+  background: #d32f2f;
+}
+
+.severity-high {
+  background: #f57c00;
+}
+
+.severity-medium {
+  background: #fbc02d;
+  color: #333;
+}
+
+.severity-low {
+  background: #388e3c;
+}
+
+.severity-unknown {
+  background: #757575;
+}
+
+.cve-description {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+.cve-footer {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 10px;
+}
+
+.published-date {
+  color: #777;
+  font-size: 14px;
+}
+
+.cve-references {
+  margin-top: 10px;
+}
+
+.cve-references strong {
+  color: #333;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.cve-references ul {
+  list-style: none;
+  padding: 0;
+}
+
+.cve-references li {
+  margin: 5px 0;
+}
+
+.cve-references a {
+  color: #667eea;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.cve-references a:hover {
+  text-decoration: underline;
+}
