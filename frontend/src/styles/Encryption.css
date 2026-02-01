@@ -33,18 +33,18 @@
 
 .encryption-content {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 20px;
 }
 
-.encryption-form, .encryption-result {
+.encryption-form, .encryption-result, .decryption-form, .decryption-result {
   background: white;
   padding: 30px;
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.encryption-form h3, .encryption-result h3 {
+.encryption-form h3, .encryption-result h3, .decryption-form h3, .decryption-result h3 {
   color: #333;
   margin-bottom: 20px;
   border-bottom: 2px solid #667eea;
@@ -124,6 +124,28 @@
   cursor: not-allowed;
 }
 
+.decrypt-btn {
+  width: 100%;
+  padding: 15px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.decrypt-btn:hover:not(:disabled) {
+  background: #c0392b;
+}
+
+.decrypt-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
 .error-message {
   background: #ffe6e6;
   color: #c0392b;
@@ -195,6 +217,12 @@
 }
 
 @media (max-width: 1024px) {
+  .encryption-content {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
   .encryption-content {
     grid-template-columns: 1fr;
   }

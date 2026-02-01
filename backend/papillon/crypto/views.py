@@ -148,8 +148,140 @@ def encrypt_text(request):
                 'success': False,
                 'detail': 'Unsupported algorithm'
             }, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'detail': 'Invalid JSON'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'detail': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def decrypt_text(request):
+    """Decrypt/decode text using various algorithms"""
+    try:
+        data = json.loads(request.body)
+        ciphertext = data.get('ciphertext', '')
+        algorithm = data.get('algorithm', 'AES-256-GCM')
+        
+        if not ciphertext:
+            return JsonResponse({
+                'success': False,
+                'detail': 'Ciphertext is required'
+            }, status=400)
+        
+        if algorithm == 'AES-256-GCM':
+            # AES-256-GCM decryption
+            key_b64 = data.get('key', '')
+            nonce_b64 = data.get('nonce', '')
+            
+            if not key_b64 or not nonce_b64:
+                return JsonResponse({
+                    'success': False,
+                    'detail': 'Key and nonce are required for AES-256-GCM'
+                }, status=400)
+            
+            try:
+                key = base64.b64decode(key_b64)
+                nonce = base64.b64decode(nonce_b64)
+                ciphertext_bytes = base64.b64decode(ciphertext)
+                
+                aesgcm = AESGCM(key)
+                plaintext = aesgcm.decrypt(nonce, ciphertext_bytes, None)
+                
+                return JsonResponse({
+                    'success': True,
+                    'algorithm': 'AES-256-GCM',
+                    'decrypted': plaintext.decode('utf-8'),
+                    'note': 'Şifre başarıyla çözüldü!'
+                }, status=200)
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'detail': f'AES Decryption failed: {str(e)}'
+                }, status=400)
+        
+        elif algorithm == 'RSA-2048':
+            # RSA-2048 decryption
+            private_key_pem = data.get('private_key', '')
+            
+            if not private_key_pem:
+                return JsonResponse({
+                    'success': False,
+                    'detail': 'Private key is required for RSA-2048'
+                }, status=400)
+            
+            try:
+                private_key = serialization.load_pem_private_key(
+                    private_key_pem.encode('utf-8'),
+                    password=None,
+                    backend=default_backend()
+                )
+                
+                ciphertext_bytes = base64.b64decode(ciphertext)
+                plaintext = private_key.decrypt(
+                    ciphertext_bytes,
+                    padding.OAEP(
+                        mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                        algorithm=hashes.SHA256(),
+                        label=None
+                    )
+                )
+                
+                return JsonResponse({
+                    'success': True,
+                    'algorithm': 'RSA-2048',
+                    'decrypted': plaintext.decode('utf-8'),
+                    'note': 'Şifre başarıyla çözüldü!'
+                }, status=200)
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'detail': f'RSA Decryption failed: {str(e)}'
+                }, status=400)
+        
+        elif algorithm == 'Base64':
+            # Base64 decoding
+            try:
+                decoded = base64.b64decode(ciphertext).decode('utf-8')
+                
+                return JsonResponse({
+                    'success': True,
+                    'algorithm': 'Base64',
+                    'decrypted': decoded,
+                    'note': 'Base64 başarıyla decode edildi!'
+                }, status=200)
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'detail': f'Base64 Decoding failed: {str(e)}'
+                }, status=400)
+        
+        elif algorithm in ['MD5', 'SHA-1', 'SHA-256', 'SHA-512']:
+            # Hash functions cannot be decrypted (one-way functions)
+            return JsonResponse({
+                'success': False,
+                'detail': f'{algorithm} one-way hash fonksiyonudur. Decrypt edilemez!'
+            }, status=400)
+        
+        else:
+            return JsonResponse({
+                'success': False,
+                'detail': 'Unsupported algorithm'
+            }, status=400)
     
     except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'detail': 'Invalid JSON'}, status=400)
+        return JsonResponse({
+            'success': False,
+            'detail': 'Invalid JSON'
+        }, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+        return JsonResponse({
+            'success': False,
+            'detail': str(e)
+        }, status=500)
