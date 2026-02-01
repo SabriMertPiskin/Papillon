@@ -7,5 +7,5 @@
 npm install
 
 # Start server
-npm start   # Runs on localhost:3000
+npm start   # Runs on localhost:5173
 ```
