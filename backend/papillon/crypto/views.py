@@ -9,6 +9,8 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.backends import default_backend
+from .models import EncryptedData
+from users.models import CustomUser
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -18,6 +20,14 @@ def encrypt_text(request):
         data = json.loads(request.body)
         plaintext = data.get('text', '')
         algorithm = data.get('algorithm', 'AES-256-GCM')
+
+        if 'user_id' not in request.session:
+            return JsonResponse({
+                'success': False,
+                'detail': 'Not authenticated'
+            }, status=401)
+
+        user = CustomUser.objects.get(username=request.session['user_id'])
         
         if not plaintext:
             return JsonResponse({
@@ -39,6 +49,16 @@ def encrypt_text(request):
                 'nonce': base64.b64encode(nonce).decode('utf-8')
             }
             
+            EncryptedData.objects.create(
+                user=user,
+                algorithm='AES-256-GCM',
+                plaintext=plaintext,
+                plaintext_preview=plaintext[:100],
+                ciphertext=encrypted_data['ciphertext'],
+                key=encrypted_data['key'],
+                nonce=encrypted_data['nonce']
+            )
+
             return JsonResponse({
                 'success': True,
                 'algorithm': 'AES-256-GCM',
@@ -81,6 +101,16 @@ def encrypt_text(request):
                 'public_key': public_pem.decode('utf-8')
             }
             
+            EncryptedData.objects.create(
+                user=user,
+                algorithm='RSA-2048',
+                plaintext=plaintext,
+                plaintext_preview=plaintext[:100],
+                ciphertext=encrypted_data['ciphertext'],
+                private_key=encrypted_data['private_key'],
+                public_key=encrypted_data['public_key']
+            )
+
             return JsonResponse({
                 'success': True,
                 'algorithm': 'RSA-2048',
@@ -92,6 +122,14 @@ def encrypt_text(request):
             # MD5 hash (deprecated, for reference only)
             hash_result = hashlib.md5(plaintext.encode('utf-8')).hexdigest()
             
+            EncryptedData.objects.create(
+                user=user,
+                algorithm='MD5',
+                plaintext=plaintext,
+                plaintext_preview=plaintext[:100],
+                hash_result=hash_result
+            )
+
             return JsonResponse({
                 'success': True,
                 'algorithm': 'MD5',
@@ -103,6 +141,14 @@ def encrypt_text(request):
             # SHA-1 hash (deprecated)
             hash_result = hashlib.sha1(plaintext.encode('utf-8')).hexdigest()
             
+            EncryptedData.objects.create(
+                user=user,
+                algorithm='SHA-1',
+                plaintext=plaintext,
+                plaintext_preview=plaintext[:100],
+                hash_result=hash_result
+            )
+
             return JsonResponse({
                 'success': True,
                 'algorithm': 'SHA-1',
@@ -114,6 +160,14 @@ def encrypt_text(request):
             # SHA-256 hash (güvenli)
             hash_result = hashlib.sha256(plaintext.encode('utf-8')).hexdigest()
             
+            EncryptedData.objects.create(
+                user=user,
+                algorithm='SHA-256',
+                plaintext=plaintext,
+                plaintext_preview=plaintext[:100],
+                hash_result=hash_result
+            )
+
             return JsonResponse({
                 'success': True,
                 'algorithm': 'SHA-256',
@@ -125,6 +179,14 @@ def encrypt_text(request):
             # SHA-512 hash (güvenli)
             hash_result = hashlib.sha512(plaintext.encode('utf-8')).hexdigest()
             
+            EncryptedData.objects.create(
+                user=user,
+                algorithm='SHA-512',
+                plaintext=plaintext,
+                plaintext_preview=plaintext[:100],
+                hash_result=hash_result
+            )
+
             return JsonResponse({
                 'success': True,
                 'algorithm': 'SHA-512',
@@ -136,6 +198,14 @@ def encrypt_text(request):
             # Base64 encoding (not encryption!)
             encoded = base64.b64encode(plaintext.encode('utf-8')).decode('utf-8')
             
+            EncryptedData.objects.create(
+                user=user,
+                algorithm='Base64',
+                plaintext=plaintext,
+                plaintext_preview=plaintext[:100],
+                ciphertext=encoded
+            )
+
             return JsonResponse({
                 'success': True,
                 'algorithm': 'Base64',

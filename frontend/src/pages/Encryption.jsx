@@ -52,9 +52,11 @@ export default function Encryption() {
     setResult(null);
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/crypto/encrypt/', {
+      const response = await axios.post('http://localhost:8000/crypto/encrypt/', {
         text: plaintext,
         algorithm: algorithm
+      }, {
+        withCredentials: true
       });
 
       if (response.data.success) {
@@ -105,7 +107,9 @@ export default function Encryption() {
         payload.private_key = decryptPrivateKey;
       }
 
-      const response = await axios.post('http://127.0.0.1:8000/crypto/decrypt/', payload);
+      const response = await axios.post('http://localhost:8000/crypto/decrypt/', payload, {
+        withCredentials: true
+      });
 
       if (response.data.success) {
         setDecryptResult(response.data);

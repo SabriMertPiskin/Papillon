@@ -19,11 +19,12 @@ export default function Dashboard() {
   const handleLogout = async () => {
     try {
       await logout();
-      localStorage.removeItem('user');
-      localStorage.removeItem('isAuthenticated');
-      navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('user');
+      localStorage.removeItem('isAuthenticated');
+      navigate('/login', { replace: true });
     }
   };
 
