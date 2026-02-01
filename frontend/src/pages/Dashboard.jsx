@@ -53,11 +53,15 @@ export default function Dashboard() {
 
         <div className="dashboard-actions">
           <a href="/cve" className="action-btn">
-          Son CVE Zafiyetlerini Görüntüle
-
-        <button className="logout-btn" onClick={handleLogout}>
-          Çıkış Yap
-        </button>
+            Son CVE Zafiyetlerini Görüntüle
+          </a>
+          <a href="/encryption" className="action-btn">
+            Metin Şifreleme (AES/RSA)
+          </a>
+          <button className="logout-btn" onClick={handleLogout}>
+            Çıkış Yap
+          </button>
+        </div>
       </div>
     </div>
   );

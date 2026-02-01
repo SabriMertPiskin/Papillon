@@ -7,19 +7,23 @@ from datetime import datetime, timedelta
 
 @require_http_methods(["GET"])
 def latest_cves(request):
-    """Fetch latest 10 CVEs from NVD API"""
+    """Fetch latest CVEs from NVD API"""
     try:
+        # Get limit from query params (default 10)
+        limit = int(request.GET.get('limit', 10))
+        limit = min(max(limit, 1), 50)  # Clamp between 1 and 50
+        
         # NVD API endpoint
         url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
         
-        # Get CVEs from last 7 days
+        # Get CVEs from last 90 days
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=7)
+        start_date = end_date - timedelta(days=60)
         
         params = {
             'pubStartDate': start_date.strftime('%Y-%m-%dT%H:%M:%S.000'),
             'pubEndDate': end_date.strftime('%Y-%m-%dT%H:%M:%S.000'),
-            'resultsPerPage': 10
+            'resultsPerPage': limit
         }
         
         # Add API key if you have one (recommended for rate limits)
@@ -34,7 +38,7 @@ def latest_cves(request):
         
         # Parse CVE data
         cves = []
-        for item in vulnerabilities[:10]:
+        for item in vulnerabilities[:limit]:  # Use limit parameter
             cve_data = item.get('cve', {})
             cve_id = cve_data.get('id', 'N/A')
             
@@ -78,6 +82,7 @@ def latest_cves(request):
         return JsonResponse({
             'success': True,
             'count': len(cves),
+            'limit': limit,
             'cves': cves
         }, status=200)
     

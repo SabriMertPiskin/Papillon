@@ -4,6 +4,7 @@ import Register from './pages/Register';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CVEList from './pages/CVEList';
+import Encryption from './pages/Encryption';
 import './App.css';
 
 function App() {
@@ -31,6 +32,11 @@ function App() {
         <Route 
           path="/cve" 
           element={isAuthenticated ? <CVEList /> : <Navigate to="/login" replace />}
+        />
+        
+        <Route 
+          path="/encryption" 
+          element={isAuthenticated ? <Encryption /> : <Navigate to="/login" replace />}
         />
         
         {/* Default route */}

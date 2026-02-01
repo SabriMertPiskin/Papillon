@@ -7,6 +7,7 @@ export default function CVEList() {
   const [cves, setCves] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [limit, setLimit] = useState(10);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,11 +18,12 @@ export default function CVEList() {
     }
 
     fetchCVEs();
-  }, [navigate]);
+  }, [navigate, limit]);
 
   const fetchCVEs = async () => {
+    setLoading(true);
     try {
-      const response = await axios.get('http://127.0.0.1:8000/cve/latest/');
+      const response = await axios.get(`http://127.0.0.1:8000/cve/latest/?limit=${limit}`);
       if (response.data.success) {
         setCves(response.data.cves);
       } else {
@@ -63,6 +65,15 @@ export default function CVEList() {
       </div>
 
       {error && <div className="error-message">{error}</div>}
+
+      <div className="limit-selector">
+        <label>Gösterilecek CVE Sayısı: </label>
+        <select value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
+          <option value={10}>10</option>
+          <option value={20}>20</option>
+          <option value={50}>50</option>
+        </select>
+      </div>
 
       <div className="cve-list">
         {cves.length === 0 ? (
