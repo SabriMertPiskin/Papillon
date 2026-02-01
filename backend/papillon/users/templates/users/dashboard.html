@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 50px auto; }
+        .container { border: 1px solid #ccc; padding: 20px; border-radius: 5px; }
+        .user-info { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h2>Welcome, {{ user.username }}!</h2>
+    
+    <div class="container">
+        <h3>Your Profile</h3>
+        <div class="user-info">
+            <p><strong>Username:</strong> {{ user.username }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            {% if user.domain %}
+            <p><strong>Domain:</strong> {{ user.domain }}</p>
+            {% endif %}
+            <p><strong>Member Since:</strong> {{ user.created_at }}</p>
+        </div>
+        
+        <a href="{% url 'logout' %}" style="background: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 3px;">Logout</a>
+    </div>
+</body>
+</html>
