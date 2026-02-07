@@ -69,8 +69,32 @@
   font-weight: bold;
   margin: 10px 0;
   transition: background 0.3s;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
 }
 
 .action-btn:hover {
   background: #5568d3;
+}
+
+.action-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.outlook-btn {
+  background: #0078d4;
+}
+
+.outlook-btn:hover {
+  background: #006ac1;
+}
+
+.disconnect-btn {
+  background: #ff6b6b;
+}
+
+.disconnect-btn:hover {
+  background: #d32f2f;
 }

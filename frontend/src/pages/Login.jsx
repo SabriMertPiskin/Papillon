@@ -37,7 +37,9 @@ export default function Login() {
         localStorage.setItem('user', JSON.stringify(response.data.user));
         localStorage.setItem('isAuthenticated', 'true');
         console.log('Redirecting to dashboard...'); // Debug
-        navigate('/dashboard', { replace: true });
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 100);
       } else {
         setErrors({ submit: response.data.detail || 'Bilinmeyen hata' });
       }

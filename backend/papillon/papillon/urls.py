@@ -22,4 +22,5 @@ urlpatterns = [
     path('auth/', include('users.urls')),
     path('cve/', include('cve.urls')),
     path('crypto/', include('crypto.urls')),
+    path('outlook/', include('outlook.urls')),
 ]
