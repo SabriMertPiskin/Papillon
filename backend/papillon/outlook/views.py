@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+import json
 import requests
 import os
 import environ
@@ -20,6 +21,41 @@ TENANT_ID = env('OUTLOOK_TENANT_ID', default=None)
 REDIRECT_URI = 'http://localhost:8000/outlook/callback'
 
 @csrf_exempt
+@require_http_methods(["POST"])
+def save_client_id(request):
+    """Save Client ID and Client Secret to session for OAuth flow"""
+    
+    if 'user_id' not in request.session:
+        return JsonResponse({
+            'success': False,
+            'detail': 'Not authenticated'
+        }, status=401)
+    
+    try:
+        payload = json.loads(request.body)
+        client_id = payload.get('client_id', '').strip()
+        client_secret = payload.get('client_secret', '').strip()
+        
+        if not client_id or not client_secret:
+            return JsonResponse({
+                'success': False,
+                'detail': 'Client ID and Client Secret are required'
+            }, status=400)
+        
+        request.session['outlook_temp_client_id'] = client_id
+        request.session['outlook_temp_client_secret'] = client_secret
+        request.session.modified = True
+        
+        return JsonResponse({
+            'success': True
+        }, status=200)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'detail': 'Invalid JSON payload'
+        }, status=400)
+
+@csrf_exempt
 @require_http_methods(["GET"])
 def authorize(request):
     """Redirect user to Microsoft OAuth authorization"""
@@ -29,11 +65,18 @@ def authorize(request):
             'success': False,
             'detail': 'Not authenticated'
         }, status=401)
+
+    client_id = request.session.get('outlook_temp_client_id')
+    if not client_id:
+        return JsonResponse({
+            'success': False,
+            'detail': 'Client ID not provided'
+        }, status=400)
     
     # Microsoft authorization endpoint - use common for personal accounts
     auth_url = (
         f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?"
-        f"client_id={CLIENT_ID}&"
+        f"client_id={client_id}&"
         f"redirect_uri={REDIRECT_URI}&"
         f"response_type=code&"
         f"scope=https%3A%2F%2Fgraph.microsoft.com%2FMail.Read%20https%3A%2F%2Fgraph.microsoft.com%2FUser.Read%20offline_access&"
@@ -85,10 +128,18 @@ def callback(request):
     
     # Exchange authorization code for tokens - use common for personal accounts
     token_url = f"https://login.microsoftonline.com/common/oauth2/v2.0/token"
+    client_id = request.session.get('outlook_temp_client_id')
+    client_secret = request.session.get('outlook_temp_client_secret')
+    
+    if not client_id or not client_secret:
+        return JsonResponse({
+            'success': False,
+            'detail': 'Client ID or Client Secret not provided'
+        }, status=400)
     
     token_data = {
-        'client_id': CLIENT_ID,
-        'client_secret': CLIENT_SECRET,
+        'client_id': client_id,
+        'client_secret': client_secret,
         'code': code,
         'redirect_uri': REDIRECT_URI,
         'grant_type': 'authorization_code',

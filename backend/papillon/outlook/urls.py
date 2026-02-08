@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('save-client-id', views.save_client_id, name='outlook_save_client_id'),
     path('authorize', views.authorize, name='outlook_authorize'),
     path('callback', views.callback, name='outlook_callback'),
     path('disconnect', views.disconnect, name='outlook_disconnect'),
