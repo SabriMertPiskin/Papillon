@@ -7,17 +7,14 @@ from django.utils import timezone
 import json
 import requests
 import os
-import environ
 from datetime import datetime, timedelta
 from .models import OutlookAccount
 from users.models import CustomUser
+from papillon.vault_service import get_secret
 
-env = environ.Env()
-environ.Env.read_env(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
-
-CLIENT_ID = env('OUTLOOK_CLIENT_ID', default=None)
-CLIENT_SECRET = env('OUTLOOK_CLIENT_SECRET', default=None)
-TENANT_ID = env('OUTLOOK_TENANT_ID', default=None)
+CLIENT_ID = get_secret('OUTLOOK_CLIENT_ID', vault_path='papillon/outlook', default=None)
+CLIENT_SECRET = get_secret('OUTLOOK_CLIENT_SECRET', vault_path='papillon/outlook', default=None)
+TENANT_ID = get_secret('OUTLOOK_TENANT_ID', vault_path='papillon/outlook', default=None)
 REDIRECT_URI = 'http://localhost:8000/outlook/callback'
 
 @csrf_exempt

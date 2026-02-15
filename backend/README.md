@@ -55,7 +55,7 @@ DB_PORT=3306
 cd papillon 
 
 python .\manage.py migrate 
-python .\manage.py runserver
+python .\manage.py runserver # For running backend with KMS vault, check the "For the KMS Vault" section!!
 ```
 
 Do not forget to check MySQL Workbench that Papillon Database has been created or not.
@@ -81,4 +81,92 @@ print(cursor.fetchall())  # Tüm tabloları listeler
 ```bash
 python manage.py dbshell
 # Connects to MySQL shell to run SQL scripts.
+```
+
+---
+
+## For the KMS Vault
+
+### Install Vault for Windows
+
+```powershell
+winget install Hashicorp.Vault
+
+# Verify with 'vault version'
+```
+
+### Start Vault Server (Development Mode)
+
+```powershell
+# Run below in different terminal
+vault server -dev
+```
+
+Output will be:
+```
+==> Vault server configuration:
+             Api Address: http://127.0.0.1:8200
+                     ...
+Unseal Key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Root Token: hvs.XXXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+**Copy the Root Token**, you will need it after.
+
+Vault runs on this terminal, don't kill it.
+
+---
+
+### Set Environment Variable's
+
+Create a new terminal, then:
+
+```powershell
+$env:VAULT_ADDR = "http://127.0.0.1:8200"
+$env:VAULT_TOKEN = "hvs.XXXXXXXXXXXXXXXXXXXXXXXXX"  # Copied token from vault terminal output
+```
+
+**Important:** These variables are only valid for this terminal session. You will need to set them again each time you open a new terminal.
+
+### Move secrets from .env to Vault
+
+```powershell
+cd path/to/backend/papillon
+python manage.py seed_vault
+```
+
+Output should look like:
+```
+✓ Vault bağlantısı başarılı.
+
+.env dosyasından okunuyor: ...\papillon\.env
+  8 anahtar okundu.
+
+==================================================
+  papillon/django - Django core ayarları
+==================================================
+  SECRET_KEY = ****
+  DEBUG = True
+  → 2 secret Vault'a yazıldı: papillon/django
+
+==================================================
+  papillon/database - Veritabanı bağlantı bilgileri
+==================================================
+  DB_ENGINE = django.db.backends.mysql
+  DB_NAME = papillon
+  DB_USER = root
+  DB_PASSWORD = ****
+  DB_HOST = 127.0.0.1
+  DB_PORT = 3306
+  → 6 secret Vault'a yazıldı: papillon/database
+
+==================================================
+Toplam 8 secret Vault'a yazıldı.
+```
+
+### Run backend with Vault
+
+**Aynı terminalde** (`VAULT_ADDR` and `VAULT_TOKEN` which are set):
+```powershell
+python manage.py runserver
 ```

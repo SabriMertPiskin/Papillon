@@ -16,6 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from django.http import JsonResponse
+from papillon.vault_service import health_check
+
+
+def vault_health(request):
+    """Vault bağlantı durumunu kontrol et"""
+    result = health_check()
+    status = 200 if result['vault_available'] and result['authenticated'] else 503
+    return JsonResponse(result, status=status)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -23,4 +33,5 @@ urlpatterns = [
     path('cve/', include('cve.urls')),
     path('crypto/', include('crypto.urls')),
     path('outlook/', include('outlook.urls')),
+    path('vault/health', vault_health, name='vault_health'),
 ]

@@ -23,19 +23,21 @@ pymysql.install_as_MySQLdb()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+# ─── Vault-backed Secret Management ──────────────────────────────────
+# Hassas bilgiler artık Vault'tan çekiliyor.
+# Vault erişilemezse .env'ye fallback yapar (sadece development).
+# Production'da VAULT_ENFORCE=True set edilmeli.
+from papillon.vault_service import get_secret, get_secret_bool
 
 # SECURITY WARNING: keep the secret key used in production secret!
-import environ
-import os
-env = environ.Env()
-environ.Env.read_env(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
-
-SECRET_KEY = env('SECRET_KEY', default='django-insecure-papillon-secret-key-2025')
+SECRET_KEY = get_secret(
+    'SECRET_KEY',
+    vault_path='papillon/django',
+    default='django-insecure-papillon-secret-key-2025'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool('DEBUG', default=True)
+DEBUG = get_secret_bool('DEBUG', vault_path='papillon/django', default=True)
 
 ALLOWED_HOSTS = []
 
@@ -89,15 +91,21 @@ WSGI_APPLICATION = 'papillon.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+# DB bilgileri Vault'tan çekiliyor (path: papillon/database)
 
 DATABASES = {
     "default": {
-        "ENGINE": env('DB_ENGINE'),
-        "NAME": env('DB_NAME'),
-        "USER": env('DB_USER'),
-        "PASSWORD": env('DB_PASSWORD'),
-        "HOST": env('DB_HOST'),
-        "PORT": env('DB_PORT'),
+        "ENGINE": get_secret('DB_ENGINE', vault_path='papillon/database',
+                             default='django.db.backends.mysql'),
+        "NAME": get_secret('DB_NAME', vault_path='papillon/database',
+                           default='papillon'),
+        "USER": get_secret('DB_USER', vault_path='papillon/database',
+                           default='root'),
+        "PASSWORD": get_secret('DB_PASSWORD', vault_path='papillon/database'),
+        "HOST": get_secret('DB_HOST', vault_path='papillon/database',
+                           default='127.0.0.1'),
+        "PORT": get_secret('DB_PORT', vault_path='papillon/database',
+                           default='3306'),
         "OPTIONS": {
             "charset": "utf8mb4",
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'"
