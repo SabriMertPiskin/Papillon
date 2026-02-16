@@ -30,4 +30,25 @@ export const getDashboard = () => {
   return API.get('/dashboard/');
 };
 
+// MFA endpoints
+export const mfaSetup = () => {
+  return API.post('/mfa/setup/');
+};
+
+export const mfaVerifySetup = (otp_code) => {
+  return API.post('/mfa/verify-setup/', { otp_code });
+};
+
+export const verifyMfa = (mfa_token, otp_code, use_backup = false) => {
+  return API.post('/mfa/verify/', { mfa_token, otp_code, use_backup });
+};
+
+export const mfaDisable = (password) => {
+  return API.post('/mfa/disable/', { password });
+};
+
+export const mfaStatus = () => {
+  return API.get('/mfa/status/');
+};
+
 export default API;

@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import CVEList from './pages/CVEList';
 import Encryption from './pages/Encryption';
 import OutlookCallback from './pages/OutlookCallback';
+import MFASettings from './pages/MFASettings';
 import './App.css';
 
 function App() {
@@ -43,6 +44,11 @@ function App() {
         <Route 
           path="/outlook/callback" 
           element={<OutlookCallback />}
+        />
+        
+        <Route 
+          path="/mfa-settings" 
+          element={isAuthenticated ? <MFASettings /> : <Navigate to="/login" replace />}
         />
         
         {/* Default route */}

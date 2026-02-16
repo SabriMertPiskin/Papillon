@@ -360,6 +360,21 @@ export default function Dashboard() {
             <strong>Kayıt Tarihi:</strong> {new Date(user.created_at).toLocaleDateString('tr-TR')}
           </div>
           
+          <div className="info-item">
+            <strong>MFA:</strong>
+            <span style={{
+              marginLeft: '10px',
+              padding: '4px 12px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              background: user.mfa_enabled ? '#28a745' : '#6c757d',
+              color: 'white'
+            }}>
+              {user.mfa_enabled ? 'Aktif' : 'Pasif'}
+            </span>
+          </div>
+
           {outlookStatus && (
             <div className="info-item">
               <strong>Outlook:</strong>
@@ -418,6 +433,11 @@ export default function Dashboard() {
           </a>
           <a href="/encryption" className="action-btn">
             Metin Şifreleme (AES/RSA)
+          </a>
+          <a href="/mfa-settings" className="action-btn" style={{
+            background: user.mfa_enabled ? '#28a745' : '#667eea'
+          }}>
+            MFA Ayarları {user.mfa_enabled ? '(Aktif)' : '(Pasif)'}
           </a>
           
           {outlookStatus && (

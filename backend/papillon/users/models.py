@@ -10,6 +10,11 @@ class CustomUser(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
     
+    # MFA (Multi-Factor Authentication)
+    mfa_enabled = models.BooleanField(default=False)
+    mfa_secret = models.CharField(max_length=64, blank=True, null=True)
+    mfa_backup_code = models.CharField(max_length=255, blank=True, null=True)  # hashed
+    
     class Meta:
         db_table = 'users'
     

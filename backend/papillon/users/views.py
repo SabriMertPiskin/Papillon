@@ -7,6 +7,15 @@ from django.views.decorators.http import require_http_methods
 from .models import CustomUser
 from .forms import RegistrationForm, LoginForm
 import json
+import pyotp
+import qrcode
+import qrcode.image.svg
+import base64
+import io
+import hashlib
+import time
+import secrets
+from django.contrib.auth.hashers import make_password as hash_backup_code
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -91,10 +100,156 @@ def login(request):
                 status=401
             )
         
-        # Create secure session
+        # MFA kontrolü - MFA aktifse session oluşturmadan mfa_required döndür
+        if user.mfa_enabled and user.mfa_secret:
+            # Geçici bir token oluştur (password doğrulandı ama MFA bekliyor)
+            mfa_token = _generate_mfa_token(user.username)
+            request.session['mfa_pending_user'] = user.username
+            request.session['mfa_token'] = mfa_token
+            request.session['mfa_pending_time'] = time.time()
+            request.session.set_expiry(300)  # 5 dakika MFA için süre
+            request.session.modified = True
+            
+            return JsonResponse({
+                'success': True,
+                'mfa_required': True,
+                'mfa_token': mfa_token,
+                'detail': 'MFA doğrulaması gerekiyor'
+            }, status=200)
+        
+        # MFA aktif değilse direkt session oluştur
         request.session['user_id'] = user.username
         request.session['email'] = user.email
         request.session.set_expiry(3600)  # 1 hour
+        request.session.modified = True
+        
+        return JsonResponse({
+            'success': True,
+            'mfa_required': False,
+            'detail': f'Welcome back, {user.username}!',
+            'user': {
+                'username': user.username,
+                'email': user.email,
+                'domain': user.domain,
+                'created_at': user.created_at.isoformat(),
+                'mfa_enabled': user.mfa_enabled
+            }
+        }, status=200)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'detail': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+
+
+def _generate_mfa_token(username):
+    """Geçici MFA token üret (login ile verify-mfa arasında kullanılır)"""
+    raw = f"{username}:{time.time()}:{id(username)}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:32]
+
+
+def _generate_backup_code():
+    """6 haneli rastgele yedek kod üret"""
+    return f"{secrets.randbelow(10**6):06d}"
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def verify_mfa(request):
+    """Login sonrası MFA kod doğrulama"""
+    try:
+        data = json.loads(request.body)
+        mfa_token = data.get('mfa_token', '')
+        otp_code = data.get('otp_code', '')
+        
+        if not mfa_token or not otp_code:
+            return JsonResponse(
+                {'success': False, 'detail': 'MFA token ve OTP kodu gerekli'},
+                status=400
+            )
+        
+        # Session'daki pending MFA bilgisini kontrol et
+        pending_user = request.session.get('mfa_pending_user')
+        session_token = request.session.get('mfa_token')
+        pending_time = request.session.get('mfa_pending_time', 0)
+        
+        if not pending_user or session_token != mfa_token:
+            return JsonResponse(
+                {'success': False, 'detail': 'Geçersiz veya süresi dolmuş MFA oturumu'},
+                status=401
+            )
+        
+        # 5 dakika zaman aşımı
+        if time.time() - pending_time > 300:
+            request.session.flush()
+            return JsonResponse(
+                {'success': False, 'detail': 'MFA süresi doldu, tekrar giriş yapın'},
+                status=401
+            )
+        
+        try:
+            user = CustomUser.objects.get(username=pending_user, is_active=True)
+        except CustomUser.DoesNotExist:
+            return JsonResponse(
+                {'success': False, 'detail': 'Kullanıcı bulunamadı'},
+                status=401
+            )
+        
+        # Yedek kod mu kullanılıyor?
+        use_backup = data.get('use_backup', False)
+        
+        if use_backup:
+            # Yedek kod doğrulama
+            if not user.mfa_backup_code or not check_password(otp_code, user.mfa_backup_code):
+                return JsonResponse(
+                    {'success': False, 'detail': 'Geçersiz yedek kod'},
+                    status=401
+                )
+            
+            # Yedek kod doğru — yeni yedek kod üret
+            new_backup_code = _generate_backup_code()
+            user.mfa_backup_code = hash_backup_code(new_backup_code)
+            user.save()
+            
+            # Session oluştur
+            del request.session['mfa_pending_user']
+            del request.session['mfa_token']
+            del request.session['mfa_pending_time']
+            
+            request.session['user_id'] = user.username
+            request.session['email'] = user.email
+            request.session.set_expiry(3600)
+            request.session.modified = True
+            
+            return JsonResponse({
+                'success': True,
+                'detail': f'Welcome back, {user.username}!',
+                'new_backup_code': new_backup_code,
+                'user': {
+                    'username': user.username,
+                    'email': user.email,
+                    'domain': user.domain,
+                    'created_at': user.created_at.isoformat(),
+                    'mfa_enabled': user.mfa_enabled
+                }
+            }, status=200)
+        
+        # TOTP doğrula
+        totp = pyotp.TOTP(user.mfa_secret)
+        if not totp.verify(otp_code, valid_window=1):
+            return JsonResponse(
+                {'success': False, 'detail': 'Geçersiz doğrulama kodu'},
+                status=401
+            )
+        
+        # MFA başarılı — geçici verileri temizle ve gerçek session oluştur
+        del request.session['mfa_pending_user']
+        del request.session['mfa_token']
+        del request.session['mfa_pending_time']
+        
+        request.session['user_id'] = user.username
+        request.session['email'] = user.email
+        request.session.set_expiry(3600)
         request.session.modified = True
         
         return JsonResponse({
@@ -104,12 +259,191 @@ def login(request):
                 'username': user.username,
                 'email': user.email,
                 'domain': user.domain,
-                'created_at': user.created_at.isoformat()
+                'created_at': user.created_at.isoformat(),
+                'mfa_enabled': user.mfa_enabled
             }
         }, status=200)
     
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'detail': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def mfa_setup(request):
+    """MFA kurulumu başlat — QR kod ve secret döndür"""
+    try:
+        if 'user_id' not in request.session:
+            return JsonResponse(
+                {'success': False, 'detail': 'Not authenticated'},
+                status=401
+            )
+        
+        user = CustomUser.objects.get(username=request.session['user_id'])
+        
+        # Yeni TOTP secret üret
+        secret = pyotp.random_base32()
+        totp = pyotp.TOTP(secret)
+        
+        # QR kod için provisioning URI
+        provisioning_uri = totp.provisioning_uri(
+            name=user.email,
+            issuer_name='Papillon'
+        )
+        
+        # QR kodu base64 PNG olarak üret
+        qr = qrcode.QRCode(version=1, box_size=6, border=2)
+        qr.add_data(provisioning_uri)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        buffer = io.BytesIO()
+        img.save(buffer, format='PNG')
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        # Secret'ı geçici olarak session'da tut (verify edilene kadar DB'ye yazmıyoruz)
+        request.session['mfa_setup_secret'] = secret
+        request.session.modified = True
+        
+        return JsonResponse({
+            'success': True,
+            'secret': secret,
+            'qr_code': f'data:image/png;base64,{qr_base64}',
+            'detail': 'QR kodu Google Authenticator ile tara, ardından kodu doğrula'
+        }, status=200)
+    
+    except CustomUser.DoesNotExist:
+        return JsonResponse({'success': False, 'detail': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def mfa_verify_setup(request):
+    """MFA kurulumunu doğrula ve aktifleştir"""
+    try:
+        if 'user_id' not in request.session:
+            return JsonResponse(
+                {'success': False, 'detail': 'Not authenticated'},
+                status=401
+            )
+        
+        data = json.loads(request.body)
+        otp_code = data.get('otp_code', '')
+        
+        if not otp_code:
+            return JsonResponse(
+                {'success': False, 'detail': 'Doğrulama kodu gerekli'},
+                status=400
+            )
+        
+        secret = request.session.get('mfa_setup_secret')
+        if not secret:
+            return JsonResponse(
+                {'success': False, 'detail': 'Önce MFA setup başlatın'},
+                status=400
+            )
+        
+        # TOTP kodu doğrula
+        totp = pyotp.TOTP(secret)
+        if not totp.verify(otp_code, valid_window=1):
+            return JsonResponse(
+                {'success': False, 'detail': 'Geçersiz doğrulama kodu'},
+                status=400
+            )
+        
+        # Doğrulama başarılı — MFA'yı aktifleştir + yedek kod üret
+        user = CustomUser.objects.get(username=request.session['user_id'])
+        backup_code = _generate_backup_code()
+        user.mfa_secret = secret
+        user.mfa_enabled = True
+        user.mfa_backup_code = hash_backup_code(backup_code)
+        user.save()
+        
+        # Geçici secret'ı session'dan temizle
+        del request.session['mfa_setup_secret']
+        request.session.modified = True
+        
+        return JsonResponse({
+            'success': True,
+            'backup_code': backup_code,
+            'detail': 'MFA başarıyla aktifleştirildi!'
+        }, status=200)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'detail': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def mfa_disable(request):
+    """MFA'yı devre dışı bırak"""
+    try:
+        if 'user_id' not in request.session:
+            return JsonResponse(
+                {'success': False, 'detail': 'Not authenticated'},
+                status=401
+            )
+        
+        data = json.loads(request.body)
+        password = data.get('password', '')
+        
+        if not password:
+            return JsonResponse(
+                {'success': False, 'detail': 'Şifre doğrulaması gerekli'},
+                status=400
+            )
+        
+        user = CustomUser.objects.get(username=request.session['user_id'])
+        
+        # Şifre doğrula (güvenlik için)
+        if not check_password(password, user.password):
+            return JsonResponse(
+                {'success': False, 'detail': 'Şifre yanlış'},
+                status=401
+            )
+        
+        user.mfa_enabled = False
+        user.mfa_secret = None
+        user.mfa_backup_code = None
+        user.save()
+        
+        return JsonResponse({
+            'success': True,
+            'detail': 'MFA devre dışı bırakıldı'
+        }, status=200)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'detail': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def mfa_status(request):
+    """Kullanıcının MFA durumunu döndür"""
+    try:
+        if 'user_id' not in request.session:
+            return JsonResponse(
+                {'success': False, 'detail': 'Not authenticated'},
+                status=401
+            )
+        
+        user = CustomUser.objects.get(username=request.session['user_id'])
+        
+        return JsonResponse({
+            'success': True,
+            'mfa_enabled': user.mfa_enabled
+        }, status=200)
+    
+    except CustomUser.DoesNotExist:
+        return JsonResponse({'success': False, 'detail': 'User not found'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'detail': str(e)}, status=500)
 
@@ -151,7 +485,8 @@ def dashboard(request):
                 'email': user.email,
                 'domain': user.domain,
                 'created_at': user.created_at.isoformat(),
-                'updated_at': user.updated_at.isoformat()
+                'updated_at': user.updated_at.isoformat(),
+                'mfa_enabled': user.mfa_enabled
             }
         }, status=200)
     
