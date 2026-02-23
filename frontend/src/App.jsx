@@ -7,6 +7,7 @@ import CVEList from './pages/CVEList';
 import Encryption from './pages/Encryption';
 import OutlookCallback from './pages/OutlookCallback';
 import MFASettings from './pages/MFASettings';
+import AttackSurfaceAnalysis from './pages/AttackSurfaceAnalysis';
 import './App.css';
 
 function App() {
@@ -49,6 +50,11 @@ function App() {
         <Route 
           path="/mfa-settings" 
           element={isAuthenticated ? <MFASettings /> : <Navigate to="/login" replace />}
+        />
+        
+        <Route 
+          path="/attack-surface" 
+          element={isAuthenticated ? <AttackSurfaceAnalysis /> : <Navigate to="/login" replace />}
         />
         
         {/* Default route */}

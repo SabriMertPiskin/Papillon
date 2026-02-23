@@ -434,6 +434,9 @@ export default function Dashboard() {
           <a href="/encryption" className="action-btn">
             Metin Şifreleme (AES/RSA)
           </a>
+          <a href="/attack-surface" className="action-btn">
+            Attack Surface Analysis
+          </a>
           <a href="/mfa-settings" className="action-btn" style={{
             background: user.mfa_enabled ? '#28a745' : '#667eea'
           }}>

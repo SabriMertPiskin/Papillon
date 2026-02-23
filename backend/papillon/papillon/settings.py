@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'cve',
     'crypto',
     'outlook',
+    'attack_surface',
 ]
 
 MIDDLEWARE = [

@@ -1,3 +1,4 @@
+import os
 import requests
 import urllib3
 from typing import List
@@ -27,8 +28,18 @@ def get_subdomains(domain: str) -> List[str]:
     session.mount('https://', adapter)
     session.mount('http://', adapter)
 
-    with open('main/tools/subdomain_list.txt', 'r') as file:
-        subdomains = file.read().splitlines()[:MAX_PROBES]
+    # Resolve subdomain list path relative to this file so imports from elsewhere work
+    subdomains_path = os.path.join(os.path.dirname(__file__), 'subdomain_list.txt')
+    subdomains = []
+    try:
+        with open(subdomains_path, 'r', encoding='utf-8') as file:
+            subdomains = file.read().splitlines()[:MAX_PROBES]
+    except FileNotFoundError as e:
+        print(f"[DEBUG SUBDOMAIN] subdomain list not found: {subdomains_path} - {e}")
+        subdomains = []
+    except Exception as e:
+        print(f"[DEBUG SUBDOMAIN] error reading subdomain list: {e}")
+        subdomains = []
 
     print(f"[DEBUG SUBDOMAIN] Checking {len(subdomains)} subdomains for {domain} in parallel")
     

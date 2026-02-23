@@ -33,5 +33,6 @@ urlpatterns = [
     path('cve/', include('cve.urls')),
     path('crypto/', include('crypto.urls')),
     path('outlook/', include('outlook.urls')),
+    path('attack-surface/', include('attack_surface.urls')),
     path('vault/health', vault_health, name='vault_health'),
 ]
