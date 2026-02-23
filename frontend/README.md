@@ -9,3 +9,5 @@ npm install
 # Start server
 npm start   # Runs on localhost:5173
 ```
+# if npm start doesnt work
+npm run dev
