@@ -5,6 +5,51 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import '../styles/Dashboard.css';
 
+// Accordion bileşeni — başlık tıklanınca içerik açılır/kapanır
+function AccordionSection({ title, count, children, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div style={{ marginBottom: '12px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #444' }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '14px 18px',
+          background: '#2a2a2a',
+          color: '#fff',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '15px',
+          fontWeight: '600',
+          textAlign: 'left',
+          transition: 'background 0.2s',
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.background = '#333'}
+        onMouseLeave={(e) => e.currentTarget.style.background = '#2a2a2a'}
+      >
+        <span>{title}{count !== undefined ? ` (${count})` : ''}</span>
+        <span style={{
+          transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.25s ease',
+          fontSize: '12px',
+          color: '#aaa'
+        }}>
+          &#9660;
+        </span>
+      </button>
+      {open && (
+        <div style={{ background: '#1a1a1a', padding: '0' }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AttackSurfaceAnalysis() {
   const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(false);
@@ -160,7 +205,7 @@ export default function AttackSurfaceAnalysis() {
           yPosition = check.newY;
         }
 
-        yPosition = addSectionTitle(pdf, 'Tespit Edilen Alt Etki Alanları', yPosition, pageHeight);
+        yPosition = addSectionTitle(pdf, 'Tespit Edilen Subdomainler', yPosition, pageHeight);
 
         const subdomainData = results.subdomains
           .filter(s => !s.error)
@@ -169,7 +214,7 @@ export default function AttackSurfaceAnalysis() {
         if (subdomainData.length > 0) {
           pdf.autoTable({
             startY: yPosition,
-            head: [['Alt Etki Alanı']],
+            head: [['Subdomain']],
             body: subdomainData,
             theme: 'grid',
             headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -404,61 +449,53 @@ export default function AttackSurfaceAnalysis() {
     }
   };
 
-  const ResultTable = ({ title, data, columns }) => {
+  const ResultTable = ({ data, columns }) => {
     if (!data || (Array.isArray(data) && data.length === 0)) return null;
 
     return (
-      <div style={{ marginBottom: '20px' }}>
-        <h3 style={{ color: '#fff', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>{title}</h3>
-        <div style={{
-          backgroundColor: '#1a1a1a',
-          borderRadius: '6px',
-          overflow: 'hidden',
-          border: '1px solid #444'
+      <div>
+        <table style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          color: '#fff',
+          fontSize: '13px'
         }}>
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            color: '#fff',
-            fontSize: '13px'
-          }}>
-            <thead>
-              <tr style={{ backgroundColor: '#2a2a2a', borderBottom: '1px solid #444' }}>
-                {columns.map((col, idx) => (
-                  <th key={idx} style={{
+          <thead>
+            <tr style={{ backgroundColor: '#2a2a2a', borderBottom: '1px solid #444' }}>
+              {columns.map((col, idx) => (
+                <th key={idx} style={{
+                  padding: '12px 15px',
+                  textAlign: 'left',
+                  fontWeight: '600',
+                  color: '#fff',
+                  borderRight: idx < columns.length - 1 ? '1px solid #333' : 'none'
+                }}>
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row, idx) => (
+              <tr key={idx} style={{
+                backgroundColor: idx % 2 === 0 ? '#1a1a1a' : '#222',
+                borderBottom: '1px solid #333'
+              }}>
+                {row.map((cell, cidx) => (
+                  <td key={cidx} style={{
                     padding: '12px 15px',
-                    textAlign: 'left',
-                    fontWeight: '600',
-                    color: '#fff',
-                    borderRight: idx < columns.length - 1 ? '1px solid #333' : 'none'
+                    borderRight: cidx < row.length - 1 ? '1px solid #333' : 'none',
+                    wordBreak: 'break-word',
+                    maxWidth: '500px',
+                    color: cell && cell.toString().toLowerCase().includes('hata') ? '#ff6b6b' : '#fff'
                   }}>
-                    {col}
-                  </th>
+                    {renderValue(cell)}
+                  </td>
                 ))}
               </tr>
-            </thead>
-            <tbody>
-              {data.map((row, idx) => (
-                <tr key={idx} style={{
-                  backgroundColor: idx % 2 === 0 ? '#1a1a1a' : '#222',
-                  borderBottom: '1px solid #333'
-                }}>
-                  {row.map((cell, cidx) => (
-                    <td key={cidx} style={{
-                      padding: '12px 15px',
-                      borderRight: cidx < row.length - 1 ? '1px solid #333' : 'none',
-                      wordBreak: 'break-word',
-                      maxWidth: '500px',
-                      color: cell && cell.toString().toLowerCase().includes('hata') ? '#ff6b6b' : '#fff'
-                    }}>
-                      {renderValue(cell)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   };
@@ -539,7 +576,7 @@ export default function AttackSurfaceAnalysis() {
             marginBottom: '20px',
             border: '1px solid #444'
           }}>
-            ⚠️ {error}
+            {error}
           </div>
         )}
 
@@ -550,7 +587,7 @@ export default function AttackSurfaceAnalysis() {
               backgroundColor: '#2a2a2a',
               padding: '20px',
               borderRadius: '6px',
-              marginBottom: '30px',
+              marginBottom: '20px',
               border: '1px solid #444'
             }}>
               <h3 style={{ marginTop: 0, color: '#fff', marginBottom: '15px' }}>Temel Bilgiler</h3>
@@ -560,99 +597,102 @@ export default function AttackSurfaceAnalysis() {
 
             {/* DNS Records */}
             {results.dns_records && results.dns_records.length > 0 && (
-              <ResultTable
-                title="DNS Kayıtları"
-                columns={['Tür', 'Değer']}
-                data={results.dns_records.map((record) => {
-                  if (record.error) return ['Hata', record.error];
-                  if (Array.isArray(record)) return [record[0], record[1]];
-                  return [record, ''];
-                })}
-              />
+              <AccordionSection title="DNS Kayıtları" count={results.dns_records.length}>
+                <ResultTable
+                  columns={['Tür', 'Değer']}
+                  data={results.dns_records.map((record) => {
+                    if (record.error) return ['Hata', record.error];
+                    if (Array.isArray(record)) return [record[0], record[1]];
+                    return [record, ''];
+                  })}
+                />
+              </AccordionSection>
             )}
 
             {/* Subdomains */}
             {results.subdomains && results.subdomains.length > 0 && (
-              <ResultTable
-                title="Bulunan Alt Domainler"
-                columns={['Alt Domain']}
-                data={results.subdomains.map((sub) => {
-                  if (sub && sub.error) return ['Hata: ' + sub.error];
-                  return [sub];
-                })}
-              />
+              <AccordionSection title="Bulunan Alt Domainler" count={results.subdomains.filter(s => !s?.error).length}>
+                <ResultTable
+                  columns={['']}
+                  data={results.subdomains.map((sub) => {
+                    if (sub && sub.error) return ['Hata: ' + sub.error];
+                    return [sub];
+                  })}
+                />
+              </AccordionSection>
             )}
 
             {/* WHOIS Info */}
             {results.whois && results.whois.length > 0 && (
-              <ResultTable
-                title="WHOIS Bilgileri"
-                columns={['Bilgi', 'Değer']}
-                data={results.whois.map((item) => {
-                  if (item.error) return ['Hata', item.error];
-                  if (Array.isArray(item)) return [item[0], item[1]];
-                  return [item, ''];
-                })}
-              />
+              <AccordionSection title="WHOIS Bilgileri" count={results.whois.length}>
+                <ResultTable
+                  columns={['Bilgi', 'Değer']}
+                  data={results.whois.map((item) => {
+                    if (item.error) return ['Hata', item.error];
+                    if (Array.isArray(item)) return [item[0], item[1]];
+                    return [item, ''];
+                  })}
+                />
+              </AccordionSection>
             )}
 
             {/* SSL Certificate */}
             {results.ssl_info && (
-              <ResultTable
-                title="SSL Sertifikası"
-                columns={['Özellik', 'Durum']}
-                data={[
-                  ['Geçerlilik Durumu', results.ssl_info.valid ? '✓ Geçerli' : '✗ Geçersiz' || 'Hata'],
-                  ['Detaylar', results.ssl_info.error ? 'Hata: ' + results.ssl_info.error : 'Mevcut']
-                ]}
-              />
+              <AccordionSection title="SSL Sertifikası">
+                <ResultTable
+                  columns={['Özellik', 'Durum']}
+                  data={[
+                    ['Geçerlilik Durumu', results.ssl_info.valid ? 'Geçerli' : 'Geçersiz' || 'Hata'],
+                    ['Detaylar', results.ssl_info.error ? 'Hata: ' + results.ssl_info.error : 'Mevcut']
+                  ]}
+                />
+              </AccordionSection>
             )}
 
             {/* Open Ports */}
             {results.open_ports && results.open_ports.length > 0 && (
-              <ResultTable
-                title="Açık Portlar"
-                columns={['Port', 'Servis']}
-                data={results.open_ports.map((port) => {
-                  if (port.error) return ['Hata', port.error];
-                  return [port.port, port.service];
-                })}
-              />
+              <AccordionSection title="Açık Portlar" count={results.open_ports.filter(p => !p.error).length}>
+                <ResultTable
+                  columns={['Port', 'Servis']}
+                  data={results.open_ports.map((port) => {
+                    if (port.error) return ['Hata', port.error];
+                    return [port.port, port.service];
+                  })}
+                />
+              </AccordionSection>
             )}
 
             {/* Emails */}
             {results.emails && results.emails.length > 0 && (
-              <ResultTable
-                title="Bulunan E-posta Adresleri"
-                columns={['E-posta', 'Kaynak']}
-                data={results.emails.map((email) => {
-                  if (email.error) return ['Hata', email.error];
-                  return [email.email || email, email.source || ''];
-                })}
-              />
+              <AccordionSection title="Bulunan E-posta Adresleri" count={results.emails.length}>
+                <ResultTable
+                  columns={['E-posta', 'Kaynak']}
+                  data={results.emails.map((email) => {
+                    if (email.error) return ['Hata', email.error];
+                    return [email.email || email, email.source || ''];
+                  })}
+                />
+              </AccordionSection>
             )}
 
             {/* Admin Panels */}
             {results.admin_panels && results.admin_panels.length > 0 && (
-              <ResultTable
-                title="Admin Panelleri"
-                columns={['URL', 'Durum', 'Detay']}
-                data={results.admin_panels.map((panel) => {
-                  if (panel.error) return ['Hata', panel.error, ''];
-                  return [panel.url || panel, panel.status || 'N/A', panel.detail || ''];
-                })}
-              />
+              <AccordionSection title="Admin Panelleri" count={results.admin_panels.length}>
+                <ResultTable
+                  columns={['URL', 'Durum', 'Detay']}
+                  data={results.admin_panels.map((panel) => {
+                    if (panel.error) return ['Hata', panel.error, ''];
+                    return [panel.url || panel, panel.status || 'N/A', panel.detail || ''];
+                  })}
+                />
+              </AccordionSection>
             )}
 
             {/* Robots.txt */}
             {results.robots_txt && (
-              <div style={{ marginBottom: '20px' }}>
-                <h3 style={{ color: '#fff', marginBottom: '10px', fontSize: '16px', fontWeight: '600' }}>Robots.txt</h3>
+              <AccordionSection title="Robots.txt">
                 <div style={{
-                  backgroundColor: '#1a1a1a',
-                  borderRadius: '6px',
                   padding: '15px',
-                  border: '1px solid #444',
                   maxHeight: '300px',
                   overflow: 'auto'
                 }}>
@@ -667,16 +707,17 @@ export default function AttackSurfaceAnalysis() {
                     {typeof results.robots_txt === 'string' ? results.robots_txt : 'Hata: ' + results.robots_txt}
                   </pre>
                 </div>
-              </div>
+              </AccordionSection>
             )}
 
             {/* IP Info */}
             {results.ip_info && (
-              <ResultTable
-                title="IP Bilgileri"
-                columns={['Bilgi']}
-                data={[[typeof results.ip_info === 'string' ? results.ip_info : JSON.stringify(results.ip_info)]]}
-              />
+              <AccordionSection title="IP Bilgileri">
+                <ResultTable
+                  columns={['Bilgi']}
+                  data={[[typeof results.ip_info === 'string' ? results.ip_info : JSON.stringify(results.ip_info)]]}
+                />
+              </AccordionSection>
             )}
           </div>
         )}
@@ -697,7 +738,7 @@ export default function AttackSurfaceAnalysis() {
                 fontWeight: '600'
               }}
             >
-              {exporting ? 'PDF Oluşturuluyor...' : '📄 PDF Olarak İndir'}
+              {exporting ? 'PDF Oluşturuluyor...' : 'PDF Olarak İndir'}
             </button>
           )}
           <button
@@ -713,7 +754,7 @@ export default function AttackSurfaceAnalysis() {
               fontWeight: '600'
             }}
           >
-            ← Dashboard'a Dön
+            Dashboard'a Dön
           </button>
         </div>
       </div>
