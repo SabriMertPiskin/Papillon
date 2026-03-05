@@ -3,4 +3,3 @@ papillon/.env
 __pycache__/
 *.pyc
 backend/ai_models/phishing_detection_module/archive/
-*.pkl
