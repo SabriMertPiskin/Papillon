@@ -175,7 +175,9 @@ export default function Dashboard() {
         { icon: '🛡️', label: 'CVE Zafiyetleri', path: '/cve' },
         { icon: '🔐', label: 'Şifreleme', path: '/encryption' },
         { icon: '🎯', label: 'Attack Surface', path: '/attack-surface' },
+        { icon: '🗺️', label: 'Zafiyet Haritası', path: '/vulnerability-map' },
         { icon: '🌐', label: 'Ağ Trafik Analizi', path: '/network-traffic' },
+        { icon: '🦠', label: 'Malware Analizi', path: '/malware-analysis' },
         { icon: '🔑', label: 'Şifre Analizi', path: '/password-strength' },
         { icon: '🚫', label: 'IP Engel Listesi', path: '/blacklist' },
       ]
@@ -224,6 +226,13 @@ export default function Dashboard() {
       title: 'Ağ Trafik Analizi',
       desc: 'Yapay zeka modelleri ile gerçek zamanlı ağ trafiği analizi ve anomali / saldırı tespiti.',
       path: '/network-traffic'
+    },
+    {
+      icon: '🦠',
+      iconClass: 'red',
+      title: 'Malware Analiz',
+      desc: 'Dosyalarınızı AI tabanlı motorumuzla statik/dinamik inceleyin ve 0-day tehditleri tespit edin.',
+      path: '/malware-analysis'
     },
     {
       icon: '🛡️',
@@ -375,7 +384,7 @@ export default function Dashboard() {
               <div className="stat-icon">🛡️</div>
               <span className="stat-trend up">↑ Aktif</span>
             </div>
-            <div className="stat-value">9</div>
+            <div className="stat-value">12</div>
             <div className="stat-label">Güvenlik Modülü</div>
           </div>
           <div className="stat-card teal">
@@ -445,33 +454,33 @@ export default function Dashboard() {
                 {generateBars(18, 130, 'bar-blue')}
               </div>
             </div>
-            <div className="chart-card">
+            <div className="chart-card clickable" onClick={() => navigate('/malware-analysis')} style={{ cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } }}>
               <div className="chart-card-header">
-                <span className="chart-card-title">Tehdit Tespitleri</span>
-                <span className="chart-card-badge">Yakında</span>
+                <span className="chart-card-title">Tehdit Tespitleri (Malware)</span>
+                <span className="chart-card-badge" style={{ background: 'rgba(211, 47, 47, 0.15)', color: '#f44336' }}>Kapsamlı Analiz</span>
               </div>
               <div className="chart-bars">
                 {generateBars(18, 130, 'bar-teal')}
               </div>
             </div>
-            <div className="chart-card">
+            <div className="chart-card clickable" onClick={() => navigate('/vulnerability-map')} style={{ cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } }}>
               <div className="chart-card-header">
                 <span className="chart-card-title">Zafiyet Haritası</span>
-                <span className="chart-card-badge">Yakında</span>
+                <span className="chart-card-badge" style={{ background: 'rgba(0, 198, 255, 0.15)', color: '#00c6ff' }}>Aktif İzleme</span>
               </div>
-              <div className="chart-placeholder">
+              <div className="chart-placeholder" style={{ background: 'transparent', border: 'none' }}>
                 <span className="chart-placeholder-icon">🗺️</span>
-                <span className="chart-placeholder-text">Zafiyet haritası verisi bekleniyor</span>
+                <span className="chart-placeholder-text">Sistem topolojisini ve zafiyetleri görüntüle</span>
               </div>
             </div>
-            <div className="chart-card">
+            <div className="chart-card clickable" onClick={() => navigate('/phishing-history')} style={{ cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } }}>
               <div className="chart-card-header">
                 <span className="chart-card-title">Phishing Alarm Geçmişi</span>
-                <span className="chart-card-badge">Yakında</span>
+                <span className="chart-card-badge" style={{ background: 'rgba(255, 152, 0, 0.15)', color: '#ff9800' }}>AI Yorumlu</span>
               </div>
-              <div className="chart-placeholder">
-                <span className="chart-placeholder-icon">📊</span>
-                <span className="chart-placeholder-text">AI modülü entegrasyonu bekleniyor</span>
+              <div className="chart-placeholder" style={{ background: 'transparent', border: 'none' }}>
+                <span className="chart-placeholder-icon">🎣</span>
+                <span className="chart-placeholder-text">Geçmiş e-posta analizlerini görüntüle</span>
               </div>
             </div>
           </div>
@@ -503,6 +512,13 @@ export default function Dashboard() {
                   disabled={loadingMail}
                 >
                   {loadingMail ? '⏳ Yükleniyor...' : '📩 Son Maili Göster'}
+                </button>
+                <button
+                  className="outlook-action-btn"
+                  onClick={() => navigate('/phishing-history')}
+                  style={{ background: 'rgba(255, 152, 0, 0.2)', color: '#ff9800', border: '1px solid rgba(255, 152, 0, 0.4)' }}
+                >
+                  🎣 Phishing Geçmişi
                 </button>
                 <button
                   className="outlook-action-btn disconnect"
