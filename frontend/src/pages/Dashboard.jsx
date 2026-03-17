@@ -171,21 +171,24 @@ export default function Dashboard() {
     {
       section: 'Güvenlik Modülleri',
       items: [
-        { icon: '🛡️', label: 'CVE Zafiyetleri', path: '/cve', desc: 'Güncel zafiyetler' },
-        { icon: '🔐', label: 'Şifreleme', path: '/encryption', desc: 'AES/RSA' },
-        { icon: '🎯', label: 'Attack Surface', path: '/attack-surface', desc: 'Yüzey analizi' },
+        { icon: '🛡️', label: 'CVE Zafiyetleri', path: '/cve' },
+        { icon: '🔐', label: 'Şifreleme', path: '/encryption' },
+        { icon: '🎯', label: 'Attack Surface', path: '/attack-surface' },
+        { icon: '🔑', label: 'Şifre Analizi', path: '/password-strength' },
+        { icon: '🚫', label: 'IP Engel Listesi', path: '/blacklist' },
       ]
     },
     {
       section: 'Hesap',
       items: [
         {
-          icon: '🔑',
+          icon: '🛡️',
           label: 'MFA Ayarları',
           path: '/mfa-settings',
           badge: user?.mfa_enabled ? 'Aktif' : 'Pasif',
           badgeClass: user?.mfa_enabled ? 'active' : 'inactive'
         },
+        { icon: '👤', label: 'Profil & Hesap', path: '/profile' },
       ]
     }
   ];
@@ -214,7 +217,7 @@ export default function Dashboard() {
       path: '/attack-surface'
     },
     {
-      icon: '🔑',
+      icon: '🛡️',
       iconClass: 'green',
       title: 'MFA Ayarları',
       desc: 'İki adımlı doğrulamayı yönetin ve hesap güvenliğinizi artırın.',
@@ -229,12 +232,25 @@ export default function Dashboard() {
       path: outlookStatus?.is_connected ? null : undefined
     },
     {
-      icon: '🤖',
+      icon: '🔑',
       iconClass: 'red',
-      title: 'AI Güvenlik Modülleri',
-      desc: 'Malware tespiti, phishing analizi, şifre gücü ölçümü ve ağ saldırısı sınıflandırması.',
-      path: null,
-      comingSoon: true
+      title: 'Şifre Güçlülük Analizi',
+      desc: 'AI destekli şifre güvenliği değerlendirmesi. Zayıf şifrelerinizi tespit edin.',
+      path: '/password-strength'
+    },
+    {
+      icon: '🚫',
+      iconClass: 'purple',
+      title: 'IP Engel Listesi',
+      desc: 'Şüpheli IP adreslerini engelleyin. IPv4 ve IPv6 CIDR formatı desteklenir.',
+      path: '/blacklist'
+    },
+    {
+      icon: '👤',
+      iconClass: 'teal',
+      title: 'Profil & Hesap',
+      desc: 'Hesap bilgilerinizi görüntüleyin, şifrenizi değiştirin, domain güncelleyin.',
+      path: '/profile'
     },
   ];
 
@@ -350,7 +366,7 @@ export default function Dashboard() {
               <div className="stat-icon">🛡️</div>
               <span className="stat-trend up">↑ Aktif</span>
             </div>
-            <div className="stat-value">5</div>
+            <div className="stat-value">8</div>
             <div className="stat-label">Güvenlik Modülü</div>
           </div>
           <div className="stat-card teal">

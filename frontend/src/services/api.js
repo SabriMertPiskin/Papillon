@@ -1,54 +1,107 @@
 import axios from 'axios';
 
+// =========================================
+// Papillon API Service - Centralized Layer
+// =========================================
+
 const API = axios.create({
-  baseURL: 'http://localhost:8000/auth',
+  baseURL: 'http://localhost:8000',
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-export const register = (username, email, password, domain = '') => {
-  return API.post('/register/', {
-    username,
-    email,
-    password,
-    password_confirm: password,
-    domain,
-  });
-};
+// --- Global 401 Interceptor (Auto Logout) ---
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const isOnLoginPage = window.location.pathname === '/login';
+      if (!isOnLoginPage) {
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
-export const login = (email, password) => {
-  return API.post('/login/', { email, password });
-};
+// =========================================
+// AUTH
+// =========================================
+export const register = (username, email, password, domain = '') =>
+  API.post('/auth/register/', { username, email, password, password_confirm: password, domain });
 
-export const logout = () => {
-  return API.post('/logout/');
-};
+export const login = (email, password) =>
+  API.post('/auth/login/', { email, password });
 
-export const getDashboard = () => {
-  return API.get('/dashboard/');
-};
+export const logout = () =>
+  API.post('/auth/logout/');
 
-// MFA endpoints
-export const mfaSetup = () => {
-  return API.post('/mfa/setup/');
-};
+export const getDashboard = () =>
+  API.get('/auth/dashboard/');
 
-export const mfaVerifySetup = (otp_code) => {
-  return API.post('/mfa/verify-setup/', { otp_code });
-};
+// =========================================
+// MFA
+// =========================================
+export const mfaSetup = () => API.post('/auth/mfa/setup/');
+export const mfaVerifySetup = (otp_code) => API.post('/auth/mfa/verify-setup/', { otp_code });
+export const verifyMfa = (mfa_token, otp_code, use_backup = false) =>
+  API.post('/auth/mfa/verify/', { mfa_token, otp_code, use_backup });
+export const mfaDisable = (password) => API.post('/auth/mfa/disable/', { password });
+export const mfaStatus = () => API.get('/auth/mfa/status/');
 
-export const verifyMfa = (mfa_token, otp_code, use_backup = false) => {
-  return API.post('/mfa/verify/', { mfa_token, otp_code, use_backup });
-};
+// =========================================
+// CRYPTO / ENCRYPTION
+// =========================================
+export const encryptText = (text, algorithm, key = null) =>
+  API.post('/crypto/encrypt/', { text, algorithm, key });
 
-export const mfaDisable = (password) => {
-  return API.post('/mfa/disable/', { password });
-};
+export const decryptText = (ciphertext, algorithm, key = null, nonce = null, private_key = null) =>
+  API.post('/crypto/decrypt/', { ciphertext, algorithm, key, nonce, private_key });
 
-export const mfaStatus = () => {
-  return API.get('/mfa/status/');
-};
+// =========================================
+// CVE
+// =========================================
+export const getLatestCVEs = (limit = 10) =>
+  API.get(`/cve/latest/?limit=${limit}`);
+
+// =========================================
+// ATTACK SURFACE
+// =========================================
+export const attackSurfaceScan = (domain) =>
+  API.post('/attack-surface/scan/', { domain });
+
+// =========================================
+// OUTLOOK
+// =========================================
+export const outlookStatus = () => API.get('/outlook/status');
+export const outlookSaveClientId = (client_id, client_secret) =>
+  API.post('/outlook/save-client-id', { client_id, client_secret });
+export const outlookAuthorize = () => API.get('/outlook/authorize');
+export const outlookDisconnect = () => API.post('/outlook/disconnect');
+export const outlookLatestMail = () => API.get('/outlook/latest-mail');
+
+// =========================================
+// AI MODULES
+// =========================================
+export const predictPasswordStrength = (password) =>
+  API.post('/ai/password-strength/predict/', { password });
+
+// Future AI endpoints (when backend is ready):
+// export const predictPhishing = (email_text) =>
+//   API.post('/ai/phishing/predict/', { email_text });
+// export const predictIntrusion = (features) =>
+//   API.post('/ai/intrusion/predict/', { features });
+// export const analyzeMalware = (formData) =>
+//   API.post('/ai/malware/analyze/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+
+// =========================================
+// BLACKLIST
+// =========================================
+export const getBlacklist = () => API.get('/blacklist/');
+export const addBlacklist = (ip_address, reason = '') =>
+  API.post('/blacklist/', { ip_address, reason });
+export const deleteBlacklist = (id) => API.delete(`/blacklist/${id}/`);
 
 export default API;
