@@ -11,6 +11,7 @@ import AttackSurfaceAnalysis from './pages/AttackSurfaceAnalysis';
 import PasswordStrength from './pages/PasswordStrength';
 import Blacklist from './pages/Blacklist';
 import UserProfile from './pages/UserProfile';
+import NetworkTraffic from './pages/NetworkTraffic';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
@@ -35,6 +36,7 @@ function App() {
         <Route path="/password-strength" element={isAuthenticated ? <PasswordStrength /> : <Navigate to="/login" replace />} />
         <Route path="/blacklist" element={isAuthenticated ? <Blacklist /> : <Navigate to="/login" replace />} />
         <Route path="/profile" element={isAuthenticated ? <UserProfile /> : <Navigate to="/login" replace />} />
+        <Route path="/network-traffic" element={isAuthenticated ? <NetworkTraffic /> : <Navigate to="/login" replace />} />
 
         {/* Outlook OAuth callback (public) */}
         <Route path="/outlook/callback" element={<OutlookCallback />} />

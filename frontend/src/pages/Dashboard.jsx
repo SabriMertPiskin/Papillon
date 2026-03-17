@@ -175,6 +175,7 @@ export default function Dashboard() {
         { icon: '🛡️', label: 'CVE Zafiyetleri', path: '/cve' },
         { icon: '🔐', label: 'Şifreleme', path: '/encryption' },
         { icon: '🎯', label: 'Attack Surface', path: '/attack-surface' },
+        { icon: '🌐', label: 'Ağ Trafik Analizi', path: '/network-traffic' },
         { icon: '🔑', label: 'Şifre Analizi', path: '/password-strength' },
         { icon: '🚫', label: 'IP Engel Listesi', path: '/blacklist' },
       ]
@@ -216,6 +217,13 @@ export default function Dashboard() {
       title: 'Attack Surface Analizi',
       desc: 'Hedef domain için port tarama, DNS, SSL, subdomain ve daha fazlası.',
       path: '/attack-surface'
+    },
+    {
+      icon: '🌐',
+      iconClass: 'blue',
+      title: 'Ağ Trafik Analizi',
+      desc: 'Yapay zeka modelleri ile gerçek zamanlı ağ trafiği analizi ve anomali / saldırı tespiti.',
+      path: '/network-traffic'
     },
     {
       icon: '🛡️',
@@ -367,7 +375,7 @@ export default function Dashboard() {
               <div className="stat-icon">🛡️</div>
               <span className="stat-trend up">↑ Aktif</span>
             </div>
-            <div className="stat-value">8</div>
+            <div className="stat-value">9</div>
             <div className="stat-label">Güvenlik Modülü</div>
           </div>
           <div className="stat-card teal">
@@ -426,10 +434,12 @@ export default function Dashboard() {
         <div className="dashboard-charts">
           <h2>İzleme & Analiz</h2>
           <div className="charts-grid">
-            <div className="chart-card">
+            <div className="chart-card clickable" onClick={() => navigate('/network-traffic')} style={{ cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } }}>
               <div className="chart-card-header">
-                <span className="chart-card-title">Ağ Trafiği Analizi</span>
-                <span className="chart-card-badge">Yakında</span>
+                <span className="chart-card-title">Ağ Trafiği Analizi & IDS</span>
+                <span style={{ fontSize: '0.8rem', color: '#4caf50', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span className="live-indicator"></span> Canlı Analiz
+                </span>
               </div>
               <div className="chart-bars">
                 {generateBars(18, 130, 'bar-blue')}
