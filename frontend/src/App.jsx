@@ -12,13 +12,15 @@ import PasswordStrength from './pages/PasswordStrength';
 import Blacklist from './pages/Blacklist';
 import UserProfile from './pages/UserProfile';
 import NotFound from './pages/NotFound';
+import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
 function App() {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
   return (
-    <Router>
+    <ErrorBoundary>
+      <Router>
       <Routes>
         {/* Auth routes */}
         <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />} />
@@ -42,6 +44,7 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
+    </ErrorBoundary>
   );
 }
 

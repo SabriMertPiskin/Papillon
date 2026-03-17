@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [loadingOutlook, setLoadingOutlook] = useState(false);
   const [latestMail, setLatestMail] = useState(null);
   const [loadingMail, setLoadingMail] = useState(false);
+  const [showMailModal, setShowMailModal] = useState(false);
   const [showClientIdModal, setShowClientIdModal] = useState(false);
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
@@ -512,8 +513,11 @@ export default function Dashboard() {
           </div>
 
           {latestMail && (
-            <div className="latest-mail-card">
-              <h4>📬 Son Mail</h4>
+            <div className="latest-mail-card clickable" onClick={() => setShowMailModal(true)} style={{ cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h4 style={{ margin: 0 }}>📬 Son Mail</h4>
+                <span style={{ fontSize: '0.8rem', color: 'var(--auth-accent)' }}>Tıklayıp Görüntüle →</span>
+              </div>
               <div className="mail-detail">
                 <strong>Gönderen:</strong> {latestMail.from_name || latestMail.from}
               </div>
@@ -592,6 +596,59 @@ export default function Dashboard() {
             >
               Anladım, Kapat
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mail Detail Modal */}
+      {showMailModal && latestMail && (
+        <div className="modal-overlay" onClick={() => setShowMailModal(false)}>
+          <div className="modal-content wide" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+            <h2 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.5rem' }}>📧</span> E-posta Detayı
+            </h2>
+            
+            <div style={{ background: 'var(--auth-input-bg, rgba(10, 22, 40, 0.6))', padding: '16px', borderRadius: '12px', marginBottom: '20px', border: '1px solid var(--auth-glass-border)' }}>
+              <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <strong>Kimden:</strong> {latestMail.from_name} ({latestMail.from})
+              </div>
+              <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <strong>Tarih:</strong> {new Date(latestMail.received_date).toLocaleString('tr-TR')}
+              </div>
+              <div>
+                <strong>Konu:</strong> <span style={{ color: 'var(--auth-text-primary)' }}>{latestMail.subject || '(Konu yok)'}</span>
+              </div>
+            </div>
+
+            <div style={{ 
+              background: 'rgba(0,0,0,0.2)', 
+              padding: '20px', 
+              borderRadius: '12px', 
+              minHeight: '200px',
+              color: 'var(--auth-text-primary)',
+              lineHeight: '1.6',
+              whiteSpace: 'pre-wrap',
+              border: '1px solid rgba(255,255,255,0.05)',
+              marginBottom: '24px'
+            }}>
+              {latestMail.body || latestMail.preview || 'Mail içeriği alınamadı.'}
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button 
+                className="modal-btn" 
+                onClick={() => {
+                  alert("⚠️ AI Phishing Analiz modülü henüz backend tarafında bağlanmadı.");
+                  setShowMailModal(false);
+                }} 
+                style={{ background: 'rgba(244, 67, 54, 0.1)', color: '#ef5350', border: '1px solid rgba(244, 67, 54, 0.3)' }}
+              >
+                🤖 Yapay Zeka Phishing Taraması Yap
+              </button>
+              <button className="modal-btn primary" onClick={() => setShowMailModal(false)}>
+                Kapat
+              </button>
+            </div>
           </div>
         </div>
       )}
