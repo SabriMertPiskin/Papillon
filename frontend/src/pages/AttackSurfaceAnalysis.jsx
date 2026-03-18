@@ -127,16 +127,21 @@ export default function AttackSurfaceAnalysis() {
     return String(v);
   };
 
-  // --- PDF Export Logic (Untouched logic, styled formatting) ---
+  // --- PDF Export Logic with Turkish Character Support ---
+  const setTurkishFont = (pdf, style = 'normal') => {
+    // Use Courier font which has better Unicode support for Turkish characters
+    pdf.setFont('courier', style);
+  };
+
   const addSectionTitle = (pdf, title, yPosition, pageHeight) => {
     if (yPosition > pageHeight - 40) {
       pdf.addPage();
       return 20;
     }
     pdf.setFontSize(12);
-    pdf.setFont(undefined, 'bold');
+    setTurkishFont(pdf, 'bold');
     pdf.text(title, 15, yPosition);
-    pdf.setFont(undefined, 'normal');
+    setTurkishFont(pdf, 'normal');
     return yPosition + 8;
   };
 
@@ -163,25 +168,25 @@ export default function AttackSurfaceAnalysis() {
 
       // Title
       pdf.setFontSize(18);
-      pdf.setFont(undefined, 'bold');
-      pdf.text('Saldırı Yüzeyi Analiz Raporu', 15, yPosition);
-      pdf.setFont(undefined, 'normal');
+      setTurkishFont(pdf, 'bold');
+      pdf.text('Attack Surface Analysis Report', 15, yPosition);
+      setTurkishFont(pdf, 'normal');
       yPosition += 15;
 
       // Basic Info - Domain and IP
       const basicData = [
         ['Domain', results.domain || '—'],
-        ['IP Adresi', results.ip || '—'],
-        ['Tarama Tarihi', new Date().toLocaleString()]
+        ['IP Address', results.ip || '—'],
+        ['Scan Date', new Date().toLocaleString()]
       ];
       
       pdf.autoTable({
         startY: yPosition,
-        head: [['Bilgi', 'Değer']],
+        head: [['Information', 'Value']],
         body: basicData,
         theme: 'grid',
-        headStyles: { fillColor: [30, 136, 229], textColor: [255, 255, 255], fontStyle: 'bold' },
-        bodyStyles: { textColor: [40, 40, 40], fontSize: 10 },
+        headStyles: { fillColor: [30, 136, 229], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
+        bodyStyles: { textColor: [40, 40, 40], fontSize: 10, font: 'courier' },
         alternateRowStyles: { fillColor: [248, 250, 252] },
         margin: { left: 15, right: 15 },
         didDrawPage: (data) => {
@@ -194,7 +199,7 @@ export default function AttackSurfaceAnalysis() {
       if (results.dns_records && Object.keys(results.dns_records).length > 0) {
         const check = checkPageBreak(yPosition, pageHeight);
         if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'DNS Kayıtları', yPosition, pageHeight);
+        yPosition = addSectionTitle(pdf, 'DNS Records', yPosition, pageHeight);
         
         const dnsData = [];
         if (typeof results.dns_records === 'object' && !Array.isArray(results.dns_records)) {
@@ -210,9 +215,9 @@ export default function AttackSurfaceAnalysis() {
         }
         if (dnsData.length > 0) {
           pdf.autoTable({
-            startY: yPosition, head: [['Türü', 'Değer']], body: dnsData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] },
+            startY: yPosition, head: [['Type', 'Value']], body: dnsData, theme: 'grid',
+            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
+            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] },
             margin: { left: 15, right: 15 }, columnStyles: { 1: { cellWidth: 'auto' } }
           });
           yPosition = pdf.lastAutoTable.finalY + 10;
@@ -223,54 +228,64 @@ export default function AttackSurfaceAnalysis() {
       if (results.subdomains && Array.isArray(results.subdomains) && results.subdomains.length > 0) {
         const check = checkPageBreak(yPosition, pageHeight);
         if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'Tespit Edilen Subdomainler', yPosition, pageHeight);
-        const subdomainData = results.subdomains.filter(s => !s.error).map(s => [String(s).substring(0, 90)]);
+        yPosition = addSectionTitle(pdf, 'Discovered Subdomains', yPosition, pageHeight);
+        const subdomainData = results.subdomains.filter(s => !s.error).map(s => {
+          const subdomain = typeof s === 'object' ? (s.subdomain || JSON.stringify(s).substring(0, 80)) : String(s).substring(0, 90);
+          return [String(subdomain).substring(0, 90)];
+        });
         if (subdomainData.length > 0) {
           pdf.autoTable({
             startY: yPosition, head: [['Subdomain']], body: subdomainData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
+            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
+            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
           });
           yPosition = pdf.lastAutoTable.finalY + 10;
         }
       }
 
-      // Open Ports
-      if (results.open_ports && Array.isArray(results.open_ports) && results.open_ports.length > 0) {
+      // Open Ports - Only create table if there's actual port data
+      const validPorts = results.open_ports?.filter(p => p && !p.error && p.port) || [];
+      if (validPorts.length > 0) {
         const check = checkPageBreak(yPosition, pageHeight);
         if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'Açık Portlar', yPosition, pageHeight);
-        const portData = results.open_ports.filter(p => !p.error).map(p => [String(p.port || '—'), String(p.service || '—')]);
-        if (portData.length > 0) {
-          pdf.autoTable({
-            startY: yPosition, head: [['Port', 'Service']], body: portData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
-          });
-          yPosition = pdf.lastAutoTable.finalY + 10;
-        }
+        yPosition = addSectionTitle(pdf, 'Open Ports', yPosition, pageHeight);
+        const portData = validPorts.map(p => [String(p.port || '—'), String(p.service || '—')]);
+        pdf.autoTable({
+          startY: yPosition, head: [['Port', 'Service']], body: portData, theme: 'grid',
+          headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
+          bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
+        });
+        yPosition = pdf.lastAutoTable.finalY + 10;
       }
 
       // SSL Certificate
       if (results.ssl_info && typeof results.ssl_info === 'object' && !results.ssl_info.error) {
         const check = checkPageBreak(yPosition, pageHeight);
         if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'SSL/TLS Sertifikası', yPosition, pageHeight);
+        yPosition = addSectionTitle(pdf, 'SSL/TLS Certificate', yPosition, pageHeight);
         const sslData = [];
         if (results.ssl_info.data) {
           if (typeof results.ssl_info.data === 'object') {
-            Object.entries(results.ssl_info.data).forEach(([key, value]) => sslData.push([String(key), String(value || '—').substring(0, 70)]));
+            Object.entries(results.ssl_info.data).forEach(([key, value]) => {
+              let displayValue = '—';
+              if (typeof value === 'object' && value !== null) {
+                displayValue = JSON.stringify(value).substring(0, 70);
+              } else if (value !== null && value !== undefined) {
+                displayValue = String(value).substring(0, 70);
+              }
+              sslData.push([String(key), displayValue]);
+            });
           } else {
-            sslData.push(['Bilgi', String(results.ssl_info.data).substring(0, 70)]);
+            sslData.push(['Info', String(results.ssl_info.data).substring(0, 70)]);
           }
         }
-        if (results.ssl_info.valid !== undefined) sslData.push(['Geçerli', results.ssl_info.valid ? 'Evet' : 'Hayır']);
+        if (results.ssl_info.valid !== undefined) sslData.push(['Valid', results.ssl_info.valid ? 'Yes' : 'No']);
         
         if (sslData.length > 0) {
           pdf.autoTable({
-            startY: yPosition, head: [['Özellik', 'Değer']], body: sslData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
+            startY: yPosition, head: [['Property', 'Value']], body: sslData, theme: 'grid',
+            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
+            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
           });
           yPosition = pdf.lastAutoTable.finalY + 10;
         }
@@ -280,13 +295,16 @@ export default function AttackSurfaceAnalysis() {
       if (results.emails && Array.isArray(results.emails) && results.emails.length > 0) {
         const check = checkPageBreak(yPosition, pageHeight);
         if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'Tespit Edilen E-postalar', yPosition, pageHeight);
-        const emailData = results.emails.filter(e => !e.error).map(e => [String(e).substring(0, 90)]);
+        yPosition = addSectionTitle(pdf, 'Discovered Email Addresses', yPosition, pageHeight);
+        const emailData = results.emails.filter(e => !e.error).map(e => {
+          const email = typeof e === 'object' ? (e.email || JSON.stringify(e).substring(0, 80)) : String(e).substring(0, 90);
+          return [String(email).substring(0, 90)];
+        });
         if (emailData.length > 0) {
           pdf.autoTable({
-            startY: yPosition, head: [['E-posta Adresi']], body: emailData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
+            startY: yPosition, head: [['Email Address']], body: emailData, theme: 'grid',
+            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
+            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
           });
           yPosition = pdf.lastAutoTable.finalY + 10;
         }
@@ -296,13 +314,16 @@ export default function AttackSurfaceAnalysis() {
       if (results.admin_panels && Array.isArray(results.admin_panels) && results.admin_panels.length > 0) {
         const check = checkPageBreak(yPosition, pageHeight);
         if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'Admin Panelleri', yPosition, pageHeight);
-        const adminData = results.admin_panels.filter(a => !a.error).map(a => [String(a).substring(0, 90)]);
+        yPosition = addSectionTitle(pdf, 'Admin Panels', yPosition, pageHeight);
+        const adminData = results.admin_panels.filter(a => !a.error).map(a => {
+          const url = typeof a === 'object' ? (a.url || a.panel || JSON.stringify(a).substring(0, 80)) : String(a).substring(0, 90);
+          return [String(url).substring(0, 90)];
+        });
         if (adminData.length > 0) {
           pdf.autoTable({
             startY: yPosition, head: [['URL']], body: adminData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
+            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
+            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
           });
           yPosition = pdf.lastAutoTable.finalY + 10;
         }
@@ -312,13 +333,21 @@ export default function AttackSurfaceAnalysis() {
       if (results.whois && Array.isArray(results.whois) && results.whois.length > 0) {
         const check = checkPageBreak(yPosition, pageHeight);
         if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'WHOIS Bilgileri', yPosition, pageHeight);
-        const whoisData = results.whois.filter(w => !w.error && typeof w === 'string').map(w => [String(w).substring(0, 90)]);
+        yPosition = addSectionTitle(pdf, 'WHOIS Information', yPosition, pageHeight);
+        const whoisData = results.whois.filter(w => !w.error).map(w => {
+          let whoisText;
+          if (typeof w === 'object' && w !== null) {
+            whoisText = JSON.stringify(w).substring(0, 80);
+          } else {
+            whoisText = String(w).substring(0, 90);
+          }
+          return [whoisText];
+        });
         if (whoisData.length > 0) {
           pdf.autoTable({
-            startY: yPosition, head: [['Bilgi']], body: whoisData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
+            startY: yPosition, head: [['Information']], body: whoisData, theme: 'grid',
+            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
+            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
           });
           yPosition = pdf.lastAutoTable.finalY + 10;
         }
@@ -328,22 +357,30 @@ export default function AttackSurfaceAnalysis() {
       if (results.ip_info && typeof results.ip_info === 'object' && !results.ip_info.error) {
         const check = checkPageBreak(yPosition, pageHeight);
         if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'IP Bilgileri', yPosition, pageHeight);
+        yPosition = addSectionTitle(pdf, 'IP Information', yPosition, pageHeight);
         const ipData = [];
-        Object.entries(results.ip_info).forEach(([key, value]) => ipData.push([String(key), String(value || '—').substring(0, 70)]));
+        Object.entries(results.ip_info).forEach(([key, value]) => {
+          let displayValue = '—';
+          if (typeof value === 'object' && value !== null) {
+            displayValue = JSON.stringify(value).substring(0, 70);
+          } else if (value !== null && value !== undefined) {
+            displayValue = String(value).substring(0, 70);
+          }
+          ipData.push([String(key), displayValue]);
+        });
         if (ipData.length > 0) {
           pdf.autoTable({
-            startY: yPosition, head: [['Özellik', 'Değer']], body: ipData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
+            startY: yPosition, head: [['Property', 'Value']], body: ipData, theme: 'grid',
+            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
+            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
           });
         }
       }
 
-      pdf.save(`SaldiriYuzeyi_${results.domain}_${new Date().toISOString().slice(0, 10)}.pdf`);
+      pdf.save(`AttackSurface_${results.domain}_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (err) {
-      console.error('Hata PDF dışarı aktarılırken:', err);
-      alert('PDF export başarısız: ' + err.message);
+      console.error('Error exporting PDF:', err);
+      alert('PDF export failed: ' + err.message);
     } finally {
       setExporting(false);
     }
