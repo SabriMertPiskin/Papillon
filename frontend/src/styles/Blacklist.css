@@ -68,7 +68,7 @@
   font-size: 1.7rem;
   font-weight: 700;
   margin: 0 0 4px;
-  background: linear-gradient(135deg, #fff, var(--auth-text-secondary, #8899b4));
+  background: linear-gradient(135deg, var(--auth-heading-gradient-start, #fff), var(--auth-heading-gradient-end, #8899b4));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -207,7 +207,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--auth-subtle-border);
 }
 
 .bl-table-header h3 {
@@ -239,8 +239,8 @@ table.bl-table {
 }
 
 table.bl-table thead tr {
-  background: rgba(10, 22, 40, 0.5);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--auth-card-inset);
+  border-bottom: 1px solid var(--auth-subtle-border);
 }
 
 table.bl-table thead th {
@@ -254,7 +254,7 @@ table.bl-table thead th {
 }
 
 table.bl-table tbody tr {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--auth-subtle-border);
   transition: background 0.2s;
 }
 

@@ -77,7 +77,7 @@
   font-size: 1.8rem;
   font-weight: 700;
   margin: 0 0 4px 0;
-  background: linear-gradient(135deg, #fff 0%, var(--auth-text-secondary, #8899b4) 100%);
+  background: linear-gradient(135deg, var(--auth-heading-gradient-start, #fff) 0%, var(--auth-heading-gradient-end, #8899b4) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -335,8 +335,8 @@
 }
 
 .accordion-body {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(10, 22, 40, 0.4);
+  border-top: 1px solid var(--auth-subtle-border);
+  background: var(--auth-card-inset);
 }
 
 /* --- Tables --- */
@@ -362,7 +362,7 @@
 
 .results-table td {
   padding: 16px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--auth-subtle-border);
   color: var(--auth-text-primary, #e8edf5);
   word-break: break-word;
   max-width: 500px;

@@ -38,12 +38,12 @@ export default function Register() {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.username.trim()) newErrors.username = 'Kullanıcı adı zorunludur';
-    else if (formData.username.length < 3) newErrors.username = 'En az 3 karakter olmalıdır';
-    if (!formData.email.includes('@')) newErrors.email = 'Geçerli bir email adresi girin';
-    if (formData.password.length < 8) newErrors.password = 'Şifre en az 8 karakter olmalıdır';
+    if (!formData.username.trim()) newErrors.username = 'Username is required';
+    else if (formData.username.length < 3) newErrors.username = 'Must be at least 3 characters';
+    if (!formData.email.includes('@')) newErrors.email = 'Enter a valid email address';
+    if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
     if (formData.password !== formData.password_confirm)
-      newErrors.password_confirm = 'Şifreler eşleşmiyor';
+      newErrors.password_confirm = 'Passwords do not match';
     return newErrors;
   };
 
@@ -60,7 +60,7 @@ export default function Register() {
       await register(formData.username, formData.email, formData.password, formData.domain);
       navigate('/login', { state: { registered: true } });
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Kayıt sırasında bir hata oluştu';
+      const errorMsg = error.response?.data?.detail || 'An error occurred during registration';
       setErrors({ submit: errorMsg });
     } finally {
       setLoading(false);
@@ -83,15 +83,15 @@ export default function Register() {
         <h1>Papillon</h1>
       </div>
       <p className="auth-brand-tagline">
-        Siber güvenlik analizlerinizi tek bir platformda yönetin. 
-        Gelişmiş tehdit algılama ve güvenlik istihbaratı.
+        Manage your cybersecurity analyses on a single platform. 
+        Advanced threat detection and security intelligence.
       </p>
       <div className="auth-floating-icons">
-        <div className="auth-floating-icon" title="Ağ Güvenliği">🛡️</div>
-        <div className="auth-floating-icon" title="Şifreleme">🔐</div>
-        <div className="auth-floating-icon" title="Tehdit Analizi">🔍</div>
-        <div className="auth-floating-icon" title="Zafiyet Tarama">⚡</div>
-        <div className="auth-floating-icon" title="AI Analiz">🤖</div>
+        <div className="auth-floating-icon" title="Network Security">🛡️</div>
+        <div className="auth-floating-icon" title="Encryption">🔐</div>
+        <div className="auth-floating-icon" title="Threat Analysis">🔍</div>
+        <div className="auth-floating-icon" title="Vulnerability Scanning">⚡</div>
+        <div className="auth-floating-icon" title="AI Analysis">🤖</div>
       </div>
     </div>
   );
@@ -100,7 +100,7 @@ export default function Register() {
     <div className="auth-theme-toggle">
       <button
         onClick={toggleTheme}
-        title={theme === 'dark' ? 'Aydınlık Mod' : 'Karanlık Mod'}
+        title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
         type="button"
       >
         {theme === 'dark' ? '☀️' : '🌙'}
@@ -112,7 +112,7 @@ export default function Register() {
     <div className="auth-footer">
       <div className="auth-security-badge">
         <span className="badge-icon">🔒</span>
-        256-bit SSL ile korunmaktadır
+        Protected with 256-bit SSL encryption
       </div>
     </div>
   );
@@ -126,15 +126,15 @@ export default function Register() {
         <ThemeToggle />
 
         <div className="auth-box">
-          <h2>Hesap Oluştur</h2>
-          <p className="auth-subtitle">Papillon platformuna katılın</p>
+          <h2>Create Account</h2>
+          <p className="auth-subtitle">Join the Papillon platform</p>
 
           {errors.submit && <div className="error-message">{errors.submit}</div>}
 
           <form onSubmit={handleSubmit}>
             {/* Username */}
             <div className="form-group">
-              <label>Kullanıcı Adı</label>
+              <label>Username</label>
               <div className={`input-wrapper ${errors.username ? 'error' : ''}`}>
                 <span className="input-icon">👤</span>
                 <input
@@ -142,7 +142,7 @@ export default function Register() {
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
-                  placeholder="kullaniciadi"
+                  placeholder="username"
                   autoComplete="username"
                   autoFocus
                 />
@@ -152,7 +152,7 @@ export default function Register() {
 
             {/* Email */}
             <div className="form-group">
-              <label>Email Adresi</label>
+              <label>Email Address</label>
               <div className={`input-wrapper ${errors.email ? 'error' : ''}`}>
                 <span className="input-icon">✉️</span>
                 <input
@@ -160,7 +160,7 @@ export default function Register() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="ornek@domain.com"
+                  placeholder="example@domain.com"
                   autoComplete="email"
                 />
               </div>
@@ -169,7 +169,7 @@ export default function Register() {
 
             {/* Password */}
             <div className="form-group">
-              <label>Şifre</label>
+              <label>Password</label>
               <div className={`input-wrapper ${errors.password ? 'error' : ''}`}>
                 <span className="input-icon">🔑</span>
                 <input
@@ -177,7 +177,7 @@ export default function Register() {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Minimum 8 karakter"
+                  placeholder="Minimum 8 characters"
                   autoComplete="new-password"
                 />
                 <button
@@ -194,7 +194,7 @@ export default function Register() {
 
             {/* Confirm Password */}
             <div className="form-group">
-              <label>Şifre Tekrar</label>
+              <label>Confirm Password</label>
               <div className={`input-wrapper ${errors.password_confirm ? 'error' : ''}`}>
                 <span className="input-icon">🔑</span>
                 <input
@@ -202,7 +202,7 @@ export default function Register() {
                   name="password_confirm"
                   value={formData.password_confirm}
                   onChange={handleChange}
-                  placeholder="Şifrenizi tekrar girin"
+                  placeholder="Re-enter your password"
                   autoComplete="new-password"
                 />
                 <button
@@ -219,7 +219,7 @@ export default function Register() {
 
             {/* Domain */}
             <div className="form-group">
-              <label>Kurumsal Domain <span style={{fontSize: '0.8em', color: 'var(--auth-text-muted)', fontWeight: 'normal'}}>(isteğe bağlı)</span></label>
+              <label>Corporate Domain <span style={{fontSize: '0.8em', color: 'var(--auth-text-muted)', fontWeight: 'normal'}}>(optional)</span></label>
               <div className="input-wrapper">
                 <span className="input-icon">🌐</span>
                 <input
@@ -227,7 +227,7 @@ export default function Register() {
                   name="domain"
                   value={formData.domain}
                   onChange={handleChange}
-                  placeholder="sirket.com"
+                  placeholder="company.com"
                 />
               </div>
             </div>
@@ -238,12 +238,12 @@ export default function Register() {
               className={loading ? 'loading' : ''}
               style={{ marginTop: '10px' }}
             >
-              {loading ? 'Hesap Oluşturuluyor...' : 'Hesap Oluştur'}
+              {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
 
           <p className="toggle-auth" style={{ marginTop: '20px' }}>
-            Zaten hesabın var mı? <Link to="/login">Giriş Yap</Link>
+            Already have an account? <Link to="/login">Sign In</Link>
           </p>
         </div>
 

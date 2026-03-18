@@ -68,7 +68,7 @@ export default function NotFound() {
         fontSize: '1.6rem', fontWeight: 700, margin: '0 0 10px',
         textAlign: 'center', position: 'relative', zIndex: 1,
       }}>
-        Sayfa Bulunamadı
+        Page Not Found
       </h1>
 
       <p style={{
@@ -76,7 +76,7 @@ export default function NotFound() {
         margin: '0 0 32px', textAlign: 'center', maxWidth: 400,
         lineHeight: 1.6, position: 'relative', zIndex: 1,
       }}>
-        Aradığınız sayfa mevcut değil veya taşınmış olabilir.
+        The page you're looking for doesn't exist or may have been moved.
       </p>
 
       {/* Buttons */}
@@ -113,7 +113,7 @@ export default function NotFound() {
           onMouseEnter={e => { e.target.style.borderColor = '#1e88e5'; e.target.style.color = '#1e88e5'; }}
           onMouseLeave={e => { e.target.style.borderColor = 'rgba(30,136,229,0.2)'; e.target.style.color = 'var(--auth-text-primary, #e8edf5)'; }}
         >
-          Geri Dön
+          Go Back
         </button>
       </div>
 

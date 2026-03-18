@@ -80,7 +80,7 @@
   font-size: 1.8rem;
   font-weight: 700;
   margin: 0 0 4px 0;
-  background: linear-gradient(135deg, #fff 0%, var(--auth-text-secondary, #8899b4) 100%);
+  background: linear-gradient(135deg, var(--auth-heading-gradient-start, #fff) 0%, var(--auth-heading-gradient-end, #8899b4) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

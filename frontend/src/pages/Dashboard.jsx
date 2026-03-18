@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { logout } from '../services/api';
+import Sidebar from '../components/Sidebar';
 import '../styles/Dashboard.css';
 
 export default function Dashboard() {
@@ -15,7 +16,6 @@ export default function Dashboard() {
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('papillon-theme') || 'dark';
@@ -65,7 +65,7 @@ export default function Dashboard() {
 
   const handleSaveClientIdAndConnect = async () => {
     if (!clientId.trim() || !clientSecret.trim()) {
-      alert('Lütfen Client ID ve Client Secret alanlarını doldurun');
+      alert('Please fill in both Client ID and Client Secret fields');
       return;
     }
 
@@ -88,13 +88,13 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Hata: ' + (error.response?.data?.detail || error.message));
+      alert('Error: ' + (error.response?.data?.detail || error.message));
       setLoadingOutlook(false);
     }
   };
 
   const handleDisconnectOutlook = async () => {
-    if (window.confirm('Outlook hesabını bağlantısını kesmek istediğinize emin misiniz?')) {
+    if (window.confirm('Are you sure you want to disconnect your Outlook account?')) {
       try {
         await axios.post('http://localhost:8000/outlook/disconnect', {}, {
           withCredentials: true
@@ -118,7 +118,7 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Error fetching latest mail:', error.response?.data?.detail || error.message);
-      alert('Mail çekme hatası: ' + (error.response?.data?.detail || 'Bilinmeyen hata'));
+      alert('Mail fetch error: ' + (error.response?.data?.detail || 'Unknown error'));
     } finally {
       setLoadingMail(false);
     }
@@ -141,10 +141,10 @@ export default function Dashboard() {
   // Get time-based greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 6) return 'İyi Geceler';
-    if (hour < 12) return 'Günaydın';
-    if (hour < 18) return 'İyi Günler';
-    return 'İyi Akşamlar';
+    if (hour < 6) return 'Good Night';
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
   };
 
   // Generate simulated chart bars
@@ -161,113 +161,77 @@ export default function Dashboard() {
     });
   };
 
-  // Navigation items
-  const navItems = [
-    {
-      section: 'Ana Menü',
-      items: [
-        { icon: '🏠', label: 'Dashboard', path: '/dashboard', active: true },
-      ]
-    },
-    {
-      section: 'Güvenlik Modülleri',
-      items: [
-        { icon: '🛡️', label: 'CVE Zafiyetleri', path: '/cve' },
-        { icon: '🔐', label: 'Şifreleme', path: '/encryption' },
-        { icon: '🎯', label: 'Attack Surface', path: '/attack-surface' },
-        { icon: '🗺️', label: 'Zafiyet Haritası', path: '/vulnerability-map' },
-        { icon: '🌐', label: 'Ağ Trafik Analizi', path: '/network-traffic' },
-        { icon: '🦠', label: 'Malware Analizi', path: '/malware-analysis' },
-        { icon: '🔑', label: 'Şifre Analizi', path: '/password-strength' },
-        { icon: '🚫', label: 'IP Engel Listesi', path: '/blacklist' },
-      ]
-    },
-    {
-      section: 'Hesap',
-      items: [
-        {
-          icon: '🛡️',
-          label: 'MFA Ayarları',
-          path: '/mfa-settings',
-          badge: user?.mfa_enabled ? 'Aktif' : 'Pasif',
-          badgeClass: user?.mfa_enabled ? 'active' : 'inactive'
-        },
-        { icon: '👤', label: 'Profil & Hesap', path: '/profile' },
-      ]
-    }
-  ];
-
   // Module cards data
   const moduleCards = [
     {
       icon: '🛡️',
       iconClass: 'blue',
-      title: 'CVE Zafiyetleri',
-      desc: 'En güncel CVE zafiyetlerini inceleyin ve güvenlik tehditlerini takip edin.',
+      title: 'CVE Vulnerabilities',
+      desc: 'Browse the latest CVE vulnerabilities and track security threats.',
       path: '/cve'
     },
     {
       icon: '🔐',
       iconClass: 'purple',
-      title: 'Metin Şifreleme',
-      desc: 'AES ve RSA algoritmaları ile metinlerinizi güvenli bir şekilde şifreleyin.',
+      title: 'Text Encryption',
+      desc: 'Securely encrypt your text with AES and RSA algorithms.',
       path: '/encryption'
     },
     {
       icon: '🎯',
       iconClass: 'teal',
-      title: 'Attack Surface Analizi',
-      desc: 'Hedef domain için port tarama, DNS, SSL, subdomain ve daha fazlası.',
+      title: 'Attack Surface Analysis',
+      desc: 'Port scanning, DNS, SSL, subdomain enumeration and more for target domains.',
       path: '/attack-surface'
     },
     {
       icon: '🌐',
       iconClass: 'blue',
-      title: 'Ağ Trafik Analizi',
-      desc: 'Yapay zeka modelleri ile gerçek zamanlı ağ trafiği analizi ve anomali / saldırı tespiti.',
+      title: 'Network Traffic Analysis',
+      desc: 'Real-time network traffic analysis and anomaly/attack detection with AI models.',
       path: '/network-traffic'
     },
     {
       icon: '🦠',
       iconClass: 'red',
-      title: 'Malware Analiz',
-      desc: 'Dosyalarınızı AI tabanlı motorumuzla statik/dinamik inceleyin ve 0-day tehditleri tespit edin.',
+      title: 'Malware Analysis',
+      desc: 'Analyze your files with our AI-powered engine using static/dynamic analysis to detect 0-day threats.',
       path: '/malware-analysis'
     },
     {
       icon: '🛡️',
       iconClass: 'green',
-      title: 'MFA Ayarları',
-      desc: 'İki adımlı doğrulamayı yönetin ve hesap güvenliğinizi artırın.',
+      title: 'MFA Settings',
+      desc: 'Manage two-factor authentication and enhance your account security.',
       path: '/mfa-settings'
     },
     {
       icon: '📧',
       iconClass: 'orange',
-      title: 'Outlook Entegrasyonu',
-      desc: 'Microsoft Outlook hesabınızı bağlayın ve e-posta analizlerini görüntüleyin.',
+      title: 'Outlook Integration',
+      desc: 'Connect your Microsoft Outlook account and view email analyses.',
       action: () => outlookStatus?.is_connected ? null : handleConnectOutlook(),
       path: outlookStatus?.is_connected ? null : undefined
     },
     {
       icon: '🔑',
       iconClass: 'red',
-      title: 'Şifre Güçlülük Analizi',
-      desc: 'AI destekli şifre güvenliği değerlendirmesi. Zayıf şifrelerinizi tespit edin.',
+      title: 'Password Strength Analysis',
+      desc: 'AI-powered password security assessment. Detect your weak passwords.',
       path: '/password-strength'
     },
     {
       icon: '🚫',
       iconClass: 'purple',
-      title: 'IP Engel Listesi',
-      desc: 'Şüpheli IP adreslerini engelleyin. IPv4 ve IPv6 CIDR formatı desteklenir.',
+      title: 'IP Blacklist',
+      desc: 'Block suspicious IP addresses. IPv4 and IPv6 CIDR format supported.',
       path: '/blacklist'
     },
     {
       icon: '👤',
       iconClass: 'teal',
-      title: 'Profil & Hesap',
-      desc: 'Hesap bilgilerinizi görüntüleyin, şifrenizi değiştirin, domain güncelleyin.',
+      title: 'Profile & Account',
+      desc: 'View your account information, change your password, update domain.',
       path: '/profile'
     },
   ];
@@ -276,79 +240,16 @@ export default function Dashboard() {
     return (
       <div className="dashboard-layout">
         <div className="dashboard-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ color: 'var(--auth-text-secondary)', fontSize: '1.1rem' }}>Yükleniyor...</div>
+          <div style={{ color: 'var(--auth-text-secondary)', fontSize: '1.1rem' }}>Loading...</div>
         </div>
       </div>
     );
   }
 
-  const userInitials = user.username
-    ? user.username.slice(0, 2).toUpperCase()
-    : '?';
-
   return (
     <div className="dashboard-layout">
       {/* ============ SIDEBAR ============ */}
-      <aside className={`dashboard-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-logo">
-          <div className="logo-icon">🦋</div>
-          <span className="logo-text">Papillon</span>
-          <button
-            className="sidebar-toggle"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            title={sidebarCollapsed ? 'Genişlet' : 'Daralt'}
-          >
-            <span className="toggle-line" />
-            <span className="toggle-line" />
-            <span className="toggle-line" />
-          </button>
-        </div>
-
-        {navItems.map((section, si) => (
-          <div className="sidebar-section" key={si}>
-            <div className="sidebar-section-title">{section.section}</div>
-            <ul className="sidebar-nav">
-              {section.items.map((item, ii) => (
-                <li className="sidebar-nav-item" key={ii}>
-                  <a
-                    href={item.path}
-                    className={`sidebar-nav-link ${item.active || location.pathname === item.path ? 'active' : ''}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigate(item.path);
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    <span className="sidebar-nav-icon">{item.icon}</span>
-                    <span className="sidebar-nav-label">{item.label}</span>
-                    {item.badge && (
-                      <span className={`sidebar-nav-badge ${item.badgeClass}`}>{item.badge}</span>
-                    )}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-
-        <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="sidebar-avatar">{userInitials}</div>
-            <div className="sidebar-user-info">
-              <div className="sidebar-username">{user.username}</div>
-              <div className="sidebar-email">{user.email}</div>
-            </div>
-          </div>
-          <button
-            className="sidebar-nav-link"
-            onClick={handleLogout}
-            style={{ color: 'var(--auth-error-text)' }}
-          >
-            <span className="sidebar-nav-icon">🚪</span>
-            <span className="sidebar-nav-label">Çıkış Yap</span>
-          </button>
-        </div>
-      </aside>
+      <Sidebar user={user} onLogout={handleLogout} />
 
       {/* ============ MAIN CONTENT ============ */}
       <main className="dashboard-main">
@@ -356,20 +257,20 @@ export default function Dashboard() {
         <div className="dashboard-topbar">
           <div className="dashboard-greeting">
             <h1>{getGreeting()}, {user.username}! 👋</h1>
-            <p>Papillon güvenlik panelinize hoş geldiniz</p>
+            <p>Welcome to your Papillon security dashboard</p>
           </div>
           <div className="topbar-actions">
             <button
               className="topbar-btn"
               onClick={toggleTheme}
-              title={theme === 'dark' ? 'Aydınlık Mod' : 'Karanlık Mod'}
+              title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
             >
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
             <button
               className="topbar-btn"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              title="Menü"
+              title="Menu"
               style={{ display: 'none' }}
             >
               ☰
@@ -382,37 +283,37 @@ export default function Dashboard() {
           <div className="stat-card blue">
             <div className="stat-card-header">
               <div className="stat-icon">🛡️</div>
-              <span className="stat-trend up">↑ Aktif</span>
+              <span className="stat-trend up">↑ Active</span>
             </div>
             <div className="stat-value">12</div>
-            <div className="stat-label">Güvenlik Modülü</div>
+            <div className="stat-label">Security Modules</div>
           </div>
           <div className="stat-card teal">
             <div className="stat-card-header">
               <div className="stat-icon">🔑</div>
             </div>
-            <div className="stat-value">{user.mfa_enabled ? 'Aktif' : 'Pasif'}</div>
-            <div className="stat-label">MFA Durumu</div>
+            <div className="stat-value">{user.mfa_enabled ? 'Active' : 'Inactive'}</div>
+            <div className="stat-label">MFA Status</div>
           </div>
           <div className="stat-card purple">
             <div className="stat-card-header">
               <div className="stat-icon">📧</div>
             </div>
-            <div className="stat-value">{outlookStatus?.is_connected ? 'Bağlı' : '—'}</div>
-            <div className="stat-label">Outlook Durumu</div>
+            <div className="stat-value">{outlookStatus?.is_connected ? 'Connected' : '—'}</div>
+            <div className="stat-label">Outlook Status</div>
           </div>
           <div className="stat-card orange">
             <div className="stat-card-header">
               <div className="stat-icon">📅</div>
             </div>
-            <div className="stat-value">{new Date(user.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</div>
-            <div className="stat-label">Kayıt Tarihi</div>
+            <div className="stat-value">{new Date(user.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</div>
+            <div className="stat-label">Registration Date</div>
           </div>
         </div>
 
         {/* Module Cards */}
         <div className="dashboard-modules">
-          <h2>Güvenlik Modülleri</h2>
+          <h2>Security Modules</h2>
           <div className="modules-grid">
             {moduleCards.map((mod, i) => (
               <div
@@ -429,7 +330,7 @@ export default function Dashboard() {
                 <div className="module-card-title">
                   {mod.title}
                   {mod.comingSoon
-                    ? <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,152,0,0.12)', color: '#ff9800' }}>Yakında</span>
+                    ? <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,152,0,0.12)', color: '#ff9800' }}>Coming Soon</span>
                     : <span className="module-arrow">→</span>
                   }
                 </div>
@@ -441,46 +342,46 @@ export default function Dashboard() {
 
         {/* Chart Placeholders */}
         <div className="dashboard-charts">
-          <h2>İzleme & Analiz</h2>
+          <h2>Monitoring & Analysis</h2>
           <div className="charts-grid">
-            <div className="chart-card clickable" onClick={() => navigate('/network-traffic')} style={{ cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } }}>
+            <div className="chart-card clickable" onClick={() => navigate('/network-traffic')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
               <div className="chart-card-header">
-                <span className="chart-card-title">Ağ Trafiği Analizi & IDS</span>
+                <span className="chart-card-title">Network Traffic Analysis & IDS</span>
                 <span style={{ fontSize: '0.8rem', color: '#4caf50', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span className="live-indicator"></span> Canlı Analiz
+                  <span className="live-indicator"></span> Live Analysis
                 </span>
               </div>
               <div className="chart-bars">
                 {generateBars(18, 130, 'bar-blue')}
               </div>
             </div>
-            <div className="chart-card clickable" onClick={() => navigate('/malware-analysis')} style={{ cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } }}>
+            <div className="chart-card clickable" onClick={() => navigate('/malware-analysis')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
               <div className="chart-card-header">
-                <span className="chart-card-title">Tehdit Tespitleri (Malware)</span>
-                <span className="chart-card-badge" style={{ background: 'rgba(211, 47, 47, 0.15)', color: '#f44336' }}>Kapsamlı Analiz</span>
+                <span className="chart-card-title">Threat Detection (Malware)</span>
+                <span className="chart-card-badge" style={{ background: 'rgba(211, 47, 47, 0.15)', color: '#f44336' }}>Comprehensive Analysis</span>
               </div>
               <div className="chart-bars">
                 {generateBars(18, 130, 'bar-teal')}
               </div>
             </div>
-            <div className="chart-card clickable" onClick={() => navigate('/vulnerability-map')} style={{ cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } }}>
+            <div className="chart-card clickable" onClick={() => navigate('/vulnerability-map')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
               <div className="chart-card-header">
-                <span className="chart-card-title">Zafiyet Haritası</span>
-                <span className="chart-card-badge" style={{ background: 'rgba(0, 198, 255, 0.15)', color: '#00c6ff' }}>Aktif İzleme</span>
+                <span className="chart-card-title">Vulnerability Map</span>
+                <span className="chart-card-badge" style={{ background: 'rgba(0, 198, 255, 0.15)', color: '#00c6ff' }}>Active Monitoring</span>
               </div>
               <div className="chart-placeholder" style={{ background: 'transparent', border: 'none' }}>
                 <span className="chart-placeholder-icon">🗺️</span>
-                <span className="chart-placeholder-text">Sistem topolojisini ve zafiyetleri görüntüle</span>
+                <span className="chart-placeholder-text">View system topology and vulnerabilities</span>
               </div>
             </div>
-            <div className="chart-card clickable" onClick={() => navigate('/phishing-history')} style={{ cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } }}>
+            <div className="chart-card clickable" onClick={() => navigate('/phishing-history')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
               <div className="chart-card-header">
-                <span className="chart-card-title">Phishing Alarm Geçmişi</span>
-                <span className="chart-card-badge" style={{ background: 'rgba(255, 152, 0, 0.15)', color: '#ff9800' }}>AI Yorumlu</span>
+                <span className="chart-card-title">Phishing Alert History</span>
+                <span className="chart-card-badge" style={{ background: 'rgba(255, 152, 0, 0.15)', color: '#ff9800' }}>AI Analyzed</span>
               </div>
               <div className="chart-placeholder" style={{ background: 'transparent', border: 'none' }}>
                 <span className="chart-placeholder-icon">🎣</span>
-                <span className="chart-placeholder-text">Geçmiş e-posta analizlerini görüntüle</span>
+                <span className="chart-placeholder-text">View past email analyses</span>
               </div>
             </div>
           </div>
@@ -490,16 +391,16 @@ export default function Dashboard() {
         <div className="outlook-section">
           <div className="outlook-header">
             <div className="outlook-title">
-              📧 Outlook Entegrasyonu
+              📧 Outlook Integration
               <span className={`outlook-status-badge ${outlookStatus?.is_connected ? 'connected' : 'disconnected'}`}>
-                {outlookStatus?.is_connected ? '● Bağlı' : '○ Bağlantısız'}
+                {outlookStatus?.is_connected ? '● Connected' : '○ Disconnected'}
               </span>
             </div>
           </div>
 
           {outlookStatus?.is_connected && outlookStatus.outlook_email && (
             <div className="mail-detail" style={{ marginBottom: '14px' }}>
-              Bağlı hesap: <strong>{outlookStatus.outlook_email}</strong>
+              Connected account: <strong>{outlookStatus.outlook_email}</strong>
             </div>
           )}
 
@@ -511,20 +412,20 @@ export default function Dashboard() {
                   onClick={fetchLatestMail}
                   disabled={loadingMail}
                 >
-                  {loadingMail ? '⏳ Yükleniyor...' : '📩 Son Maili Göster'}
+                  {loadingMail ? '⏳ Loading...' : '📩 Show Latest Mail'}
                 </button>
                 <button
                   className="outlook-action-btn"
                   onClick={() => navigate('/phishing-history')}
                   style={{ background: 'rgba(255, 152, 0, 0.2)', color: '#ff9800', border: '1px solid rgba(255, 152, 0, 0.4)' }}
                 >
-                  🎣 Phishing Geçmişi
+                  🎣 Phishing History
                 </button>
                 <button
                   className="outlook-action-btn disconnect"
                   onClick={handleDisconnectOutlook}
                 >
-                  ✕ Bağlantıyı Kes
+                  ✕ Disconnect
                 </button>
               </>
             ) : (
@@ -533,29 +434,29 @@ export default function Dashboard() {
                 onClick={handleConnectOutlook}
                 disabled={loadingOutlook}
               >
-                {loadingOutlook ? '⏳ Yönlendiriliyorsunuz...' : '🔗 Outlook\'u Bağla'}
+                {loadingOutlook ? '⏳ Redirecting...' : '🔗 Connect Outlook'}
               </button>
             )}
           </div>
 
           {latestMail && (
-            <div className="latest-mail-card clickable" onClick={() => setShowMailModal(true)} style={{ cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
+            <div className="latest-mail-card clickable" onClick={() => setShowMailModal(true)} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0 }}>📬 Son Mail</h4>
-                <span style={{ fontSize: '0.8rem', color: 'var(--auth-accent)' }}>Tıklayıp Görüntüle →</span>
+                <h4 style={{ margin: 0 }}>📬 Latest Mail</h4>
+                <span style={{ fontSize: '0.8rem', color: 'var(--auth-accent)' }}>Click to View →</span>
               </div>
               <div className="mail-detail">
-                <strong>Gönderen:</strong> {latestMail.from_name || latestMail.from}
+                <strong>From:</strong> {latestMail.from_name || latestMail.from}
               </div>
               <div className="mail-detail">
-                <strong>Konu:</strong> {latestMail.subject || '(Konu yok)'}
+                <strong>Subject:</strong> {latestMail.subject || '(No subject)'}
               </div>
               <div className="mail-detail">
-                <strong>Tarih:</strong> {new Date(latestMail.received_date).toLocaleString('tr-TR')}
+                <strong>Date:</strong> {new Date(latestMail.received_date).toLocaleString('en-US')}
               </div>
               <div className="mail-preview">
-                <strong>Önizleme:</strong><br />
-                {latestMail.preview || 'İçerik yok'}
+                <strong>Preview:</strong><br />
+                {latestMail.preview || 'No content'}
               </div>
             </div>
           )}
@@ -568,51 +469,51 @@ export default function Dashboard() {
       {showHelpModal && (
         <div className="modal-overlay" onClick={() => setShowHelpModal(false)}>
           <div className="modal-content wide" onClick={(e) => e.stopPropagation()}>
-            <h2>Client ID ve Secret Nasıl Alınır?</h2>
+            <h2>How to Get Client ID and Secret?</h2>
 
-            <h4>Adım 1: Azure Portal'a Girin</h4>
-            <p>Tarayıcınızda şu adresi açın: <strong>https://portal.azure.com</strong></p>
+            <h4>Step 1: Go to Azure Portal</h4>
+            <p>Open this address in your browser: <strong>https://portal.azure.com</strong></p>
             <div className="modal-code-block">
-              Microsoft hesabınız ile giriş yapın. Eğer hesabınız yoksa, Outlook hesabınızla oturum açabilirsiniz.
+              Sign in with your Microsoft account. If you don't have one, you can sign in with your Outlook account.
             </div>
 
-            <h4>Adım 2: "App registrations" Bulun</h4>
+            <h4>Step 2: Find "App registrations"</h4>
             <ol>
-              <li>Azure Portal'da arama çubuğundan <strong>"App registrations"</strong> yazıp arayın</li>
-              <li>Sol menüden <strong>"App registrations"</strong> seçeneğine tıklayın</li>
+              <li>Search for <strong>"App registrations"</strong> in the Azure Portal search bar</li>
+              <li>Click on <strong>"App registrations"</strong> from the left menu</li>
             </ol>
 
-            <h4>Adım 3: Yeni Uygulama Kaydedin</h4>
+            <h4>Step 3: Register a New Application</h4>
             <ol>
-              <li><strong>"+ New registration"</strong> butonuna tıklayın</li>
-              <li><strong>Name:</strong> alanına uygulamanızın adını yazın (örn: "Papillon Mail")</li>
-              <li><strong>Supported account types:</strong> kısmında <strong>"Accounts in any organizational directory and personal Microsoft accounts"</strong> seçin</li>
-              <li><strong>Redirect URI:</strong> alanında <strong>Web</strong> seçin</li>
-              <li>URI'ye şunu yazın: <strong>http://localhost:8000/outlook/callback</strong></li>
-              <li><strong>Register</strong> butonuna tıklayın</li>
+              <li>Click the <strong>"+ New registration"</strong> button</li>
+              <li><strong>Name:</strong> enter your application name (e.g., "Papillon Mail")</li>
+              <li><strong>Supported account types:</strong> select <strong>"Accounts in any organizational directory and personal Microsoft accounts"</strong></li>
+              <li><strong>Redirect URI:</strong> select <strong>Web</strong></li>
+              <li>Enter the URI: <strong>http://localhost:8000/outlook/callback</strong></li>
+              <li>Click the <strong>Register</strong> button</li>
             </ol>
 
-            <h4>Adım 4: Client ID'yi Kopyalayın</h4>
+            <h4>Step 4: Copy the Client ID</h4>
             <ol>
-              <li>Yeni oluşturulan uygulamanın detay sayfasında olacaksınız</li>
-              <li><strong>"Application (client) ID"</strong> etiketinin yanındaki kodu kopyalayın</li>
-              <li>O kodu <strong>"Client ID"</strong> alanına yapıştırın</li>
+              <li>You will be on the detail page of the newly created application</li>
+              <li>Copy the code next to the <strong>"Application (client) ID"</strong> label</li>
+              <li>Paste it into the <strong>"Client ID"</strong> field</li>
             </ol>
 
-            <h4>Adım 5: Client Secret'i Alın</h4>
+            <h4>Step 5: Get the Client Secret</h4>
             <ol>
-              <li>Sol menüde <strong>"Certificates & secrets"</strong> tıklayın</li>
-              <li><strong>"+ New client secret"</strong> butonuna tıklayın</li>
-              <li><strong>Expires</strong> olarak <strong>"24 months"</strong> seçin</li>
-              <li><strong>Add</strong> butonuna tıklayın</li>
-              <li>Oluşturulan secret'in <strong>"Value"</strong> sütunundaki kodu kopyalayın</li>
-              <li><strong>DİKKAT: Bu kodu bir yerde saklayın, tekrar erişilemez!</strong></li>
+              <li>Click <strong>"Certificates & secrets"</strong> in the left menu</li>
+              <li>Click the <strong>"+ New client secret"</strong> button</li>
+              <li>Select <strong>"24 months"</strong> for <strong>Expires</strong></li>
+              <li>Click the <strong>Add</strong> button</li>
+              <li>Copy the code in the <strong>"Value"</strong> column of the created secret</li>
+              <li><strong>CAUTION: Save this code somewhere, it cannot be accessed again!</strong></li>
             </ol>
 
-            <h4>Adım 6: İzinleri Ayarlayın (Opsiyonel)</h4>
+            <h4>Step 6: Set Permissions (Optional)</h4>
             <ol>
-              <li>Sol menüde <strong>"API permissions"</strong> tıklayın</li>
-              <li><strong>"Mail.Read"</strong> ve <strong>"User.Read"</strong> izinlerini kontrol edin</li>
+              <li>Click <strong>"API permissions"</strong> in the left menu</li>
+              <li>Check the <strong>"Mail.Read"</strong> and <strong>"User.Read"</strong> permissions</li>
             </ol>
 
             <button
@@ -620,7 +521,7 @@ export default function Dashboard() {
               onClick={() => setShowHelpModal(false)}
               style={{ marginTop: '20px' }}
             >
-              Anladım, Kapat
+              Got It, Close
             </button>
           </div>
         </div>
@@ -631,18 +532,18 @@ export default function Dashboard() {
         <div className="modal-overlay" onClick={() => setShowMailModal(false)}>
           <div className="modal-content wide" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
             <h2 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.5rem' }}>📧</span> E-posta Detayı
+              <span style={{ fontSize: '1.5rem' }}>📧</span> Email Details
             </h2>
             
             <div style={{ background: 'var(--auth-input-bg, rgba(10, 22, 40, 0.6))', padding: '16px', borderRadius: '12px', marginBottom: '20px', border: '1px solid var(--auth-glass-border)' }}>
               <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <strong>Kimden:</strong> {latestMail.from_name} ({latestMail.from})
+                <strong>From:</strong> {latestMail.from_name} ({latestMail.from})
               </div>
               <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <strong>Tarih:</strong> {new Date(latestMail.received_date).toLocaleString('tr-TR')}
+                <strong>Date:</strong> {new Date(latestMail.received_date).toLocaleString('en-US')}
               </div>
               <div>
-                <strong>Konu:</strong> <span style={{ color: 'var(--auth-text-primary)' }}>{latestMail.subject || '(Konu yok)'}</span>
+                <strong>Subject:</strong> <span style={{ color: 'var(--auth-text-primary)' }}>{latestMail.subject || '(No subject)'}</span>
               </div>
             </div>
 
@@ -657,22 +558,22 @@ export default function Dashboard() {
               border: '1px solid rgba(255,255,255,0.05)',
               marginBottom: '24px'
             }}>
-              {latestMail.body || latestMail.preview || 'Mail içeriği alınamadı.'}
+              {latestMail.body || latestMail.preview || 'Could not retrieve mail content.'}
             </div>
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button 
                 className="modal-btn" 
                 onClick={() => {
-                  alert("⚠️ AI Phishing Analiz modülü henüz backend tarafında bağlanmadı.");
+                  alert("⚠️ AI Phishing Analysis module is not yet connected on the backend.");
                   setShowMailModal(false);
                 }} 
                 style={{ background: 'rgba(244, 67, 54, 0.1)', color: '#ef5350', border: '1px solid rgba(244, 67, 54, 0.3)' }}
               >
-                🤖 Yapay Zeka Phishing Taraması Yap
+                🤖 Run AI Phishing Scan
               </button>
               <button className="modal-btn primary" onClick={() => setShowMailModal(false)}>
-                Kapat
+                Close
               </button>
             </div>
           </div>
@@ -684,11 +585,11 @@ export default function Dashboard() {
         <div className="modal-overlay" onClick={() => setShowClientIdModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0 }}>Outlook Bağlantısı</h3>
+              <h3 style={{ margin: 0 }}>Outlook Connection</h3>
               <button
                 className="topbar-btn"
                 onClick={handleShowHelp}
-                title="Nasıl alabilirim?"
+                title="How do I get these?"
                 style={{ width: '32px', height: '32px', fontSize: '14px', borderRadius: '50%' }}
               >
                 ?
@@ -701,7 +602,7 @@ export default function Dashboard() {
                 type="text"
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                placeholder="Azure'dan aldığınız Client ID"
+                placeholder="Your Client ID from Azure"
               />
             </div>
 
@@ -711,7 +612,7 @@ export default function Dashboard() {
                 type="password"
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
-                placeholder="Azure'dan aldığınız Client Secret"
+                placeholder="Your Client Secret from Azure"
               />
             </div>
 
@@ -721,14 +622,14 @@ export default function Dashboard() {
                 onClick={() => setShowClientIdModal(false)}
                 disabled={loadingOutlook}
               >
-                İptal
+                Cancel
               </button>
               <button
                 className="modal-btn primary"
                 onClick={handleSaveClientIdAndConnect}
                 disabled={loadingOutlook}
               >
-                {loadingOutlook ? 'Bağlanıyor...' : 'Bağlan'}
+                {loadingOutlook ? 'Connecting...' : 'Connect'}
               </button>
             </div>
           </div>

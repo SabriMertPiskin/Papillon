@@ -7,12 +7,10 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    // Update state so the next render will show the fallback UI.
     return { hasError: true };
   }
 
   componentDidCatch(error, errorInfo) {
-    // You can also log the error to an error reporting service
     console.error("ErrorBoundary caught an error:", error, errorInfo);
     this.setState({
       error: error,
@@ -22,7 +20,6 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      // Custom fallback UI
       return (
         <div style={{
           minHeight: '100vh',
@@ -44,9 +41,9 @@ class ErrorBoundary extends React.Component {
             maxWidth: '600px',
             boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
           }}>
-            <h1 style={{ color: '#ef5350', margin: '0 0 16px', fontSize: '2rem' }}>Beklenmeyen Bir Hata Oluştu</h1>
+            <h1 style={{ color: '#ef5350', margin: '0 0 16px', fontSize: '2rem' }}>An Unexpected Error Occurred</h1>
             <p style={{ color: 'var(--auth-text-secondary)', marginBottom: '24px' }}>
-              Uygulama çalışırken kritik bir hata meydana geldi. Bu durum geçici olabilir. Lütfen sayfayı yenilemeyi deneyin.
+              A critical error occurred while the application was running. This may be temporary. Please try refreshing the page.
             </p>
             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
               <button 
@@ -60,7 +57,7 @@ class ErrorBoundary extends React.Component {
                   cursor: 'pointer',
                   fontWeight: '600'
                 }}>
-                Sayfayı Yenile
+                Refresh Page
               </button>
               <button 
                 onClick={() => window.location.href = '/dashboard'}
@@ -73,12 +70,12 @@ class ErrorBoundary extends React.Component {
                   cursor: 'pointer',
                   fontWeight: '600'
                 }}>
-                Dashboard'a Dön
+                Back to Dashboard
               </button>
             </div>
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <details style={{ marginTop: '30px', textAlign: 'left', background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', overflowX: 'auto' }}>
-                <summary style={{ cursor: 'pointer', color: '#ef5350', fontWeight: 'bold' }}>Hata Detayları (Sadece Geliştirici Modu)</summary>
+                <summary style={{ cursor: 'pointer', color: '#ef5350', fontWeight: 'bold' }}>Error Details (Developer Mode Only)</summary>
                 <pre style={{ color: '#ff8a80', fontSize: '0.85rem', marginTop: '10px' }}>
                   {this.state.error.toString()}
                   <br />

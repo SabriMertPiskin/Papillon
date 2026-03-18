@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import DashboardLayout from '../components/DashboardLayout';
 import '../styles/Encryption.css';
 
 // SVG Icons
@@ -27,7 +28,6 @@ const IconCheck = () => (
 );
 
 export default function Encryption() {
-  // Theme sync
   useEffect(() => {
     const theme = localStorage.getItem('papillon-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
@@ -40,7 +40,6 @@ export default function Encryption() {
   const [error, setError] = useState(null);
   const [copySuccess, setCopySuccess] = useState('');
 
-  // Decryption states
   const [decryptAlgorithm, setDecryptAlgorithm] = useState('AES-256-GCM');
   const [ciphertext, setCiphertext] = useState('');
   const [decryptKey, setDecryptKey] = useState('');
@@ -60,19 +59,19 @@ export default function Encryption() {
   }, [navigate]);
 
   const algorithmDescriptions = {
-    'AES-256-GCM': 'Simetrik şifreleme. Aynı anahtarla şifrelenir ve çözülür. Hızlı ve güvenli.',
-    'RSA-2048': 'Asimetrik şifreleme. Public key ile şifreleme, Private key ile şifre çözme.',
-    'MD5': 'Hash fonksiyonu. DEPRECATED! Sadece referans için.',
-    'SHA-1': 'Hash fonksiyonu. DEPRECATED! Sadece referans için.',
-    'SHA-256': 'Gelişmiş Hash fonksiyonu. Bütünlük doğrulaması için güvenli.',
-    'SHA-512': 'En güvenli Hash algoritması. Uzun veri blogları için ideal.',
-    'Base64': 'Sadece kodlama (Encoding). Gizlilik sağlamaz, veri transferi içindir.'
+    'AES-256-GCM': 'Symmetric encryption. Encrypted and decrypted with the same key. Fast and secure.',
+    'RSA-2048': 'Asymmetric encryption. Encrypt with public key, decrypt with private key.',
+    'MD5': 'Hash function. DEPRECATED! For reference only.',
+    'SHA-1': 'Hash function. DEPRECATED! For reference only.',
+    'SHA-256': 'Advanced hash function. Secure for integrity verification.',
+    'SHA-512': 'Most secure hash algorithm. Ideal for long data blocks.',
+    'Base64': 'Encoding only. Does not provide confidentiality, used for data transfer.'
   };
 
   const handleEncrypt = async (e) => {
     e.preventDefault();
     if (!plaintext.trim()) {
-      setError('Lütfen işlenecek metni girin.');
+      setError('Please enter the text to process.');
       return;
     }
     setLoading(true);
@@ -91,7 +90,7 @@ export default function Encryption() {
         setError(response.data.detail);
       }
     } catch (err) {
-      setError('İşlem sırasında sunucu hatası oluştu.');
+      setError('A server error occurred during the operation.');
       console.error('Error:', err);
     } finally {
       setLoading(false);
@@ -101,17 +100,17 @@ export default function Encryption() {
   const handleDecrypt = async (e) => {
     e.preventDefault();
     if (!ciphertext.trim()) {
-      setDecryptError('Lütfen çözülecek şifreli metni girin.');
+      setDecryptError('Please enter the encrypted text to decrypt.');
       return;
     }
 
     if (decryptAlgorithm === 'AES-256-GCM' && (!decryptKey.trim() || !decryptNonce.trim())) {
-      setDecryptError('AES-256-GCM çözümü için Key ve Nonce gereklidir.');
+      setDecryptError('Key and Nonce are required for AES-256-GCM decryption.');
       return;
     }
 
     if (decryptAlgorithm === 'RSA-2048' && !decryptPrivateKey.trim()) {
-      setDecryptError('RSA-2048 çözümü için Private Key gereklidir.');
+      setDecryptError('Private Key is required for RSA-2048 decryption.');
       return;
     }
 
@@ -142,7 +141,7 @@ export default function Encryption() {
         setDecryptError(response.data.detail);
       }
     } catch (err) {
-      setDecryptError('Şifre çözme başarısız oldu. Girdiğiniz verileri kontrol edin.');
+      setDecryptError('Decryption failed. Please check your input data.');
       console.error('Error:', err);
     } finally {
       setDecryptLoading(false);
@@ -156,279 +155,275 @@ export default function Encryption() {
   };
 
   return (
-    <div className="encryption-layout">
-      {/* Header */}
-      <div className="encryption-header">
-        <div className="header-title-group">
-          <div className="header-icon">🔐</div>
-          <div className="header-title">
-            <h1>Metin Şifreleme</h1>
-            <p>AES, RSA ve Hash algoritmaları ile güvenli veri manipülasyonu</p>
+    <DashboardLayout>
+      <div className="encryption-layout">
+        <div className="encryption-header">
+          <div className="header-title-group">
+            <div className="header-icon">🔐</div>
+            <div className="header-title">
+              <h1>Text Encryption</h1>
+              <p>Secure data manipulation with AES, RSA and Hash algorithms</p>
+            </div>
           </div>
         </div>
-        <button onClick={() => navigate('/dashboard')} className="back-btn">
-          <span>←</span> Dashboard'a Dön
-        </button>
-      </div>
 
-      <div className="encryption-grid">
-        {/* ================= ENCRYPT CARD ================= */}
-        <div className="crypto-card encrypt-card">
-          <h2 className="card-title encrypt-title">
-            <span style={{fontSize: '1.5rem'}}>🔒</span> Şifrele & Hash
-          </h2>
-          
-          {error && (
-            <div className="error-message">
-              <IconAlert /> {error}
-            </div>
-          )}
-
-          <form onSubmit={handleEncrypt} className="crypto-form">
-            <div className="form-group">
-              <label>İşlenecek Metin</label>
-              <textarea
-                className="crypto-input"
-                value={plaintext}
-                onChange={(e) => setPlaintext(e.target.value)}
-                placeholder="Örn: Gizli askeri kordinatlar veya şifreler..."
-                rows={4}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Güvenlik Algoritması</label>
-              <select 
-                className="crypto-input"
-                value={algorithm} 
-                onChange={(e) => setAlgorithm(e.target.value)}
-              >
-                <optgroup label="Şifreleme (Encryption)">
-                  <option value="AES-256-GCM">AES-256-GCM (Simetrik - Önerilen)</option>
-                  <option value="RSA-2048">RSA-2048 (Asimetrik)</option>
-                </optgroup>
-                <optgroup label="Özet Alma (Hashing)">
-                  <option value="SHA-256">SHA-256 (Güvenli Hash)</option>
-                  <option value="SHA-512">SHA-512 (Ultra Güvenli Hash)</option>
-                  <option value="SHA-1">SHA-1 (Zayıf Hash)</option>
-                  <option value="MD5">MD5 (Kırılmış Hash)</option>
-                </optgroup>
-                <optgroup label="Kodlama (Encoding)">
-                  <option value="Base64">Base64 (Şifreleme Değildir)</option>
-                </optgroup>
-              </select>
-            </div>
-
-            <div className="algorithm-info">
-              {algorithmDescriptions[algorithm]}
-            </div>
-
-            <button type="submit" disabled={loading} className="action-btn encrypt">
-              {loading ? 'İşleniyor...' : 'Kriptola'}
-            </button>
-          </form>
-
-          {/* Encrypt Result Area */}
-          {result && (
-            <div className="result-container">
-              <h4>İşlem Sonucu <span style={{fontSize: '0.8rem', opacity: 0.6}}>({result.algorithm})</span></h4>
-              
-              {result.note && (
-                <div className="result-note">
-                  <IconCheck /> {result.note}
-                </div>
-              )}
-
-              {result.algorithm === 'AES-256-GCM' && (
-                <>
-                  <div className="result-item">
-                    <label>Şifreli Metin (Ciphertext)</label>
-                    <div className="result-box">
-                      <code>{result.encrypted.ciphertext}</code>
-                      <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.ciphertext, 'aes-cipher')} title="Kopyala">
-                        {copySuccess === 'aes-cipher' ? <IconCheck /> : <IconCopy />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="result-item">
-                    <label>Key (Gizli Anahtar - 256 bit)</label>
-                    <div className="result-box">
-                      <code>{result.encrypted.key}</code>
-                      <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.key, 'aes-key')} title="Kopyala">
-                        {copySuccess === 'aes-key' ? <IconCheck /> : <IconCopy />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="result-item">
-                    <label>Nonce (Initialization Vector - 96 bit)</label>
-                    <div className="result-box">
-                      <code>{result.encrypted.nonce}</code>
-                      <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.nonce, 'aes-nonce')} title="Kopyala">
-                        {copySuccess === 'aes-nonce' ? <IconCheck /> : <IconCopy />}
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {result.algorithm === 'RSA-2048' && (
-                <>
-                  <div className="result-item">
-                    <label>Şifreli Metin (Ciphertext)</label>
-                    <div className="result-box">
-                      <code>{result.encrypted.ciphertext}</code>
-                      <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.ciphertext, 'rsa-cipher')} title="Kopyala">
-                        {copySuccess === 'rsa-cipher' ? <IconCheck /> : <IconCopy />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="result-item">
-                    <label>Public Key (Açık Anahtar)</label>
-                    <div className="result-box">
-                      <pre>{result.encrypted.public_key}</pre>
-                      <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.public_key, 'rsa-pub')} title="Kopyala">
-                        {copySuccess === 'rsa-pub' ? <IconCheck /> : <IconCopy />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="result-item">
-                    <label style={{color: '#ff5252'}}>Private Key (Gizli Anahtar - KİMSE İLE PAYLAŞMAYIN)</label>
-                    <div className="result-box">
-                      <pre className="private-key">{result.encrypted.private_key}</pre>
-                      <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.private_key, 'rsa-priv')} title="Kopyala">
-                        {copySuccess === 'rsa-priv' ? <IconCheck /> : <IconCopy />}
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {['MD5', 'SHA-1', 'SHA-256', 'SHA-512', 'Base64'].includes(result.algorithm) && (
-                <div className="result-item">
-                  <label>{result.algorithm === 'Base64' ? 'Base64 Çıktısı' : 'Hash Çıktısı (Digest)'}</label>
-                  <div className="result-box">
-                    <code>{result.encrypted.hash || result.encrypted.encoded}</code>
-                    <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.hash || result.encrypted.encoded, 'hash-out')} title="Kopyala">
-                      {copySuccess === 'hash-out' ? <IconCheck /> : <IconCopy />}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ================= DECRYPT CARD ================= */}
-        <div className="crypto-card decrypt-card">
-          <h2 className="card-title decrypt-title">
-            <span style={{fontSize: '1.5rem'}}>🔓</span> Şifre Çöz & Decode
-          </h2>
-          
-          {decryptError && (
-            <div className="error-message">
-              <IconAlert /> {decryptError}
-            </div>
-          )}
-
-          <form onSubmit={handleDecrypt} className="crypto-form">
-            <div className="form-group">
-              <label>Algoritma Tipi</label>
-              <select 
-                className="crypto-input"
-                value={decryptAlgorithm} 
-                onChange={(e) => setDecryptAlgorithm(e.target.value)}
-              >
-                <option value="AES-256-GCM">AES-256-GCM (Simetrik Çözümleme)</option>
-                <option value="RSA-2048">RSA-2048 (Asimetrik Çözümleme)</option>
-                <option value="Base64">Base64 (Decode)</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Şifreli / Kodlu Metin</label>
-              <textarea
-                className="crypto-input"
-                value={ciphertext}
-                onChange={(e) => setCiphertext(e.target.value)}
-                placeholder="Örn: U2FsdGVkX1+... veya Base64 formatında metin"
-                rows={3}
-              />
-            </div>
-
-            {decryptAlgorithm === 'AES-256-GCM' && (
-              <>
-                <div className="form-group">
-                  <label>Gizli Anahtar (Key) - Base64 Formatında</label>
-                  <textarea
-                    className="crypto-input"
-                    value={decryptKey}
-                    onChange={(e) => setDecryptKey(e.target.value)}
-                    placeholder="Şifreleme sırasında oluşturulan Key değerini girin"
-                    rows={2}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Nonce (IV) - Base64 Formatında</label>
-                  <textarea
-                    className="crypto-input"
-                    value={decryptNonce}
-                    onChange={(e) => setDecryptNonce(e.target.value)}
-                    placeholder="Şifreleme sırasında oluşturulan Nonce değerini girin"
-                    rows={2}
-                  />
-                </div>
-              </>
+        <div className="encryption-grid">
+          {/* ENCRYPT CARD */}
+          <div className="crypto-card encrypt-card">
+            <h2 className="card-title encrypt-title">
+              <span style={{fontSize: '1.5rem'}}>🔒</span> Encrypt & Hash
+            </h2>
+            
+            {error && (
+              <div className="error-message">
+                <IconAlert /> {error}
+              </div>
             )}
 
-            {decryptAlgorithm === 'RSA-2048' && (
+            <form onSubmit={handleEncrypt} className="crypto-form">
               <div className="form-group">
-                <label>Gizli Anahtar (Private Key) - PEM Formatında</label>
+                <label>Text to Process</label>
                 <textarea
                   className="crypto-input"
-                  style={{fontFamily: 'monospace', fontSize: '0.8rem'}}
-                  value={decryptPrivateKey}
-                  onChange={(e) => setDecryptPrivateKey(e.target.value)}
-                  placeholder="-----BEGIN RSA PRIVATE KEY-----..."
+                  value={plaintext}
+                  onChange={(e) => setPlaintext(e.target.value)}
+                  placeholder="e.g., Secret military coordinates or passwords..."
                   rows={4}
                 />
               </div>
+
+              <div className="form-group">
+                <label>Security Algorithm</label>
+                <select 
+                  className="crypto-input"
+                  value={algorithm} 
+                  onChange={(e) => setAlgorithm(e.target.value)}
+                >
+                  <optgroup label="Encryption">
+                    <option value="AES-256-GCM">AES-256-GCM (Symmetric - Recommended)</option>
+                    <option value="RSA-2048">RSA-2048 (Asymmetric)</option>
+                  </optgroup>
+                  <optgroup label="Hashing">
+                    <option value="SHA-256">SHA-256 (Secure Hash)</option>
+                    <option value="SHA-512">SHA-512 (Ultra Secure Hash)</option>
+                    <option value="SHA-1">SHA-1 (Weak Hash)</option>
+                    <option value="MD5">MD5 (Broken Hash)</option>
+                  </optgroup>
+                  <optgroup label="Encoding">
+                    <option value="Base64">Base64 (Not Encryption)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div className="algorithm-info">
+                {algorithmDescriptions[algorithm]}
+              </div>
+
+              <button type="submit" disabled={loading} className="action-btn encrypt">
+                {loading ? 'Processing...' : 'Encrypt'}
+              </button>
+            </form>
+
+            {result && (
+              <div className="result-container">
+                <h4>Result <span style={{fontSize: '0.8rem', opacity: 0.6}}>({result.algorithm})</span></h4>
+                
+                {result.note && (
+                  <div className="result-note">
+                    <IconCheck /> {result.note}
+                  </div>
+                )}
+
+                {result.algorithm === 'AES-256-GCM' && (
+                  <>
+                    <div className="result-item">
+                      <label>Ciphertext</label>
+                      <div className="result-box">
+                        <code>{result.encrypted.ciphertext}</code>
+                        <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.ciphertext, 'aes-cipher')} title="Copy">
+                          {copySuccess === 'aes-cipher' ? <IconCheck /> : <IconCopy />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="result-item">
+                      <label>Key (Secret Key - 256 bit)</label>
+                      <div className="result-box">
+                        <code>{result.encrypted.key}</code>
+                        <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.key, 'aes-key')} title="Copy">
+                          {copySuccess === 'aes-key' ? <IconCheck /> : <IconCopy />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="result-item">
+                      <label>Nonce (Initialization Vector - 96 bit)</label>
+                      <div className="result-box">
+                        <code>{result.encrypted.nonce}</code>
+                        <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.nonce, 'aes-nonce')} title="Copy">
+                          {copySuccess === 'aes-nonce' ? <IconCheck /> : <IconCopy />}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {result.algorithm === 'RSA-2048' && (
+                  <>
+                    <div className="result-item">
+                      <label>Ciphertext</label>
+                      <div className="result-box">
+                        <code>{result.encrypted.ciphertext}</code>
+                        <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.ciphertext, 'rsa-cipher')} title="Copy">
+                          {copySuccess === 'rsa-cipher' ? <IconCheck /> : <IconCopy />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="result-item">
+                      <label>Public Key</label>
+                      <div className="result-box">
+                        <pre>{result.encrypted.public_key}</pre>
+                        <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.public_key, 'rsa-pub')} title="Copy">
+                          {copySuccess === 'rsa-pub' ? <IconCheck /> : <IconCopy />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="result-item">
+                      <label style={{color: '#ff5252'}}>Private Key (DO NOT SHARE WITH ANYONE)</label>
+                      <div className="result-box">
+                        <pre className="private-key">{result.encrypted.private_key}</pre>
+                        <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.private_key, 'rsa-priv')} title="Copy">
+                          {copySuccess === 'rsa-priv' ? <IconCheck /> : <IconCopy />}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {['MD5', 'SHA-1', 'SHA-256', 'SHA-512', 'Base64'].includes(result.algorithm) && (
+                  <div className="result-item">
+                    <label>{result.algorithm === 'Base64' ? 'Base64 Output' : 'Hash Output (Digest)'}</label>
+                    <div className="result-box">
+                      <code>{result.encrypted.hash || result.encrypted.encoded}</code>
+                      <button className="copy-btn" onClick={() => copyToClipboard(result.encrypted.hash || result.encrypted.encoded, 'hash-out')} title="Copy">
+                        {copySuccess === 'hash-out' ? <IconCheck /> : <IconCopy />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* DECRYPT CARD */}
+          <div className="crypto-card decrypt-card">
+            <h2 className="card-title decrypt-title">
+              <span style={{fontSize: '1.5rem'}}>🔓</span> Decrypt & Decode
+            </h2>
+            
+            {decryptError && (
+              <div className="error-message">
+                <IconAlert /> {decryptError}
+              </div>
             )}
 
-            <div className="algorithm-info" style={{background: 'rgba(124, 77, 255, 0.1)', borderLeftColor: '#b388ff'}}>
-              {decryptAlgorithm === 'AES-256-GCM' && 'Şifreyi çözebilmek için orijinal Key ve Nonce değerlerinin tam olarak uyuşması şarttır.'}
-              {decryptAlgorithm === 'RSA-2048' && 'Metin Public Key ile şifrelendiyse, sadece ona ait olan Private Key kullanılarak çözülebilir.'}
-              {decryptAlgorithm === 'Base64' && 'Düz metne çevirmek için geri dönüştürür. Ekstra bilgi gerekmez.'}
-            </div>
+            <form onSubmit={handleDecrypt} className="crypto-form">
+              <div className="form-group">
+                <label>Algorithm Type</label>
+                <select 
+                  className="crypto-input"
+                  value={decryptAlgorithm} 
+                  onChange={(e) => setDecryptAlgorithm(e.target.value)}
+                >
+                  <option value="AES-256-GCM">AES-256-GCM (Symmetric Decryption)</option>
+                  <option value="RSA-2048">RSA-2048 (Asymmetric Decryption)</option>
+                  <option value="Base64">Base64 (Decode)</option>
+                </select>
+              </div>
 
-            <button type="submit" disabled={decryptLoading} className="action-btn decrypt">
-              {decryptLoading ? 'Çözülüyor...' : 'Şifreyi Çöz'}
-            </button>
-          </form>
+              <div className="form-group">
+                <label>Encrypted / Encoded Text</label>
+                <textarea
+                  className="crypto-input"
+                  value={ciphertext}
+                  onChange={(e) => setCiphertext(e.target.value)}
+                  placeholder="e.g., U2FsdGVkX1+... or Base64 formatted text"
+                  rows={3}
+                />
+              </div>
 
-          {/* Decrypt Result Area */}
-          {decryptResult && (
-            <div className="result-container">
-              <h4>Çözümleme Sonucu <span style={{fontSize: '0.8rem', opacity: 0.6}}>({decryptResult.algorithm})</span></h4>
-              
-              {decryptResult.note && (
-                <div className="result-note">
-                  <IconCheck /> {decryptResult.note}
+              {decryptAlgorithm === 'AES-256-GCM' && (
+                <>
+                  <div className="form-group">
+                    <label>Secret Key - Base64 Format</label>
+                    <textarea
+                      className="crypto-input"
+                      value={decryptKey}
+                      onChange={(e) => setDecryptKey(e.target.value)}
+                      placeholder="Enter the Key value generated during encryption"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Nonce (IV) - Base64 Format</label>
+                    <textarea
+                      className="crypto-input"
+                      value={decryptNonce}
+                      onChange={(e) => setDecryptNonce(e.target.value)}
+                      placeholder="Enter the Nonce value generated during encryption"
+                      rows={2}
+                    />
+                  </div>
+                </>
+              )}
+
+              {decryptAlgorithm === 'RSA-2048' && (
+                <div className="form-group">
+                  <label>Private Key - PEM Format</label>
+                  <textarea
+                    className="crypto-input"
+                    style={{fontFamily: 'monospace', fontSize: '0.8rem'}}
+                    value={decryptPrivateKey}
+                    onChange={(e) => setDecryptPrivateKey(e.target.value)}
+                    placeholder="-----BEGIN RSA PRIVATE KEY-----..."
+                    rows={4}
+                  />
                 </div>
               )}
 
-              <div className="result-item">
-                <label>Orijinal / Çözülen Metin</label>
-                <div className="result-box" style={{borderColor: '#b388ff'}}>
-                  <code>{decryptResult.decrypted}</code>
-                  <button className="copy-btn" onClick={() => copyToClipboard(decryptResult.decrypted, 'decrypted-out')} title="Kopyala">
-                    {copySuccess === 'decrypted-out' ? <IconCheck /> : <IconCopy />}
-                  </button>
+              <div className="algorithm-info" style={{background: 'rgba(124, 77, 255, 0.1)', borderLeftColor: '#b388ff'}}>
+                {decryptAlgorithm === 'AES-256-GCM' && 'The original Key and Nonce values must match exactly to decrypt.'}
+                {decryptAlgorithm === 'RSA-2048' && 'If text was encrypted with a public key, it can only be decrypted with the corresponding private key.'}
+                {decryptAlgorithm === 'Base64' && 'Converts back to plain text. No additional information needed.'}
+              </div>
+
+              <button type="submit" disabled={decryptLoading} className="action-btn decrypt">
+                {decryptLoading ? 'Decrypting...' : 'Decrypt'}
+              </button>
+            </form>
+
+            {decryptResult && (
+              <div className="result-container">
+                <h4>Decryption Result <span style={{fontSize: '0.8rem', opacity: 0.6}}>({decryptResult.algorithm})</span></h4>
+                
+                {decryptResult.note && (
+                  <div className="result-note">
+                    <IconCheck /> {decryptResult.note}
+                  </div>
+                )}
+
+                <div className="result-item">
+                  <label>Original / Decrypted Text</label>
+                  <div className="result-box" style={{borderColor: '#b388ff'}}>
+                    <code>{decryptResult.decrypted}</code>
+                    <button className="copy-btn" onClick={() => copyToClipboard(decryptResult.decrypted, 'decrypted-out')} title="Copy">
+                      {copySuccess === 'decrypted-out' ? <IconCheck /> : <IconCopy />}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

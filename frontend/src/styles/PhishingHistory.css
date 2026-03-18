@@ -42,7 +42,7 @@
 }
 
 .p-stat-box {
-  background: var(--auth-form-bg, rgba(16, 28, 48, 0.8));
+  background: var(--auth-form-bg);
   border: 1px solid var(--auth-glass-border);
   padding: 10px 20px;
   border-radius: 12px;
@@ -73,10 +73,10 @@
   display: flex;
   gap: 15px;
   margin-bottom: 25px;
-  background: rgba(0,0,0,0.2);
+  background: var(--auth-card-inset);
   padding: 15px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid var(--auth-subtle-border);
 }
 
 .filter-input {
@@ -115,7 +115,7 @@
 
 /* Individual Card */
 .phishing-card {
-  background: var(--auth-form-bg, rgba(16, 28, 48, 0.8));
+  background: var(--auth-form-bg);
   border: 1px solid var(--auth-glass-border);
   border-radius: 12px;
   padding: 20px;
@@ -152,11 +152,11 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background: rgba(0,0,0,0.2);
+  background: var(--auth-card-inset);
   width: 70px;
   height: 70px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.05);
+  border: 2px solid var(--auth-subtle-border);
 }
 
 .p-score-val {
@@ -258,7 +258,7 @@
 
 /* Detail Modal Styles (Overrides Default Modal) */
 .phishing-modal-header {
-  border-bottom: 2px solid rgba(255,255,255,0.05);
+  border-bottom: 2px solid var(--auth-subtle-border);
   padding-bottom: 15px;
   margin-bottom: 20px;
 }
@@ -331,7 +331,7 @@
     align-items: flex-start;
     flex-direction: row;
     justify-content: space-between;
-    border-top: 1px solid rgba(255,255,255,0.05);
+    border-top: 1px solid var(--auth-subtle-border);
     padding-top: 15px;
   }
 }

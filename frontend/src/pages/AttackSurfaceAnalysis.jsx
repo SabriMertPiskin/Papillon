@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import DashboardLayout from '../components/DashboardLayout';
 import '../styles/AttackSurface.css';
 
 // --- Icons ---
@@ -30,7 +31,6 @@ const IconDownload = () => (
   </svg>
 );
 
-// Menu Icons
 const iconsMap = {
   dns: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>,
   subdomain: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>,
@@ -43,31 +43,21 @@ const iconsMap = {
   ip: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
 };
 
-// Accordion (Premium UI)
 function AccordionSection({ title, count, icon, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
-
   return (
     <div className="accordion-wrapper">
       <button className="accordion-header" onClick={() => setOpen(!open)}>
         <div className="accordion-title-group">
           <div className="accordion-icon">{icon}</div>
           <span className="accordion-title">{title}</span>
-          {count !== undefined && count > 0 && (
-            <span className="accordion-badge">{count}</span>
-          )}
+          {count !== undefined && count > 0 && (<span className="accordion-badge">{count}</span>)}
         </div>
         <div className="accordion-arrow" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
       </button>
-      {open && (
-        <div className="accordion-body">
-          {children}
-        </div>
-      )}
+      {open && (<div className="accordion-body">{children}</div>)}
     </div>
   );
 }
@@ -82,43 +72,22 @@ export default function AttackSurfaceAnalysis() {
 
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    if (!isAuthenticated) {
-      navigate('/login');
-    }
-    
-    // Theme sync
+    if (!isAuthenticated) { navigate('/login'); }
     const theme = localStorage.getItem('papillon-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
   }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!domain.trim()) {
-      setError('Lütfen tarama için bir domain girin.');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    setResults(null);
-
+    if (!domain.trim()) { setError('Please enter a domain to scan.'); return; }
+    setLoading(true); setError(''); setResults(null);
     try {
-      const response = await axios.post('http://localhost:8000/attack-surface/scan/', {
-        domain: domain.trim()
-      }, {
-        withCredentials: true
-      });
-
-      if (response.data.success) {
-        setResults(response.data.results);
-      } else {
-        setError(response.data.detail || 'Tarama başarısız oldu.');
-      }
+      const response = await axios.post('http://localhost:8000/attack-surface/scan/', { domain: domain.trim() }, { withCredentials: true });
+      if (response.data.success) { setResults(response.data.results); }
+      else { setError(response.data.detail || 'Scan failed.'); }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Tarama sırasında sunucu hatası oluştu.');
-    } finally {
-      setLoading(false);
-    }
+      setError(err.response?.data?.detail || 'A server error occurred during the scan.');
+    } finally { setLoading(false); }
   };
 
   const renderValue = (v) => {
@@ -127,253 +96,66 @@ export default function AttackSurfaceAnalysis() {
     return String(v);
   };
 
-  // --- PDF Export Logic with Turkish Character Support ---
-  const setTurkishFont = (pdf, style = 'normal') => {
-    // Use Courier font which has better Unicode support for Turkish characters
-    pdf.setFont('courier', style);
-  };
-
   const addSectionTitle = (pdf, title, yPosition, pageHeight) => {
-    if (yPosition > pageHeight - 40) {
-      pdf.addPage();
-      return 20;
-    }
-    pdf.setFontSize(12);
-    setTurkishFont(pdf, 'bold');
-    pdf.text(title, 15, yPosition);
-    setTurkishFont(pdf, 'normal');
+    if (yPosition > pageHeight - 40) { pdf.addPage(); return 20; }
+    pdf.setFontSize(12); pdf.setFont(undefined, 'bold'); pdf.text(title, 15, yPosition); pdf.setFont(undefined, 'normal');
     return yPosition + 8;
   };
 
   const checkPageBreak = (yPosition, pageHeight) => {
-    if (yPosition > pageHeight - 30) {
-      return { needsBreak: true, newY: 20 };
-    }
+    if (yPosition > pageHeight - 30) return { needsBreak: true, newY: 20 };
     return { needsBreak: false, newY: yPosition };
   };
 
   const exportPDF = () => {
     if (!results) return;
-
     setExporting(true);
     try {
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageHeight = pdf.internal.pageSize.getHeight();
       let yPosition = 20;
-
-      // Title
-      pdf.setFontSize(18);
-      setTurkishFont(pdf, 'bold');
+      pdf.setFontSize(18); pdf.setFont(undefined, 'bold');
       pdf.text('Attack Surface Analysis Report', 15, yPosition);
-      setTurkishFont(pdf, 'normal');
-      yPosition += 15;
+      pdf.setFont(undefined, 'normal'); yPosition += 15;
 
-      // Basic Info - Domain and IP
-      const basicData = [
-        ['Domain', results.domain || '—'],
-        ['IP Address', results.ip || '—'],
-        ['Scan Date', new Date().toLocaleString()]
-      ];
-      
-      pdf.autoTable({
-        startY: yPosition,
-        head: [['Information', 'Value']],
-        body: basicData,
-        theme: 'grid',
-        headStyles: { fillColor: [30, 136, 229], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
-        bodyStyles: { textColor: [40, 40, 40], fontSize: 10, font: 'courier' },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        margin: { left: 15, right: 15 },
-        didDrawPage: (data) => {
-          yPosition = pdf.lastAutoTable.finalY + 12;
-        }
-      });
+      const basicData = [['Domain', results.domain || '—'], ['IP Address', results.ip || '—'], ['Scan Date', new Date().toLocaleString()]];
+      pdf.autoTable({ startY: yPosition, head: [['Info', 'Value']], body: basicData, theme: 'grid', headStyles: { fillColor: [30, 136, 229], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 10 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
       yPosition = pdf.lastAutoTable.finalY + 12;
 
-      // DNS Records
       if (results.dns_records && Object.keys(results.dns_records).length > 0) {
-        const check = checkPageBreak(yPosition, pageHeight);
-        if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
+        const check = checkPageBreak(yPosition, pageHeight); if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
         yPosition = addSectionTitle(pdf, 'DNS Records', yPosition, pageHeight);
-        
         const dnsData = [];
         if (typeof results.dns_records === 'object' && !Array.isArray(results.dns_records)) {
           Object.entries(results.dns_records).forEach(([type, records]) => {
-            if (Array.isArray(records)) {
-              records.forEach(record => dnsData.push([type, String(record).substring(0, 70)]));
-            } else if (typeof records === 'object') {
-              dnsData.push([type, JSON.stringify(records).substring(0, 70)]);
-            } else {
-              dnsData.push([type, String(records).substring(0, 70)]);
-            }
+            if (Array.isArray(records)) { records.forEach(record => dnsData.push([type, String(record).substring(0, 70)])); }
+            else if (typeof records === 'object') { dnsData.push([type, JSON.stringify(records).substring(0, 70)]); }
+            else { dnsData.push([type, String(records).substring(0, 70)]); }
           });
         }
         if (dnsData.length > 0) {
-          pdf.autoTable({
-            startY: yPosition, head: [['Type', 'Value']], body: dnsData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] },
-            margin: { left: 15, right: 15 }, columnStyles: { 1: { cellWidth: 'auto' } }
-          });
+          pdf.autoTable({ startY: yPosition, head: [['Type', 'Value']], body: dnsData, theme: 'grid', headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
           yPosition = pdf.lastAutoTable.finalY + 10;
         }
       }
 
-      // Subdomains
       if (results.subdomains && Array.isArray(results.subdomains) && results.subdomains.length > 0) {
-        const check = checkPageBreak(yPosition, pageHeight);
-        if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'Discovered Subdomains', yPosition, pageHeight);
-        const subdomainData = results.subdomains.filter(s => !s.error).map(s => {
-          const subdomain = typeof s === 'object' ? (s.subdomain || JSON.stringify(s).substring(0, 80)) : String(s).substring(0, 90);
-          return [String(subdomain).substring(0, 90)];
-        });
+        const check = checkPageBreak(yPosition, pageHeight); if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
+        yPosition = addSectionTitle(pdf, 'Detected Subdomains', yPosition, pageHeight);
+        const subdomainData = results.subdomains.filter(s => !s.error).map(s => [String(s).substring(0, 90)]);
         if (subdomainData.length > 0) {
-          pdf.autoTable({
-            startY: yPosition, head: [['Subdomain']], body: subdomainData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
-          });
+          pdf.autoTable({ startY: yPosition, head: [['Subdomain']], body: subdomainData, theme: 'grid', headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
           yPosition = pdf.lastAutoTable.finalY + 10;
         }
       }
 
-      // Open Ports - Only create table if there's actual port data
-      const validPorts = results.open_ports?.filter(p => p && !p.error && p.port) || [];
-      if (validPorts.length > 0) {
-        const check = checkPageBreak(yPosition, pageHeight);
-        if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
+      if (results.open_ports && Array.isArray(results.open_ports) && results.open_ports.length > 0) {
+        const check = checkPageBreak(yPosition, pageHeight); if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
         yPosition = addSectionTitle(pdf, 'Open Ports', yPosition, pageHeight);
-        const portData = validPorts.map(p => [String(p.port || '—'), String(p.service || '—')]);
-        pdf.autoTable({
-          startY: yPosition, head: [['Port', 'Service']], body: portData, theme: 'grid',
-          headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
-          bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
-        });
-        yPosition = pdf.lastAutoTable.finalY + 10;
-      }
-
-      // SSL Certificate
-      if (results.ssl_info && typeof results.ssl_info === 'object' && !results.ssl_info.error) {
-        const check = checkPageBreak(yPosition, pageHeight);
-        if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'SSL/TLS Certificate', yPosition, pageHeight);
-        const sslData = [];
-        if (results.ssl_info.data) {
-          if (typeof results.ssl_info.data === 'object') {
-            Object.entries(results.ssl_info.data).forEach(([key, value]) => {
-              let displayValue = '—';
-              if (typeof value === 'object' && value !== null) {
-                displayValue = JSON.stringify(value).substring(0, 70);
-              } else if (value !== null && value !== undefined) {
-                displayValue = String(value).substring(0, 70);
-              }
-              sslData.push([String(key), displayValue]);
-            });
-          } else {
-            sslData.push(['Info', String(results.ssl_info.data).substring(0, 70)]);
-          }
-        }
-        if (results.ssl_info.valid !== undefined) sslData.push(['Valid', results.ssl_info.valid ? 'Yes' : 'No']);
-        
-        if (sslData.length > 0) {
-          pdf.autoTable({
-            startY: yPosition, head: [['Property', 'Value']], body: sslData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
-          });
+        const portData = results.open_ports.filter(p => !p.error).map(p => [String(p.port || '—'), String(p.service || '—')]);
+        if (portData.length > 0) {
+          pdf.autoTable({ startY: yPosition, head: [['Port', 'Service']], body: portData, theme: 'grid', headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
           yPosition = pdf.lastAutoTable.finalY + 10;
-        }
-      }
-
-      // Emails
-      if (results.emails && Array.isArray(results.emails) && results.emails.length > 0) {
-        const check = checkPageBreak(yPosition, pageHeight);
-        if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'Discovered Email Addresses', yPosition, pageHeight);
-        const emailData = results.emails.filter(e => !e.error).map(e => {
-          const email = typeof e === 'object' ? (e.email || JSON.stringify(e).substring(0, 80)) : String(e).substring(0, 90);
-          return [String(email).substring(0, 90)];
-        });
-        if (emailData.length > 0) {
-          pdf.autoTable({
-            startY: yPosition, head: [['Email Address']], body: emailData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
-          });
-          yPosition = pdf.lastAutoTable.finalY + 10;
-        }
-      }
-
-      // Admin Panels
-      if (results.admin_panels && Array.isArray(results.admin_panels) && results.admin_panels.length > 0) {
-        const check = checkPageBreak(yPosition, pageHeight);
-        if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'Admin Panels', yPosition, pageHeight);
-        const adminData = results.admin_panels.filter(a => !a.error).map(a => {
-          const url = typeof a === 'object' ? (a.url || a.panel || JSON.stringify(a).substring(0, 80)) : String(a).substring(0, 90);
-          return [String(url).substring(0, 90)];
-        });
-        if (adminData.length > 0) {
-          pdf.autoTable({
-            startY: yPosition, head: [['URL']], body: adminData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
-          });
-          yPosition = pdf.lastAutoTable.finalY + 10;
-        }
-      }
-
-      // WHOIS Info
-      if (results.whois && Array.isArray(results.whois) && results.whois.length > 0) {
-        const check = checkPageBreak(yPosition, pageHeight);
-        if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'WHOIS Information', yPosition, pageHeight);
-        const whoisData = results.whois.filter(w => !w.error).map(w => {
-          let whoisText;
-          if (typeof w === 'object' && w !== null) {
-            whoisText = JSON.stringify(w).substring(0, 80);
-          } else {
-            whoisText = String(w).substring(0, 90);
-          }
-          return [whoisText];
-        });
-        if (whoisData.length > 0) {
-          pdf.autoTable({
-            startY: yPosition, head: [['Information']], body: whoisData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
-          });
-          yPosition = pdf.lastAutoTable.finalY + 10;
-        }
-      }
-
-      // IP Info
-      if (results.ip_info && typeof results.ip_info === 'object' && !results.ip_info.error) {
-        const check = checkPageBreak(yPosition, pageHeight);
-        if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'IP Information', yPosition, pageHeight);
-        const ipData = [];
-        Object.entries(results.ip_info).forEach(([key, value]) => {
-          let displayValue = '—';
-          if (typeof value === 'object' && value !== null) {
-            displayValue = JSON.stringify(value).substring(0, 70);
-          } else if (value !== null && value !== undefined) {
-            displayValue = String(value).substring(0, 70);
-          }
-          ipData.push([String(key), displayValue]);
-        });
-        if (ipData.length > 0) {
-          pdf.autoTable({
-            startY: yPosition, head: [['Property', 'Value']], body: ipData, theme: 'grid',
-            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', font: 'courier' },
-            bodyStyles: { textColor: [40, 40, 40], fontSize: 9, font: 'courier' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }
-          });
         }
       }
 
@@ -381,34 +163,21 @@ export default function AttackSurfaceAnalysis() {
     } catch (err) {
       console.error('Error exporting PDF:', err);
       alert('PDF export failed: ' + err.message);
-    } finally {
-      setExporting(false);
-    }
+    } finally { setExporting(false); }
   };
 
   const ResultTable = ({ data, columns }) => {
     if (!data || (Array.isArray(data) && data.length === 0)) return null;
-
     return (
       <div className="results-table-container">
         <table className="results-table">
-          <thead>
-            <tr>
-              {columns.map((col, idx) => (
-                <th key={idx}>{col}</th>
-              ))}
-            </tr>
-          </thead>
+          <thead><tr>{columns.map((col, idx) => (<th key={idx}>{col}</th>))}</tr></thead>
           <tbody>
             {data.map((row, idx) => (
               <tr key={idx}>
                 {row.map((cell, cidx) => {
-                  const isError = cell && cell.toString().toLowerCase().includes('hata');
-                  return (
-                    <td key={cidx} className={isError ? 'text-error' : ''}>
-                      {renderValue(cell)}
-                    </td>
-                  );
+                  const isError = cell && cell.toString().toLowerCase().includes('error');
+                  return (<td key={cidx} className={isError ? 'text-error' : ''}>{renderValue(cell)}</td>);
                 })}
               </tr>
             ))}
@@ -419,202 +188,109 @@ export default function AttackSurfaceAnalysis() {
   };
 
   return (
-    <div className="attack-layout">
-      {/* Header */}
-      <div className="attack-header">
-        <div className="header-title-group">
-          <div className="header-icon">
-            <IconTarget />
-          </div>
-          <div className="header-title">
-            <h1>Attack Surface Analizi</h1>
-            <p>Hedef domain için derinlemesine yüzey taraması, port ve zafiyet tespiti</p>
+    <DashboardLayout>
+      <div className="attack-layout">
+        <div className="attack-header">
+          <div className="header-title-group">
+            <div className="header-icon"><IconTarget /></div>
+            <div className="header-title">
+              <h1>Attack Surface Analysis</h1>
+              <p>In-depth surface scanning, port and vulnerability detection for target domains</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="attack-content">
-        {/* Search / Scan Box */}
-        <div className="scan-card">
-          {error && (
-            <div className="alert-error">
-              <IconAlert /> {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="scan-form">
-            <div className="scan-input-group">
-              <label>Hedef Domain / IP Adresi</label>
-              <input
-                type="text"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                placeholder="Örn: github.com"
-                disabled={loading}
-              />
-            </div>
-            <button type="submit" disabled={loading} className="scan-btn">
-              {loading ? (
-                <>
-                  <div className="spinner"></div> Taranıyor...
-                </>
-              ) : (
-                <>
-                  <span>🔍</span> Analizi Başlat
-                </>
-              )}
-            </button>
-          </form>
-        </div>
-
-        {/* Results Area */}
-        {results && (
-          <div>
-            {/* Top Info Cards */}
-            <div className="summary-grid">
-              <div className="info-card">
-                <div className="info-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                </div>
-                <div className="info-details">
-                  <div className="info-label">Domain Hedefi</div>
-                  <div className="info-value" title={results.domain}>{results.domain || '—'}</div>
-                </div>
+        <div className="attack-content">
+          <div className="scan-card">
+            {error && (<div className="alert-error"><IconAlert /> {error}</div>)}
+            <form onSubmit={handleSubmit} className="scan-form">
+              <div className="scan-input-group">
+                <label>Target Domain / IP Address</label>
+                <input type="text" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="e.g., github.com" disabled={loading} />
               </div>
-              <div className="info-card">
-                <div className="info-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                </div>
-                <div className="info-details">
-                  <div className="info-label">Çözümlenen IP</div>
-                  <div className="info-value">{results.ip || '—'}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Detailed Accordions */}
-            {results.dns_records && results.dns_records.length > 0 && (
-              <AccordionSection title="DNS Kayıtları" count={results.dns_records.length} icon={iconsMap.dns}>
-                <ResultTable
-                  columns={['Kayıt Türü', 'Değer']}
-                  data={results.dns_records.map((record) => {
-                    if (record.error) return ['Hata', record.error];
-                    if (Array.isArray(record)) return [record[0], record[1]];
-                    return [record, ''];
-                  })}
-                />
-              </AccordionSection>
-            )}
-
-            {results.subdomains && results.subdomains.length > 0 && (
-              <AccordionSection title="Tespit Edilen Subdomainler" count={results.subdomains.filter(s => !s?.error).length} icon={iconsMap.subdomain}>
-                <ResultTable
-                  columns={['Subdomain Adresi']}
-                  data={results.subdomains.map((sub) => {
-                    if (sub && sub.error) return ['Hata: ' + sub.error];
-                    return [sub];
-                  })}
-                />
-              </AccordionSection>
-            )}
-
-            {results.ssl_info && (
-              <AccordionSection title="SSL / TLS Sertifikası" icon={iconsMap.ssl}>
-                <ResultTable
-                  columns={['Sertifika Özelliği', 'Durum']}
-                  data={[
-                    ['Geçerlilik Durumu', results.ssl_info.valid ? 'Geçerli' : 'Geçersiz' || 'Hata'],
-                    ['Detaylar', results.ssl_info.error ? 'Hata: ' + results.ssl_info.error : 'Mevcut']
-                  ]}
-                />
-              </AccordionSection>
-            )}
-
-            {results.open_ports && results.open_ports.length > 0 && (
-              <AccordionSection title="Açık Ağ Portları" count={results.open_ports.filter(p => !p.error).length} icon={iconsMap.port}>
-                <ResultTable
-                  columns={['Port Numarası', 'Temsil Eden Servis']}
-                  data={results.open_ports.map((port) => {
-                    if (port.error) return ['Hata', port.error];
-                    return [port.port, port.service];
-                  })}
-                />
-              </AccordionSection>
-            )}
-
-            {results.emails && results.emails.length > 0 && (
-              <AccordionSection title="Bulunan E-posta Adresleri" count={results.emails.length} icon={iconsMap.email}>
-                <ResultTable
-                  columns={['Maskelenmemiş E-posta', 'Sızıntı / Tespit Kaynağı']}
-                  data={results.emails.map((email) => {
-                    if (email.error) return ['Hata', email.error];
-                    return [email.email || email, email.source || '—'];
-                  })}
-                />
-              </AccordionSection>
-            )}
-
-            {results.admin_panels && results.admin_panels.length > 0 && (
-              <AccordionSection title="Açık Yönetim Panelleri" count={results.admin_panels.length} icon={iconsMap.admin}>
-                <ResultTable
-                  columns={['Panel URL', 'HTTP Durumu', 'Tespit Detayı']}
-                  data={results.admin_panels.map((panel) => {
-                    if (panel.error) return ['Hata', panel.error, ''];
-                    return [panel.url || panel, panel.status || 'N/A', panel.detail || ''];
-                  })}
-                />
-              </AccordionSection>
-            )}
-
-            {results.whois && results.whois.length > 0 && (
-              <AccordionSection title="WHOIS Tescil Bilgileri" count={results.whois.length} icon={iconsMap.whois}>
-                <ResultTable
-                  columns={['Bölüm', 'Değer']}
-                  data={results.whois.map((item) => {
-                    if (item.error) return ['Hata', item.error];
-                    if (Array.isArray(item)) return [item[0], item[1]];
-                    return [item, ''];
-                  })}
-                />
-              </AccordionSection>
-            )}
-
-            {results.robots_txt && (
-              <AccordionSection title="Robots.txt Kapsamı" icon={iconsMap.robot}>
-                <pre className="code-block">
-                  {typeof results.robots_txt === 'string' ? results.robots_txt : 'Hata: ' + results.robots_txt}
-                </pre>
-              </AccordionSection>
-            )}
-
-            {results.ip_info && (
-              <AccordionSection title="Cihaz (IP) Bilgileri" icon={iconsMap.ip}>
-                <ResultTable
-                  columns={['Coğrafya ve Sağlayıcı Özeti']}
-                  data={[[typeof results.ip_info === 'string' ? results.ip_info : JSON.stringify(results.ip_info, null, 2)]]}
-                />
-              </AccordionSection>
-            )}
+              <button type="submit" disabled={loading} className="scan-btn">
+                {loading ? (<><div className="spinner"></div> Scanning...</>) : (<><span>🔍</span> Start Analysis</>)}
+              </button>
+            </form>
           </div>
-        )}
 
-        <div className="action-bar">
-          <button onClick={() => navigate('/dashboard')} className="back-btn" style={{marginBottom: 0, padding: '14px 24px'}}>
-            Dashboard'a Dön
-          </button>
-          
           {results && (
-            <button
-              onClick={exportPDF}
-              disabled={exporting}
-              className="export-btn"
-            >
-              <IconDownload />
-              {exporting ? 'Rapor Oluşturuluyor...' : 'PDF Raporu İndir'}
-            </button>
+            <div>
+              <div className="summary-grid">
+                <div className="info-card">
+                  <div className="info-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
+                  <div className="info-details">
+                    <div className="info-label">Target Domain</div>
+                    <div className="info-value" title={results.domain}>{results.domain || '—'}</div>
+                  </div>
+                </div>
+                <div className="info-card">
+                  <div className="info-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div>
+                  <div className="info-details">
+                    <div className="info-label">Resolved IP</div>
+                    <div className="info-value">{results.ip || '—'}</div>
+                  </div>
+                </div>
+              </div>
+
+              {results.dns_records && results.dns_records.length > 0 && (
+                <AccordionSection title="DNS Records" count={results.dns_records.length} icon={iconsMap.dns}>
+                  <ResultTable columns={['Record Type', 'Value']} data={results.dns_records.map((record) => { if (record.error) return ['Error', record.error]; if (Array.isArray(record)) return [record[0], record[1]]; return [record, '']; })} />
+                </AccordionSection>
+              )}
+              {results.subdomains && results.subdomains.length > 0 && (
+                <AccordionSection title="Detected Subdomains" count={results.subdomains.filter(s => !s?.error).length} icon={iconsMap.subdomain}>
+                  <ResultTable columns={['Subdomain Address']} data={results.subdomains.map((sub) => { if (sub && sub.error) return ['Error: ' + sub.error]; return [sub]; })} />
+                </AccordionSection>
+              )}
+              {results.ssl_info && (
+                <AccordionSection title="SSL / TLS Certificate" icon={iconsMap.ssl}>
+                  <ResultTable columns={['Certificate Property', 'Status']} data={[['Validity Status', results.ssl_info.valid ? 'Valid' : 'Invalid' || 'Error'], ['Details', results.ssl_info.error ? 'Error: ' + results.ssl_info.error : 'Available']]} />
+                </AccordionSection>
+              )}
+              {results.open_ports && results.open_ports.length > 0 && (
+                <AccordionSection title="Open Network Ports" count={results.open_ports.filter(p => !p.error).length} icon={iconsMap.port}>
+                  <ResultTable columns={['Port Number', 'Service']} data={results.open_ports.map((port) => { if (port.error) return ['Error', port.error]; return [port.port, port.service]; })} />
+                </AccordionSection>
+              )}
+              {results.emails && results.emails.length > 0 && (
+                <AccordionSection title="Discovered Email Addresses" count={results.emails.length} icon={iconsMap.email}>
+                  <ResultTable columns={['Email Address', 'Detection Source']} data={results.emails.map((email) => { if (email.error) return ['Error', email.error]; return [email.email || email, email.source || '—']; })} />
+                </AccordionSection>
+              )}
+              {results.admin_panels && results.admin_panels.length > 0 && (
+                <AccordionSection title="Exposed Admin Panels" count={results.admin_panels.length} icon={iconsMap.admin}>
+                  <ResultTable columns={['Panel URL', 'HTTP Status', 'Detection Detail']} data={results.admin_panels.map((panel) => { if (panel.error) return ['Error', panel.error, '']; return [panel.url || panel, panel.status || 'N/A', panel.detail || '']; })} />
+                </AccordionSection>
+              )}
+              {results.whois && results.whois.length > 0 && (
+                <AccordionSection title="WHOIS Registration Info" count={results.whois.length} icon={iconsMap.whois}>
+                  <ResultTable columns={['Section', 'Value']} data={results.whois.map((item) => { if (item.error) return ['Error', item.error]; if (Array.isArray(item)) return [item[0], item[1]]; return [item, '']; })} />
+                </AccordionSection>
+              )}
+              {results.robots_txt && (
+                <AccordionSection title="Robots.txt Scope" icon={iconsMap.robot}>
+                  <pre className="code-block">{typeof results.robots_txt === 'string' ? results.robots_txt : 'Error: ' + results.robots_txt}</pre>
+                </AccordionSection>
+              )}
+              {results.ip_info && (
+                <AccordionSection title="Device (IP) Information" icon={iconsMap.ip}>
+                  <ResultTable columns={['Geography and Provider Summary']} data={[[typeof results.ip_info === 'string' ? results.ip_info : JSON.stringify(results.ip_info, null, 2)]]} />
+                </AccordionSection>
+              )}
+            </div>
           )}
+
+          <div className="action-bar">
+            {results && (
+              <button onClick={exportPDF} disabled={exporting} className="export-btn">
+                <IconDownload />
+                {exporting ? 'Generating Report...' : 'Download PDF Report'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

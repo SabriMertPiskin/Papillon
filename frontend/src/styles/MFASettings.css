@@ -196,10 +196,10 @@
   align-items: center;
   gap: 16px;
   margin-bottom: 16px;
-  background: rgba(10, 22, 40, 0.4);
+  background: var(--auth-card-inset);
   padding: 12px 16px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid var(--auth-subtle-border);
 }
 
 .step-number {
@@ -230,7 +230,7 @@
   align-items: center;
   gap: 20px;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed var(--auth-subtle-border);
   padding: 32px;
   border-radius: 16px;
   margin: 24px 0;
@@ -258,7 +258,7 @@
 
 .manual-key code {
   display: inline-block;
-  background: rgba(10, 22, 40, 0.6);
+  background: var(--auth-card-inset);
   color: var(--auth-teal, #00bcd4);
   padding: 8px 16px;
   border-radius: 8px;
@@ -421,7 +421,7 @@
 }
 
 .backup-code-display {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--auth-card-inset);
   border: 2px dashed rgba(251, 192, 45, 0.5);
   border-radius: 12px;
   padding: 20px;
@@ -443,7 +443,7 @@
   gap: 6px;
   padding: 10px 16px;
   border-radius: 10px;
-  background: rgba(10, 22, 40, 0.6);
+  background: var(--auth-card-inset);
   border: 1px solid var(--auth-glass-border, rgba(255, 255, 255, 0.1));
   color: var(--auth-text-secondary, #8899b4);
   font-size: 0.85rem;

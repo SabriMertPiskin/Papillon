@@ -33,6 +33,11 @@
   --auth-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
   --auth-transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   --auth-particle-color: rgba(30, 136, 229, 0.08);
+  --auth-form-bg: rgba(16, 28, 48, 0.8);
+  --auth-card-inset: rgba(10, 22, 40, 0.4);
+  --auth-subtle-border: rgba(255, 255, 255, 0.05);
+  --auth-heading-gradient-start: #ffffff;
+  --auth-heading-gradient-end: #8899b4;
 }
 
 [data-theme="light"] {
@@ -63,6 +68,11 @@
   --auth-warning-text: #e65100;
   --auth-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
   --auth-particle-color: rgba(30, 136, 229, 0.05);
+  --auth-form-bg: rgba(255, 255, 255, 0.85);
+  --auth-card-inset: rgba(0, 0, 0, 0.03);
+  --auth-subtle-border: rgba(0, 0, 0, 0.08);
+  --auth-heading-gradient-start: #1a2a3a;
+  --auth-heading-gradient-end: #5a6d7e;
 }
 
 /* --- Animations --- */

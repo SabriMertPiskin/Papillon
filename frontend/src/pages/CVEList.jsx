@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import DashboardLayout from '../components/DashboardLayout';
 import '../styles/CVEList.css';
 
 // SVG Icons
@@ -43,7 +44,6 @@ export default function CVEList() {
       return;
     }
 
-    // Theme sync
     const theme = localStorage.getItem('papillon-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
 
@@ -61,7 +61,7 @@ export default function CVEList() {
         setError(response.data.detail);
       }
     } catch (err) {
-      setError('CVE verilerini sunucudan çekerken bir hata oluştu. Lütfen bağlantınızı kontrol edin.');
+      setError('An error occurred while fetching CVE data from the server. Please check your connection.');
       console.error('CVE fetch error:', err);
     } finally {
       setLoading(false);
@@ -80,110 +80,109 @@ export default function CVEList() {
   };
 
   return (
-    <div className="cve-layout">
-      {/* Header Area */}
-      <div className="cve-header">
-        <div className="header-title-group">
-          <div className="header-icon">
-            <IconShieldAlert />
+    <DashboardLayout>
+      <div className="cve-layout">
+        {/* Header Area */}
+        <div className="cve-header">
+          <div className="header-title-group">
+            <div className="header-icon">
+              <IconShieldAlert />
+            </div>
+            <div className="header-title">
+              <h1>Latest Vulnerabilities (CVE)</h1>
+              <p>Most recently published cybersecurity vulnerability reports from the NVD database</p>
+            </div>
           </div>
-          <div className="header-title">
-            <h1>Güncel Zafiyetler (CVE)</h1>
-            <p>NVD veritabanından alınan en son yayınlanmış siber güvenlik zafiyet okumaları</p>
+          
+          <div className="header-actions">
+            <div className="limit-selector">
+              <label>Results Per Page:</label>
+              <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} disabled={loading}>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
           </div>
         </div>
-        
-        <div className="header-actions">
-          <div className="limit-selector">
-            <label>Sayfa Başına Gösterim:</label>
-            <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} disabled={loading}>
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
-          <button onClick={() => navigate('/dashboard')} className="back-btn">
-            <span>←</span> Dashboard'a Dön
-          </button>
-        </div>
-      </div>
 
-      <div className="cve-content">
-        {error && (
-          <div className="alert-error">
-            <IconShieldAlert />
-            <span>{error}</span>
-          </div>
-        )}
+        <div className="cve-content">
+          {error && (
+            <div className="alert-error">
+              <IconShieldAlert />
+              <span>{error}</span>
+            </div>
+          )}
 
-        {loading ? (
-          <div className="cve-loading">
-            <div className="spinner" style={{width: 30, height: 30, borderWidth: 4}}></div>
-            <p>Zafiyet veritabanı senkronize ediliyor...</p>
-          </div>
-        ) : (
-          <>
-            {cves.length === 0 && !error ? (
-              <div className="empty-state">
-                <IconShieldAlert />
-                <p>Şu anda gösterilecek herhangi bir CVE kaydı bulunamadı.</p>
-              </div>
-            ) : (
-              <div className="cve-grid">
-                {cves.map((cve, index) => {
-                  const severityClass = getSeverityClass(cve.severity);
-                  return (
-                    <div key={index} className={`cve-card ${severityClass}`}>
-                      
-                      <div className="cve-card-header">
-                        <div className="cve-title-wrapper">
-                          <h3 className="cve-id">{cve.id}</h3>
-                        </div>
-                        <span className="severity-badge">
-                          {cve.severity || 'UNKNOWN'} {cve.score ? `(${cve.score})` : ''}
-                        </span>
-                      </div>
-                      
-                      <p className="cve-description" title={cve.description}>
-                        {cve.description}
-                      </p>
-                      
-                      <div className="cve-meta">
-                        <div className="cve-date">
-                          <IconCalendar />
-                          <span>Yayınlanma: {new Date(cve.published).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+          {loading ? (
+            <div className="cve-loading">
+              <div className="spinner" style={{width: 30, height: 30, borderWidth: 4}}></div>
+              <p>Synchronizing vulnerability database...</p>
+            </div>
+          ) : (
+            <>
+              {cves.length === 0 && !error ? (
+                <div className="empty-state">
+                  <IconShieldAlert />
+                  <p>No CVE records found to display at this time.</p>
+                </div>
+              ) : (
+                <div className="cve-grid">
+                  {cves.map((cve, index) => {
+                    const severityClass = getSeverityClass(cve.severity);
+                    return (
+                      <div key={index} className={`cve-card ${severityClass}`}>
+                        
+                        <div className="cve-card-header">
+                          <div className="cve-title-wrapper">
+                            <h3 className="cve-id">{cve.id}</h3>
+                          </div>
+                          <span className="severity-badge">
+                            {cve.severity || 'UNKNOWN'} {cve.score ? `(${cve.score})` : ''}
+                          </span>
                         </div>
                         
-                        {cve.references && cve.references.length > 0 && (
-                          <div className="cve-references">
-                            <strong>Dış Kaynaklar ({cve.references.length})</strong>
-                            <ul>
-                              {cve.references.slice(0, 3).map((ref, idx) => (
-                                <li key={idx}>
-                                  <a href={ref} target="_blank" rel="noopener noreferrer" title={ref}>
-                                    <IconLink /> {new URL(ref).hostname || 'Referans Linki'}
-                                  </a>
-                                </li>
-                              ))}
-                              {cve.references.length > 3 && (
-                                <li>
-                                  <span style={{ fontSize: '0.8rem', color: 'var(--auth-text-muted)', fontStyle: 'italic' }}>
-                                    + {cve.references.length - 3} kaynak daha var...
-                                  </span>
-                                </li>
-                              )}
-                            </ul>
+                        <p className="cve-description" title={cve.description}>
+                          {cve.description}
+                        </p>
+                        
+                        <div className="cve-meta">
+                          <div className="cve-date">
+                            <IconCalendar />
+                            <span>Published: {new Date(cve.published).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                           </div>
-                        )}
+                          
+                          {cve.references && cve.references.length > 0 && (
+                            <div className="cve-references">
+                              <strong>External Sources ({cve.references.length})</strong>
+                              <ul>
+                                {cve.references.slice(0, 3).map((ref, idx) => (
+                                  <li key={idx}>
+                                    <a href={ref} target="_blank" rel="noopener noreferrer" title={ref}>
+                                      <IconLink /> {new URL(ref).hostname || 'Reference Link'}
+                                    </a>
+                                  </li>
+                                ))}
+                                {cve.references.length > 3 && (
+                                  <li>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--auth-text-muted)', fontStyle: 'italic' }}>
+                                      + {cve.references.length - 3} more sources...
+                                    </span>
+                                  </li>
+                                )}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

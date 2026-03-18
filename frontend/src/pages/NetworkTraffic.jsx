@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  LineChart, Line 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
+import DashboardLayout from '../components/DashboardLayout';
 import '../styles/NetworkTraffic.css';
 
-// --- Yardımcı Simulator Fonksiyonları ---
+// --- Helper Simulator Functions ---
 const generateTimeStr = (date) => {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
 };
@@ -27,9 +27,9 @@ export default function NetworkTraffic() {
 
   // Anomalies list
   const [anomalies, setAnomalies] = useState([
-    { id: 1, time: generateTimeStr(new Date(Date.now() - 120000)), type: 'warning', ip: '45.33.12.89', desc: 'Sıradışı Port Taraması Algılandı (Port 22)' },
-    { id: 2, time: generateTimeStr(new Date(Date.now() - 300000)), type: 'critical', ip: '185.20.10.2', desc: 'DDoS (SYN Flood) Denemesi Tespit Edildi' },
-    { id: 3, time: generateTimeStr(new Date(Date.now() - 600000)), type: 'warning', ip: '114.114.114.114', desc: 'Yüksek DNS Sorgu Sıklığı' }
+    { id: 1, time: generateTimeStr(new Date(Date.now() - 120000)), type: 'warning', ip: '45.33.12.89', desc: 'Unusual Port Scan Detected (Port 22)' },
+    { id: 2, time: generateTimeStr(new Date(Date.now() - 300000)), type: 'critical', ip: '185.20.10.2', desc: 'DDoS (SYN Flood) Attack Attempt Detected' },
+    { id: 3, time: generateTimeStr(new Date(Date.now() - 600000)), type: 'warning', ip: '114.114.114.114', desc: 'High DNS Query Frequency' }
   ]);
 
   // Table Data (Active IPs)
@@ -42,7 +42,7 @@ export default function NetworkTraffic() {
 
   const intervalRef = useRef(null);
 
-  // İnitial Fake Data Loading
+  // Initial Fake Data Loading
   useEffect(() => {
     const initData = [];
     let now = new Date();
@@ -92,7 +92,7 @@ export default function NetworkTraffic() {
             time: generateTimeStr(now),
             type: 'critical',
             ip: badIP,
-            desc: `Anormal Trafik Artışı (AI Modeli: XGBoost IDS Tetiklendi)`
+            desc: `Abnormal Traffic Spike (AI Model: XGBoost IDS Triggered)`
           };
           setAnomalies(prev => [newAnomaly, ...prev].slice(0, 50)); // Keep max 50
           setAnomalyCount(prev => prev + 1);
@@ -115,160 +115,162 @@ export default function NetworkTraffic() {
 
 
   return (
-    <div className="network-page-container">
-      <div className="network-header">
-        <h1>🌐 Ağ Trafiği ve IDS Analizi</h1>
-        <p>Yapay zeka (XGBoost) destekli gerçek zamanlı saldırı tespiti ve paket analizi.</p>
-        <div className={`live-badge ${!isSimulating ? 'stopped' : ''}`}>
-          <div className={`live-indicator ${!isSimulating ? 'stopped' : ''}`}></div>
-          {isSimulating ? 'SİSTEM AKTİF (SIMULASYON)' : 'SİSTEM DURDURULDU'}
+    <DashboardLayout>
+      <div className="network-page-container">
+        <div className="network-header">
+          <h1>🌐 Network Traffic & IDS Analysis</h1>
+          <p>Real-time attack detection and packet analysis powered by AI (XGBoost).</p>
+          <div className={`live-badge ${!isSimulating ? 'stopped' : ''}`}>
+            <div className={`live-indicator ${!isSimulating ? 'stopped' : ''}`}></div>
+            {isSimulating ? 'SYSTEM ACTIVE (SIMULATION)' : 'SYSTEM STOPPED'}
+          </div>
         </div>
-      </div>
 
-      <div className="network-stats-row">
-        <div className="net-stat-card">
-          <div className="net-stat-icon blue">📦</div>
-          <div className="net-stat-info">
-            <h3>Geçen Paket</h3>
-            <p className="stat-val">{packetsTotal.toLocaleString()}</p>
+        <div className="network-stats-row">
+          <div className="net-stat-card">
+            <div className="net-stat-icon blue">📦</div>
+            <div className="net-stat-info">
+              <h3>Packets Processed</h3>
+              <p className="stat-val">{packetsTotal.toLocaleString()}</p>
+            </div>
+          </div>
+          <div className="net-stat-card">
+            <div className="net-stat-icon green">⬇️</div>
+            <div className="net-stat-info">
+              <h3>Bandwidth</h3>
+              <p className="stat-val">{bandwidthOut} <span style={{fontSize: '1rem'}}>MB/s</span></p>
+            </div>
+          </div>
+          <div className="net-stat-card">
+            <div className="net-stat-icon orange">🔗</div>
+            <div className="net-stat-info">
+              <h3>Active Connections</h3>
+              <p className="stat-val">{activeConnections}</p>
+            </div>
+          </div>
+          <div className="net-stat-card">
+            <div className="net-stat-icon red">🛑</div>
+            <div className="net-stat-info">
+              <h3>Blocked Threats</h3>
+              <p className="stat-val">{anomalyCount}</p>
+            </div>
           </div>
         </div>
-        <div className="net-stat-card">
-          <div className="net-stat-icon green">⬇️</div>
-          <div className="net-stat-info">
-            <h3>Bant Genişliği</h3>
-            <p className="stat-val">{bandwidthOut} <span style={{fontSize: '1rem'}}>MB/s</span></p>
-          </div>
-        </div>
-        <div className="net-stat-card">
-          <div className="net-stat-icon orange">🔗</div>
-          <div className="net-stat-info">
-            <h3>Aktif Bağlantı</h3>
-            <p className="stat-val">{activeConnections}</p>
-          </div>
-        </div>
-        <div className="net-stat-card">
-          <div className="net-stat-icon red">🛑</div>
-          <div className="net-stat-info">
-            <h3>Bloke Tehditler</h3>
-            <p className="stat-val">{anomalyCount}</p>
-          </div>
-        </div>
-      </div>
 
-      <div className="network-grid">
-        {/* Main Chart Panel */}
-        <div className="net-panel-card">
-          <div className="net-panel-header">
-            <h2>📈 Ağ Trafik Akışı (Gerçek Zamanlı)</h2>
-            <div className="net-controls">
-              {isSimulating ? (
-                <button className="net-btn stop" onClick={() => setIsSimulating(false)}>
-                  ⏸ Durdur
-                </button>
-              ) : (
-                <button className="net-btn start" onClick={() => setIsSimulating(true)}>
-                  ▶️ Başlat
-                </button>
+        <div className="net-main-grid">
+          {/* Main Chart Panel */}
+          <div className="net-panel-card">
+            <div className="net-panel-header">
+              <h2>📈 Network Traffic Flow (Real-time)</h2>
+              <div className="net-controls">
+                {isSimulating ? (
+                  <button className="net-btn stop" onClick={() => setIsSimulating(false)}>
+                    ⏸ Pause
+                  </button>
+                ) : (
+                  <button className="net-btn start" onClick={() => setIsSimulating(true)}>
+                    ▶️ Start
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="net-chart-container">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trafficData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorIn" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#81c784" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#81c784" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorOut" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#64b5f6" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#64b5f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <XAxis dataKey="time" stroke="var(--auth-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--auth-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--auth-form-bg)', borderColor: 'var(--auth-glass-border)', color: '#fff', borderRadius: '8px' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                  <Area type="monotone" dataKey="inbound" name="Inbound Traffic (Kbps)" stroke="#81c784" strokeWidth={3} fillOpacity={1} fill="url(#colorIn)" isAnimationActive={false} />
+                  <Area type="monotone" dataKey="outbound" name="Outbound Traffic (Kbps)" stroke="#64b5f6" strokeWidth={3} fillOpacity={1} fill="url(#colorOut)" isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* AI Anomaly Panel */}
+          <div className="net-panel-card">
+            <div className="net-panel-header">
+              <h2>🚨 AI Anomaly Logs</h2>
+              <span style={{ fontSize: '0.8rem', color: 'var(--auth-text-muted)' }}>Last 50 entries</span>
+            </div>
+            <div className="anomaly-list">
+              {anomalies.map(anom => (
+                <div key={anom.id} className={`anomaly-item ${anom.type}`}>
+                  <div className="anom-header">
+                    <span className={`anom-type ${anom.type}`}>{anom.type === 'critical' ? 'Critical Risk' : 'Warning'}</span>
+                    <span className="anom-time">{anom.time}</span>
+                  </div>
+                  <p className="anom-desc">{anom.desc}</p>
+                  <div className="anom-ip">Source IP: {anom.ip}</div>
+                </div>
+              ))}
+              {anomalies.length === 0 && (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--auth-text-muted)' }}>
+                  No anomalies detected yet.
+                </div>
               )}
             </div>
           </div>
-          <div className="net-chart-container">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trafficData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorIn" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#81c784" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#81c784" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorOut" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#64b5f6" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#64b5f6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="time" stroke="var(--auth-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--auth-text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: 'var(--auth-form-bg)', borderColor: 'var(--auth-glass-border)', color: '#fff', borderRadius: '8px' }}
-                  itemStyle={{ color: '#fff' }}
-                />
-                <Area type="monotone" dataKey="inbound" name="Gelen Trafik (Kbps)" stroke="#81c784" strokeWidth={3} fillOpacity={1} fill="url(#colorIn)" isAnimationActive={false} />
-                <Area type="monotone" dataKey="outbound" name="Giden Trafik (Kbps)" stroke="#64b5f6" strokeWidth={3} fillOpacity={1} fill="url(#colorOut)" isAnimationActive={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
         </div>
 
-        {/* AI Anomaly Panel */}
-        <div className="net-panel-card">
+        {/* Active IP Matrix */}
+        <div className="net-panel-card" style={{ marginBottom: '50px' }}>
           <div className="net-panel-header">
-            <h2>🚨 AI Anomali Logları</h2>
-            <span style={{ fontSize: '0.8rem', color: 'var(--auth-text-muted)' }}>Son 50 kayıt</span>
+            <h2>🌐 Active IP Connection Matrix</h2>
+            <span style={{ fontSize: '0.9rem', color: 'var(--auth-text-muted)' }}>Top 10 IPs</span>
           </div>
-          <div className="anomaly-list">
-            {anomalies.map(anom => (
-              <div key={anom.id} className={`anomaly-item ${anom.type}`}>
-                <div className="anom-header">
-                  <span className={`anom-type ${anom.type}`}>{anom.type === 'critical' ? 'Kritik Risk' : 'Uyarı'}</span>
-                  <span className="anom-time">{anom.time}</span>
-                </div>
-                <p className="anom-desc">{anom.desc}</p>
-                <div className="anom-ip">Kaynak IP: {anom.ip}</div>
-              </div>
-            ))}
-            {anomalies.length === 0 && (
-              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--auth-text-muted)' }}>
-                Henüz anomali tespit edilmedi.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Active IP Matrix */}
-      <div className="net-panel-card" style={{ marginBottom: '50px' }}>
-        <div className="net-panel-header">
-          <h2>🌐 Aktif IP Bağlantı Matrisi</h2>
-          <span style={{ fontSize: '0.9rem', color: 'var(--auth-text-muted)' }}>Top 10 IP</span>
-        </div>
-        <div className="net-table-container">
-          <table className="net-table">
-            <thead>
-              <tr>
-                <th>IP Adresi</th>
-                <th>Protokol</th>
-                <th>Toplam Paket</th>
-                <th>Risk Seviyesi</th>
-                <th>Aksiyon</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeIPs.map((ipObj, idx) => (
-                <tr key={idx}>
-                  <td style={{ fontFamily: 'monospace', color: '#64b5f6' }}>{ipObj.ip}</td>
-                  <td>{ipObj.protocol}</td>
-                  <td>{ipObj.packets.toLocaleString()}</td>
-                  <td>
-                    <span className={`risk-badge ${ipObj.risk}`}>
-                      {ipObj.risk === 'low' ? 'Düşük' : ipObj.risk === 'medium' ? 'Orta' : 'Yüksek'}
-                    </span>
-                  </td>
-                  <td>
-                    <button 
-                      style={{ background: 'transparent', border: '1px solid #ef5350', color: '#ef5350', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                      onClick={() => alert(`IP Engelleme talebi: ${ipObj.ip}\n\n(Backend bağlantısı bekleniyor)`)}
-                    >
-                      Blockla
-                    </button>
-                  </td>
+          <div className="net-table-container">
+            <table className="net-table">
+              <thead>
+                <tr>
+                  <th>IP Address</th>
+                  <th>Protocol</th>
+                  <th>Total Packets</th>
+                  <th>Risk Level</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {activeIPs.map((ipObj, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontFamily: 'monospace', color: '#64b5f6' }}>{ipObj.ip}</td>
+                    <td>{ipObj.protocol}</td>
+                    <td>{ipObj.packets.toLocaleString()}</td>
+                    <td>
+                      <span className={`risk-badge ${ipObj.risk}`}>
+                        {ipObj.risk === 'low' ? 'Low' : ipObj.risk === 'medium' ? 'Medium' : 'High'}
+                      </span>
+                    </td>
+                    <td>
+                      <button 
+                        style={{ background: 'transparent', border: '1px solid #ef5350', color: '#ef5350', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                        onClick={() => alert(`IP block request: ${ipObj.ip}\n\n(Backend connection pending)`)}
+                      >
+                        Block
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

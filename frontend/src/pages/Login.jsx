@@ -37,8 +37,8 @@ export default function Login() {
     e.preventDefault();
     const newErrors = {};
 
-    if (!formData.email.includes('@')) newErrors.email = 'Geçerli email girin';
-    if (!formData.password) newErrors.password = 'Şifre gerekli';
+    if (!formData.email.includes('@')) newErrors.email = 'Enter a valid email';
+    if (!formData.password) newErrors.password = 'Password is required';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -60,10 +60,10 @@ export default function Login() {
           window.location.href = '/dashboard';
         }, 100);
       } else {
-        setErrors({ submit: response.data.detail || 'Bilinmeyen hata' });
+        setErrors({ submit: response.data.detail || 'Unknown error' });
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Email veya şifre yanlış';
+      const errorMsg = error.response?.data?.detail || 'Invalid email or password';
       setErrors({ submit: errorMsg });
     } finally {
       setLoading(false);
@@ -74,7 +74,7 @@ export default function Login() {
     e.preventDefault();
 
     if (!otpCode || otpCode.length !== 6) {
-      setErrors({ otp: '6 haneli kodu girin' });
+      setErrors({ otp: 'Enter the 6-digit code' });
       return;
     }
 
@@ -97,10 +97,10 @@ export default function Login() {
           window.location.href = '/dashboard';
         }, 100);
       } else {
-        setErrors({ otp: response.data.detail || 'Doğrulama başarısız' });
+        setErrors({ otp: response.data.detail || 'Verification failed' });
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Geçersiz doğrulama kodu';
+      const errorMsg = error.response?.data?.detail || 'Invalid verification code';
       setErrors({ otp: errorMsg });
     } finally {
       setLoading(false);
@@ -123,15 +123,15 @@ export default function Login() {
         <h1>Papillon</h1>
       </div>
       <p className="auth-brand-tagline">
-        Siber güvenlik analizlerinizi tek bir platformda yönetin. 
-        Gelişmiş tehdit algılama ve güvenlik istihbaratı.
+        Manage your cybersecurity analyses on a single platform. 
+        Advanced threat detection and security intelligence.
       </p>
       <div className="auth-floating-icons">
-        <div className="auth-floating-icon" title="Ağ Güvenliği">🛡️</div>
-        <div className="auth-floating-icon" title="Şifreleme">🔐</div>
-        <div className="auth-floating-icon" title="Tehdit Analizi">🔍</div>
-        <div className="auth-floating-icon" title="Zafiyet Tarama">⚡</div>
-        <div className="auth-floating-icon" title="AI Analiz">🤖</div>
+        <div className="auth-floating-icon" title="Network Security">🛡️</div>
+        <div className="auth-floating-icon" title="Encryption">🔐</div>
+        <div className="auth-floating-icon" title="Threat Analysis">🔍</div>
+        <div className="auth-floating-icon" title="Vulnerability Scanning">⚡</div>
+        <div className="auth-floating-icon" title="AI Analysis">🤖</div>
       </div>
     </div>
   );
@@ -140,7 +140,7 @@ export default function Login() {
     <div className="auth-theme-toggle">
       <button
         onClick={toggleTheme}
-        title={theme === 'dark' ? 'Aydınlık Mod' : 'Karanlık Mod'}
+        title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
         type="button"
       >
         {theme === 'dark' ? '☀️' : '🌙'}
@@ -152,7 +152,7 @@ export default function Login() {
     <div className="auth-footer">
       <div className="auth-security-badge">
         <span className="badge-icon">🔒</span>
-        256-bit SSL ile korunmaktadır
+        Protected with 256-bit SSL encryption
       </div>
     </div>
   );
@@ -166,10 +166,10 @@ export default function Login() {
         <div className="auth-form-panel">
           <ThemeToggle />
           <div className="auth-box">
-            <h2>Yeni Yedek Kodunuz</h2>
+            <h2>Your New Backup Code</h2>
             <p className="auth-subtitle">
-              Yedek kodunuz kullanıldığı için yeni bir kod üretildi.
-              Bu kodu güvenli bir yere kaydedin!
+              A new backup code has been generated because your previous one was used.
+              Save this code in a safe place!
             </p>
 
             <div className="backup-code-box">
@@ -177,14 +177,14 @@ export default function Login() {
             </div>
 
             <p className="backup-code-warning">
-              ⚠ Bu kod bir daha gösterilmeyecek!
+              ⚠ This code will not be shown again!
             </p>
 
             <button
               className="backup-continue-btn"
               onClick={() => { window.location.href = '/dashboard'; }}
             >
-              Kaydettim, Devam Et →
+              Saved, Continue →
             </button>
           </div>
           <SecurityBadge />
@@ -202,18 +202,18 @@ export default function Login() {
         <div className="auth-form-panel">
           <ThemeToggle />
           <div className="auth-box">
-            <h2>İki Adımlı Doğrulama</h2>
+            <h2>Two-Factor Authentication</h2>
             <p className="auth-subtitle">
               {useBackup
-                ? 'MFA kurulumunda aldığınız 6 haneli yedek kodu girin'
-                : 'Google Authenticator uygulamasındaki 6 haneli kodu girin'}
+                ? 'Enter the 6-digit backup code you received during MFA setup'
+                : 'Enter the 6-digit code from your Google Authenticator app'}
             </p>
 
             {errors.otp && <div className="error-message">{errors.otp}</div>}
 
             <form onSubmit={handleMfaSubmit}>
               <div className="form-group">
-                <label>{useBackup ? 'Yedek Kod' : 'Doğrulama Kodu'}</label>
+                <label>{useBackup ? 'Backup Code' : 'Verification Code'}</label>
                 <div className="input-wrapper">
                   <span className="input-icon">🔑</span>
                   <input
@@ -237,11 +237,11 @@ export default function Login() {
                 disabled={loading || otpCode.length !== 6}
                 className={loading ? 'loading' : ''}
               >
-                {loading ? 'Doğrulanıyor...' : 'Doğrula'}
+                {loading ? 'Verifying...' : 'Verify'}
               </button>
             </form>
 
-            <div className="auth-divider"><span>veya</span></div>
+            <div className="auth-divider"><span>or</span></div>
 
             <p className="toggle-auth">
               <a href="#" onClick={(e) => {
@@ -250,7 +250,7 @@ export default function Login() {
                 setOtpCode('');
                 setErrors({});
               }}>
-                {useBackup ? '← Authenticator kodunu kullan' : 'Yedek kodu kullan'}
+                {useBackup ? '← Use Authenticator code' : 'Use backup code'}
               </a>
             </p>
 
@@ -262,7 +262,7 @@ export default function Login() {
                 setErrors({});
                 setUseBackup(false);
               }}>
-                ← Giriş ekranına dön
+                ← Back to login
               </a>
             </p>
           </div>
@@ -280,9 +280,9 @@ export default function Login() {
       <div className="auth-form-panel">
         <ThemeToggle />
         <div className="auth-box">
-          <h2>Hoş Geldiniz</h2>
+          <h2>Welcome Back</h2>
           <p className="auth-subtitle">
-            Devam etmek için hesabınıza giriş yapın
+            Sign in to your account to continue
           </p>
 
           {errors.submit && <div className="error-message">{errors.submit}</div>}
@@ -298,7 +298,7 @@ export default function Login() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="ornek@email.com"
+                  placeholder="example@email.com"
                   autoComplete="email"
                 />
               </div>
@@ -306,7 +306,7 @@ export default function Login() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="login-password">Şifre</label>
+              <label htmlFor="login-password">Password</label>
               <div className="input-wrapper">
                 <span className="input-icon">🔒</span>
                 <input
@@ -315,14 +315,14 @@ export default function Login() {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Şifrenizi girin"
+                  placeholder="Enter your password"
                   autoComplete="current-password"
                 />
                 <button
                   type="button"
                   className="password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
-                  title={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                  title={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? '🙈' : '👁️'}
                 </button>
@@ -335,12 +335,12 @@ export default function Login() {
               disabled={loading}
               className={loading ? 'loading' : ''}
             >
-              {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
           <p className="toggle-auth">
-            Hesabın yok mu? <a href="/register">Kayıt Ol</a>
+            Don't have an account? <a href="/register">Sign Up</a>
           </p>
         </div>
         <SecurityBadge />

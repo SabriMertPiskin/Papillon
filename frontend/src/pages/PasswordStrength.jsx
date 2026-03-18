@@ -1,255 +1,183 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { predictPasswordStrength } from '../services/api';
+import axios from 'axios';
+import DashboardLayout from '../components/DashboardLayout';
 import '../styles/PasswordStrength.css';
-
-const IconKey = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
-  </svg>
-);
-
-const IconEye = ({ open }) => open ? (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>
-  </svg>
-) : (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-    <line x1="1" y1="1" x2="23" y2="23"></line>
-  </svg>
-);
-
-const IconAlert = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
-  </svg>
-);
-
-const IconLightbulb = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="9" y1="18" x2="15" y2="18"></line><line x1="10" y1="22" x2="14" y2="22"></line>
-    <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path>
-  </svg>
-);
-
-// Client-side criteria checks (runs immediately on keystroke)
-function evaluateCriteria(password) {
-  return {
-    length: password.length >= 8,
-    uppercase: /[A-Z]/.test(password),
-    lowercase: /[a-z]/.test(password),
-    number: /[0-9]/.test(password),
-    special: /[^A-Za-z0-9]/.test(password),
-    noCommon: !['password', '123456', 'qwerty', 'abc123', '111111'].some(c => password.toLowerCase().includes(c)),
-  };
-}
-
-// Client-side strength estimate (shown without backend)
-function estimateStrength(criteria) {
-  const passed = Object.values(criteria).filter(Boolean).length;
-  if (passed <= 2) return { label: 'Zayıf', level: 'weak', pct: 20 };
-  if (passed <= 4) return { label: 'Orta', level: 'medium', pct: 60 };
-  return { label: 'Güçlü', level: 'strong', pct: 100 };
-}
-
-const CRITERIA_LABELS = {
-  length: 'En az 8 karakter',
-  uppercase: 'Büyük harf (A-Z)',
-  lowercase: 'Küçük harf (a-z)',
-  number: 'Rakam (0-9)',
-  special: 'Özel karakter (!@#...)',
-  noCommon: 'Yaygın ifade içermiyor',
-};
 
 export default function PasswordStrength() {
   const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
+  const [strength, setStrength] = useState(null);
+  const [criteria, setCriteria] = useState([]);
+  const [aiResult, setAiResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [aiResult, setAiResult] = useState(null); // backend AI result
-  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    if (!isAuthenticated) navigate('/login');
+    if (!isAuthenticated) { navigate('/login'); }
     const theme = localStorage.getItem('papillon-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
   }, [navigate]);
 
-  const criteria = evaluateCriteria(password);
-  const clientStrength = estimateStrength(criteria);
-  
-  // Display either AI result or client estimate
-  const displayStrength = aiResult || (password.length > 0 ? clientStrength : null);
+  const analyzePassword = (pwd) => {
+    if (!pwd) {
+      setStrength(null);
+      setCriteria([]);
+      return;
+    }
 
-  const strengthLabel = aiResult
-    ? { 0: 'Zayıf', 1: 'Orta', 2: 'Güçlü' }[aiResult.strength_level] ?? aiResult.label
-    : clientStrength.label;
+    const checks = [
+      { label: 'At least 8 characters', passed: pwd.length >= 8 },
+      { label: 'At least 12 characters (strong)', passed: pwd.length >= 12 },
+      { label: 'Contains uppercase letter', passed: /[A-Z]/.test(pwd) },
+      { label: 'Contains lowercase letter', passed: /[a-z]/.test(pwd) },
+      { label: 'Contains number', passed: /\d/.test(pwd) },
+      { label: 'Contains special character (!@#$%^&*)', passed: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd) },
+      { label: 'Not a common password', passed: !['123456', 'password', 'qwerty', '123456789', '12345678', '111111', '1234567', 'sunshine', 'iloveyou', 'princess'].includes(pwd.toLowerCase()) },
+    ];
 
-  const strengthLevel = aiResult
-    ? { 0: 'weak', 1: 'medium', 2: 'strong' }[aiResult.strength_level] ?? aiResult.level
-    : clientStrength.level;
+    setCriteria(checks);
 
-  const strengthPct = aiResult ? { weak: 20, medium: 60, strong: 100 }[strengthLevel] : clientStrength.pct;
+    const passedCount = checks.filter(c => c.passed).length;
+    let level = 'Very Weak';
+    let color = '#ef5350';
+    let percent = 10;
 
-  const handleAnalyze = async (e) => {
-    e.preventDefault();
+    if (passedCount >= 7) { level = 'Very Strong'; color = '#4caf50'; percent = 100; }
+    else if (passedCount >= 5) { level = 'Strong'; color = '#66bb6a'; percent = 75; }
+    else if (passedCount >= 4) { level = 'Moderate'; color = '#ff9800'; percent = 50; }
+    else if (passedCount >= 2) { level = 'Weak'; color = '#ff5722'; percent = 30; }
+
+    setStrength({ level, color, percent });
+  };
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setPassword(val);
+    analyzePassword(val);
+    setAiResult(null);
+  };
+
+  const handleAiCheck = async () => {
     if (!password) return;
     setLoading(true);
-    setError('');
     setAiResult(null);
     try {
-      const resp = await predictPasswordStrength(password);
-      if (resp.data) {
-        setAiResult({
-          strength_level: resp.data.strength_level,
-          label: ['Zayıf', 'Orta', 'Güçlü'][resp.data.strength_level] ?? 'Bilinmiyor',
-          level: ['weak', 'medium', 'strong'][resp.data.strength_level] ?? 'medium',
-          features: resp.data.features || null,
-          ai: true,
-        });
+      const response = await axios.post('http://localhost:8000/password/analyze/', {
+        password: password,
+      }, { withCredentials: true });
+
+      if (response.data.success) {
+        setAiResult(response.data);
+      } else {
+        setAiResult({ error: response.data.detail || 'Analysis failed' });
       }
-    } catch {
-      setError('AI analizi şu an kullanılamıyor. Aşağıdaki kriter değerlendirmesi kullanılıyor.');
+    } catch (err) {
+      setAiResult({ error: err.response?.data?.detail || 'Server error. AI model could not be reached.' });
     } finally {
       setLoading(false);
     }
   };
 
-  const suggestions = [
-    !criteria.length && 'Şifrenizi 8 karakterden uzun yapın.',
-    !criteria.uppercase && 'En az bir büyük harf ekleyin (A-Z).',
-    !criteria.lowercase && 'En az bir küçük harf ekleyin (a-z).',
-    !criteria.number && 'En az bir rakam ekleyin (0-9).',
-    !criteria.special && '!, @, #, $ gibi özel karakter ekleyin.',
-    !criteria.noCommon && '"password", "123456" gibi tahmin edilebilir ifadelerden kaçının.',
-  ].filter(Boolean);
-
-  const strengthDescriptions = {
-    weak: 'Şifreniz tahmin edilmesi kolay. Lütfen güçlendirin.',
-    medium: 'Şifreniz kabul edilebilir fakat daha güçlü yapılabilir.',
-    strong: 'Harika! Şifreniz güvenlik standartlarını karşılıyor.',
-  };
-
   return (
-    <div className="ps-layout">
-      {/* Header */}
-      <div className="ps-header">
-        <div className="ps-title-group">
-          <div className="ps-header-icon"><IconKey /></div>
+    <DashboardLayout>
+      <div className="password-layout">
+        <div className="password-header">
+          <div className="header-icon-wrapper">🔑</div>
           <div>
-            <h1>Şifre Güçlülük Analizi</h1>
-            <p>AI destekli şifre güvenliği değerlendirmesi</p>
+            <h1>Password Strength Analysis</h1>
+            <p>AI-powered password security assessment. Detect and improve your weak passwords.</p>
           </div>
         </div>
-        <button className="back-btn" onClick={() => navigate('/dashboard')}>← Dashboard'a Dön</button>
-      </div>
 
-      {/* Main Card */}
-      <div className="ps-card">
-        {/* Error */}
-        {error && (
-          <div className="ps-alert">
-            <IconAlert /> {error}
-          </div>
-        )}
-
-        {/* Input */}
-        <form onSubmit={handleAnalyze}>
-          <div className="ps-input-group">
-            <div className="ps-input-wrapper">
-              <span className="ps-input-icon">
-                <IconKey />
-              </span>
+        <div className="password-content">
+          <div className="password-card main-card">
+            <h2>Test Your Password</h2>
+            <div className="password-input-group">
               <input
-                className="ps-input"
-                type={showPw ? 'text' : 'password'}
+                type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={e => { setPassword(e.target.value); setAiResult(null); }}
-                placeholder="Analiz etmek istediğiniz şifreyi girin..."
+                onChange={handleChange}
+                placeholder="Type a password to test..."
+                className="password-test-input"
                 autoFocus
               />
-              <button
-                type="button"
-                className="ps-eye-btn"
-                onClick={() => setShowPw(p => !p)}
-              >
-                <IconEye open={showPw} />
+              <button className="toggle-visibility" onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? '🙈' : '👁️'}
               </button>
             </div>
-            <button
-              type="submit"
-              className="ps-analyze-btn"
-              disabled={loading || !password}
-            >
-              {loading ? 'Analiz...' : 'AI Analizi'}
-            </button>
-          </div>
-        </form>
 
-        {/* Strength Meter */}
-        {password.length > 0 && (
-          <>
-            {/* Score Display */}
-            <div className="ps-score-display">
-              <div className={`ps-score-circle ${strengthLevel}`}>
-                <span style={{ fontSize: '0.6rem', fontWeight: 600, opacity: 0.8, marginBottom: 2 }}>SEVİYE</span>
-                {strengthPct}
-              </div>
-              <div className="ps-score-info">
-                <h3 style={{ color: strengthLevel === 'weak' ? '#ef5350' : strengthLevel === 'medium' ? '#fbc02d' : '#4caf50' }}>
-                  {strengthLabel}
-                  {aiResult?.ai && <span style={{ fontSize: '0.7rem', marginLeft: 8, color: 'var(--auth-teal)', fontWeight: 400 }}>AI Sonucu</span>}
-                </h3>
-                <p>{strengthDescriptions[strengthLevel]}</p>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="ps-meter-section">
-              <div className="ps-meter-label">
-                <span className="ps-meter-title">Güvenlik Skoru</span>
-                <span className={`ps-meter-result ${strengthLevel}`}>{strengthLabel}</span>
-              </div>
-              <div className="ps-meter-track">
-                <div
-                  className={`ps-meter-fill ${strengthLevel}`}
-                  style={{ width: `${strengthPct}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Criteria Checklist */}
-            <div className="ps-criteria-grid">
-              {Object.entries(criteria).map(([key, passed]) => (
-                <div key={key} className={`ps-criteria-item ${passed ? 'pass' : 'fail'}`}>
-                  <div className="ps-criteria-dot" />
-                  {CRITERIA_LABELS[key]}
+            {strength && (
+              <div className="strength-bar-container">
+                <div className="strength-bar">
+                  <div
+                    className="strength-bar-fill"
+                    style={{ width: `${strength.percent}%`, backgroundColor: strength.color }}
+                  />
                 </div>
-              ))}
-            </div>
-
-            {/* Suggestions */}
-            {suggestions.length > 0 && (
-              <div className="ps-suggestions">
-                <h4><IconLightbulb /> Güçlendirme Önerileri</h4>
-                <ul>
-                  {suggestions.map((s, i) => <li key={i}>{s}</li>)}
-                </ul>
+                <div className="strength-label" style={{ color: strength.color }}>
+                  {strength.level} ({strength.percent}%)
+                </div>
               </div>
             )}
-          </>
-        )}
 
-        {/* Idle state */}
-        {password.length === 0 && (
-          <div className="ps-idle">
-            <div className="ps-idle-icon"><IconKey /></div>
-            <p>Bir şifre girin — anında güvenlik analizi yapılacak</p>
+            {criteria.length > 0 && (
+              <div className="criteria-list">
+                <h3>Security Criteria</h3>
+                {criteria.map((c, i) => (
+                  <div key={i} className={`criteria-item ${c.passed ? 'passed' : 'failed'}`}>
+                    <span className="criteria-icon">{c.passed ? '✅' : '❌'}</span>
+                    <span>{c.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {password && (
+              <button className="ai-check-btn" onClick={handleAiCheck} disabled={loading}>
+                {loading ? '🤖 AI Analyzing...' : '🤖 Run AI Assessment'}
+              </button>
+            )}
+
+            {aiResult && (
+              <div className={`ai-result-card ${aiResult.error ? 'error' : ''}`}>
+                <h3>🧠 AI Assessment Result</h3>
+                {aiResult.error ? (
+                  <p className="ai-error">{aiResult.error}</p>
+                ) : (
+                  <>
+                    <div className="ai-prediction">
+                      <strong>Prediction:</strong> <span style={{ color: aiResult.prediction === 'Strong' ? '#4caf50' : '#ef5350' }}>{aiResult.prediction}</span>
+                    </div>
+                    {aiResult.suggestions && aiResult.suggestions.length > 0 && (
+                      <div className="ai-suggestions">
+                        <strong>Suggestions:</strong>
+                        <ul>
+                          {aiResult.suggestions.map((s, i) => <li key={i}>{s}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
-        )}
+
+          <div className="password-card tips-card">
+            <h3>💡 Strong Password Tips</h3>
+            <ul className="tips-list">
+              <li>Use at least 12 characters (longer is more secure)</li>
+              <li>Mix uppercase, lowercase, numbers and symbols</li>
+              <li>Avoid personal information (name, birthdate, etc.)</li>
+              <li>Don't use common dictionary words</li>
+              <li>Create a unique password for each account</li>
+              <li>Consider using a password manager</li>
+              <li>Enable two-factor authentication (MFA) for extra security</li>
+            </ul>
+          </div>
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
