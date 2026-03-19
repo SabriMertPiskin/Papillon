@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { logout } from '../services/api';
+import { logout, predictPhishing } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import '../styles/Dashboard.css';
 
@@ -17,6 +17,8 @@ export default function Dashboard() {
   const [clientSecret, setClientSecret] = useState('');
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('papillon-theme') || 'dark';
   });
@@ -561,18 +563,54 @@ export default function Dashboard() {
               {latestMail.body || latestMail.preview || 'Could not retrieve mail content.'}
             </div>
 
+            {scanResult && (
+              <div style={{
+                background: scanResult.status === 'clean' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+                border: `1px solid ${scanResult.status === 'clean' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)'}`,
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '16px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '1.5rem' }}>{scanResult.status === 'clean' ? '✅' : '🚨'}</span>
+                  <strong style={{ fontSize: '1.1rem' }}>
+                    {scanResult.label} — Risk Score: {scanResult.score}/100
+                  </strong>
+                </div>
+                {scanResult.ai_reasons && scanResult.ai_reasons.length > 0 && (
+                  <ul style={{ margin: '8px 0 0 20px', opacity: 0.9, fontSize: '0.9rem' }}>
+                    {scanResult.ai_reasons.map((r, i) => <li key={i} style={{ marginBottom: '4px' }}>{r}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button 
                 className="modal-btn" 
-                onClick={() => {
-                  alert("⚠️ AI Phishing Analysis module is not yet connected on the backend.");
-                  setShowMailModal(false);
+                disabled={scanLoading}
+                onClick={async () => {
+                  setScanLoading(true);
+                  setScanResult(null);
+                  try {
+                    const emailText = latestMail.body || latestMail.preview || '';
+                    const res = await predictPhishing(emailText, latestMail.from || '', latestMail.subject || '');
+                    if (res.data.success) {
+                      setScanResult(res.data.result);
+                    } else {
+                      alert('Scan failed: ' + (res.data.detail || 'Unknown error'));
+                    }
+                  } catch (err) {
+                    alert('Could not reach AI module: ' + (err.response?.data?.detail || err.message));
+                  } finally {
+                    setScanLoading(false);
+                  }
                 }} 
                 style={{ background: 'rgba(244, 67, 54, 0.1)', color: '#ef5350', border: '1px solid rgba(244, 67, 54, 0.3)' }}
               >
-                🤖 Run AI Phishing Scan
+                {scanLoading ? '⏳ Scanning...' : '🤖 Run AI Phishing Scan'}
               </button>
-              <button className="modal-btn primary" onClick={() => setShowMailModal(false)}>
+              <button className="modal-btn primary" onClick={() => { setShowMailModal(false); setScanResult(null); }}>
                 Close
               </button>
             </div>

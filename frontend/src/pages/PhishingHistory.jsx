@@ -1,83 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
+import { getPhishingHistory } from '../services/api';
 import '../styles/PhishingHistory.css';
-
-// Mock Data for UI
-const mockPhishingLogs = [
-  {
-    id: 1,
-    date: '2026-03-18 01:10:05',
-    sender: 'support@account-paypal.com.tr',
-    subject: 'Security Alert: Your Account Has Been Restricted!',
-    preview: 'Dear customer, we have detected suspicious activity on your account. Please click the link below to...',
-    score: 98,
-    status: 'phishing',
-    aiReasons: [
-      'Sender address (account-paypal.com.tr) does not match the official domain (paypal.com).',
-      'Email content creates a sense of urgency to force the recipient to click.',
-      'Link analysis: The redirect page is not a known OAuth or Login page, it is a newly registered domain.'
-    ],
-    fullBody: 'Dear customer,\n\nWe have detected suspicious activity on your account. For your security, a temporary restriction has been placed on your account.\n\nTo lift the restriction and verify your account, please click the following link and sign in within 24 hours:\n\nhttp://verify-account-paypal-tr.com/login/auth=192831\n\nOtherwise, your account will be permanently closed.\n\nBest regards,\nPayPal Support Team'
-  },
-  {
-    id: 2,
-    date: '2026-03-17 14:22:18',
-    sender: 'it-dept@company-domain.com',
-    subject: 'Payroll Statement View',
-    preview: 'The attached file contains your payroll statement for this month. To view it...',
-    score: 85,
-    status: 'phishing',
-    aiReasons: [
-      'Attached file (Payroll.pdf.exe) is a double-extension malware (Executable).',
-      'Although the email appears to be from the IT department, the Reply-To address is different (hacker@mail-ru.com).',
-      'Social engineering: Salary/Money theme.'
-    ],
-    fullBody: 'Hello,\n\nThe attached file contains your payroll statement for this month.\nPlease download and review it.\n\nBest regards,\nHuman Resources'
-  },
-  {
-    id: 3,
-    date: '2026-03-17 09:15:42',
-    sender: 'no-reply@github.com',
-    subject: '[GitHub] You have a new follower',
-    preview: 'Sabri Mert started following you on GitHub. Checkout their profile here...',
-    score: 5,
-    status: 'clean',
-    aiReasons: [
-      'Sender address and DKIM/SPF records match the official GitHub servers.',
-      'All links in the content point to the https://github.com/ domain.',
-      'Does not contain any suspicious language or urgency.'
-    ],
-    fullBody: 'Hey Sabri Mert,\n\nSomeone started following you on GitHub.\n\nView their profile here: https://github.com/new-follower\n\nThanks,\nThe GitHub Team'
-  },
-  {
-    id: 4,
-    date: '2026-03-16 19:40:11',
-    sender: 'admin@netflix-subscription.net',
-    subject: 'Payment Failed!',
-    preview: 'Your Netflix subscription is about to be cancelled. Please update your card information.',
-    score: 65,
-    status: 'suspicious',
-    aiReasons: [
-      'Sender domain (netflix-subscription.net) is not the official Netflix domain, although Netflix infrastructure may also be in use. Suspicious.',
-      'Emotional manipulation (subscription cancellation) is present.',
-      'Redirect link gives an SSL error.'
-    ],
-    fullBody: 'Hello,\n\nYour last payment could not be charged from your credit card. Your Netflix service is about to be cancelled.\nTo continue, update your payment method at the link below:\n\nhttp://netflix-subscription.net/update-billing\n\nNetflix Team'
-  }
-];
 
 export default function PhishingHistory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedLog, setSelectedLog] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [stats, setStats] = useState({ total_phishing: 0, total_suspicious: 0, total_clean: 0, total_scanned: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const filteredLogs = mockPhishingLogs.filter(log => {
-    const matchesSearch = log.subject.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          log.sender.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || log.status === filterStatus;
-    
-    return matchesSearch && matchesStatus;
-  });
+  // Backend'den veri çek
+  const fetchHistory = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getPhishingHistory(
+        filterStatus === 'all' ? '' : filterStatus,
+        searchTerm
+      );
+      if (response.data.success) {
+        setLogs(response.data.logs);
+        setStats(response.data.stats);
+      } else {
+        setError(response.data.detail || 'Failed to fetch phishing history');
+      }
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setError('Please log in to view phishing history.');
+      } else {
+        setError('Could not connect to the backend. Make sure the server is running.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sayfa yüklendiğinde ve filtre değiştiğinde çağır
+  useEffect(() => {
+    const debounce = setTimeout(() => {
+      fetchHistory();
+    }, 300);
+    return () => clearTimeout(debounce);
+  }, [filterStatus, searchTerm]);
 
   const getStatusLabel = (status) => {
     if (status === 'phishing') return 'PHISHING (DANGER)';
@@ -98,15 +65,15 @@ export default function PhishingHistory() {
           
           <div className="phishing-stats-mini">
             <div className="p-stat-box danger">
-              <span className="p-stat-num">24</span>
+              <span className="p-stat-num">{stats.total_phishing}</span>
               <span className="p-stat-lbl">Blocked Phishing</span>
             </div>
             <div className="p-stat-box">
-              <span className="p-stat-num">8</span>
+              <span className="p-stat-num">{stats.total_suspicious}</span>
               <span className="p-stat-lbl">Suspicious Detected</span>
             </div>
             <div className="p-stat-box safe">
-              <span className="p-stat-num">1.4K</span>
+              <span className="p-stat-num">{stats.total_clean}</span>
               <span className="p-stat-lbl">Clean Emails</span>
             </div>
           </div>
@@ -133,12 +100,25 @@ export default function PhishingHistory() {
         </div>
 
         <div className="phishing-grid">
-          {filteredLogs.length === 0 ? (
+          {loading ? (
             <div style={{ textAlign: 'center', padding: '50px', color: 'var(--auth-text-muted)' }}>
-              No logs matching the search criteria.
+              <div style={{ fontSize: '2rem', marginBottom: '10px' }}>⏳</div>
+              Loading scan history...
+            </div>
+          ) : error ? (
+            <div style={{ textAlign: 'center', padding: '50px', color: '#ef5350' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '10px' }}>⚠️</div>
+              {error}
+            </div>
+          ) : logs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '50px', color: 'var(--auth-text-muted)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📭</div>
+              {searchTerm || filterStatus !== 'all' 
+                ? 'No logs matching the search criteria.' 
+                : 'No phishing scans yet. Use the Dashboard to scan emails with AI.'}
             </div>
           ) : (
-            filteredLogs.map(log => (
+            logs.map(log => (
               <div 
                 key={log.id} 
                 className={`phishing-card status-${log.status}`}
@@ -151,10 +131,10 @@ export default function PhishingHistory() {
                 
                 <div className="p-card-content">
                   <div className="p-card-header">
-                    <h3 className="p-subject">{log.subject}</h3>
+                    <h3 className="p-subject">{log.subject || '(No Subject)'}</h3>
                     <span className={`p-badge ${log.status}`}>{getStatusLabel(log.status)}</span>
                   </div>
-                  <div className="p-sender">{log.sender}</div>
+                  <div className="p-sender">{log.sender || '(Unknown Sender)'}</div>
                   <div className="p-preview">{log.preview}</div>
                 </div>
 
@@ -188,7 +168,7 @@ export default function PhishingHistory() {
               <div className={`ai-reasoning-box ${selectedLog.status === 'clean' ? 'safe' : ''}`}>
                 <h4>🤖 AI Decision Rationale (Explainable AI)</h4>
                 <ul className="ai-reasoning-list">
-                  {selectedLog.aiReasons.map((reason, idx) => (
+                  {(selectedLog.aiReasons || []).map((reason, idx) => (
                     <li key={idx} style={{ marginBottom: '8px' }}>{reason}</li>
                   ))}
                 </ul>

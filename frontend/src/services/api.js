@@ -88,9 +88,13 @@ export const outlookLatestMail = () => API.get('/outlook/latest-mail');
 export const predictPasswordStrength = (password) =>
   API.post('/ai/password-strength/predict/', { password });
 
+export const predictPhishing = (email_text, sender = '', subject = '') =>
+  API.post('/ai/phishing/predict/', { email_text, sender, subject });
+
+export const getPhishingHistory = (status = '', search = '') =>
+  API.get(`/ai/phishing/history/?status=${status}&search=${search}`);
+
 // Future AI endpoints (when backend is ready):
-// export const predictPhishing = (email_text) =>
-//   API.post('/ai/phishing/predict/', { email_text });
 // export const predictIntrusion = (features) =>
 //   API.post('/ai/intrusion/predict/', { features });
 // export const analyzeMalware = (formData) =>

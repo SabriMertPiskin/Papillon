@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'crypto',
     'outlook',
     'attack_surface',
+    'phishing',
 ]
 
 MIDDLEWARE = [
