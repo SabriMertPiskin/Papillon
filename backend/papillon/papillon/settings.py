@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'password_ai',
     'malware_analysis',
     'network_ids',
+    'blacklist',
 ]
 
 MIDDLEWARE = [

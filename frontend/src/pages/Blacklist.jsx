@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import DashboardLayout from '../components/DashboardLayout';
+import { getBlacklist, addBlacklist, deleteBlacklist } from '../services/api';
 import '../styles/Blacklist.css';
 
 export default function Blacklist() {
@@ -13,16 +13,6 @@ export default function Blacklist() {
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
-  // Offline mock data for when backend is not available
-  const mockData = [
-    { id: 1, ip_address: '45.33.12.89', reason: 'Port scanning detected', created_at: '2026-03-18T10:30:00Z', blocked_by: 'admin' },
-    { id: 2, ip_address: '185.20.10.2', reason: 'DDoS SYN flood attack', created_at: '2026-03-17T22:15:00Z', blocked_by: 'system' },
-    { id: 3, ip_address: '114.114.114.114', reason: 'Suspicious DNS traffic', created_at: '2026-03-17T14:00:00Z', blocked_by: 'admin' },
-    { id: 4, ip_address: '103.25.231.18', reason: 'SSH brute-force attempt', created_at: '2026-03-16T09:45:00Z', blocked_by: 'IDS' },
-    { id: 5, ip_address: '192.168.1.200/24', reason: 'Internal network vulnerability', created_at: '2026-03-15T20:00:00Z', blocked_by: 'admin' },
-    { id: 6, ip_address: '2001:db8::ff00:42:8329', reason: 'IPv6 anomaly detected', created_at: '2026-03-14T11:30:00Z', blocked_by: 'AI Model' },
-  ];
-
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
     if (!isAuthenticated) { navigate('/login'); }
@@ -33,14 +23,17 @@ export default function Blacklist() {
 
   const fetchBlacklist = async () => {
     setLoading(true);
+    setError('');
     try {
-      const response = await axios.get('http://localhost:8000/blacklist/', { withCredentials: true });
+      const response = await getBlacklist();
       if (response.data.success) {
         setBlacklist(response.data.blacklist || []);
+      } else {
+        setError(response.data.detail || 'Failed to load blacklist.');
       }
     } catch (err) {
-      console.warn('Backend not reachable, loading mock data.');
-      setBlacklist(mockData);
+      console.error('Blacklist fetch error:', err);
+      setError('Could not connect to backend. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -63,10 +56,7 @@ export default function Blacklist() {
     }
 
     try {
-      const response = await axios.post('http://localhost:8000/blacklist/add', {
-        ip_address: newIP.trim(),
-        reason: reason.trim() || 'Manual block'
-      }, { withCredentials: true });
+      const response = await addBlacklist(newIP.trim(), reason.trim() || 'Manual block');
 
       if (response.data.success) {
         setSuccess(`${newIP} successfully added to blacklist.`);
@@ -77,18 +67,8 @@ export default function Blacklist() {
         setError(response.data.detail || 'Failed to add.');
       }
     } catch (err) {
-      // Offline mode — add to local
-      const newItem = {
-        id: Date.now(),
-        ip_address: newIP.trim(),
-        reason: reason.trim() || 'Manual block',
-        created_at: new Date().toISOString(),
-        blocked_by: 'admin (offline)'
-      };
-      setBlacklist(prev => [newItem, ...prev]);
-      setSuccess(`${newIP} added to list (offline mode).`);
-      setNewIP('');
-      setReason('');
+      const detail = err.response?.data?.detail || err.message || 'Unknown error';
+      setError(detail);
     }
   };
 
@@ -96,12 +76,12 @@ export default function Blacklist() {
     if (!window.confirm(`Remove ${ip} from the blacklist?`)) return;
 
     try {
-      await axios.delete(`http://localhost:8000/blacklist/${id}`, { withCredentials: true });
+      await deleteBlacklist(id);
       setSuccess(`${ip} removed from blacklist.`);
       fetchBlacklist();
     } catch (err) {
-      setBlacklist(prev => prev.filter(item => item.id !== id));
-      setSuccess(`${ip} removed from list (offline mode).`);
+      const detail = err.response?.data?.detail || err.message || 'Unknown error';
+      setError(detail);
     }
   };
 
