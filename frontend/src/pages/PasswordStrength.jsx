@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { predictPasswordStrength } from '../services/api';
 import DashboardLayout from '../components/DashboardLayout';
 import '../styles/PasswordStrength.css';
 
@@ -64,9 +64,7 @@ export default function PasswordStrength() {
     setLoading(true);
     setAiResult(null);
     try {
-      const response = await axios.post('http://localhost:8000/password/analyze/', {
-        password: password,
-      }, { withCredentials: true });
+      const response = await predictPasswordStrength(password);
 
       if (response.data.success) {
         setAiResult(response.data);
