@@ -97,8 +97,9 @@ export const getPhishingHistory = (status = '', search = '') =>
 // Future AI endpoints (when backend is ready):
 // export const predictIntrusion = (features) =>
 //   API.post('/ai/intrusion/predict/', { features });
-// export const analyzeMalware = (formData) =>
-//   API.post('/ai/malware/analyze/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+
+export const analyzeMalware = (formData) =>
+  API.post('/ai/malware/analyze/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 
 // =========================================
 // BLACKLIST

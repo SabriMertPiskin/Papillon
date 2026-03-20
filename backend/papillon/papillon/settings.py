@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'attack_surface',
     'phishing',
     'password_ai',
+    'malware_analysis',
 ]
 
 MIDDLEWARE = [

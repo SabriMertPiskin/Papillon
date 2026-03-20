@@ -36,5 +36,6 @@ urlpatterns = [
     path('attack-surface/', include('attack_surface.urls')),
     path('ai/phishing/', include('phishing.urls')),
     path('ai/password-strength/', include('password_ai.urls')),
+    path('ai/malware/', include('malware_analysis.urls')),
     path('vault/health', vault_health, name='vault_health'),
 ]
