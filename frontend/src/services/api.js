@@ -94,9 +94,12 @@ export const predictPhishing = (email_text, sender = '', subject = '') =>
 export const getPhishingHistory = (status = '', search = '') =>
   API.get(`/ai/phishing/history/?status=${status}&search=${search}`);
 
-// Future AI endpoints (when backend is ready):
-// export const predictIntrusion = (features) =>
-//   API.post('/ai/intrusion/predict/', { features });
+// Network IDS AI endpoints
+export const predictIntrusion = (features) =>
+  API.post('/ai/network-ids/predict/', { features });
+
+export const analyzeNetworkBatch = (samples) =>
+  API.post('/ai/network-ids/analyze-batch/', { samples });
 
 export const analyzeMalware = (formData) =>
   API.post('/ai/malware/analyze/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });

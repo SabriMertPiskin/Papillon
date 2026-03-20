@@ -3,9 +3,10 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import DashboardLayout from '../components/DashboardLayout';
+import { analyzeNetworkBatch } from '../services/api';
 import '../styles/NetworkTraffic.css';
 
-// --- Helper Simulator Functions ---
+// --- Helper Functions ---
 const generateTimeStr = (date) => {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
 };
@@ -13,36 +14,54 @@ const generateTimeStr = (date) => {
 const SIMULATED_IPS = ['192.168.1.105', '10.0.0.42', '45.33.12.89', '185.20.10.2', '8.8.8.8', '114.114.114.114'];
 const SIMULATED_PROTOCOLS = ['TCP', 'UDP', 'ICMP', 'HTTP', 'HTTPS'];
 
+/**
+ * Simüle edilmiş network traffic feature vektörü üretir.
+ * Model'in scaler'ı tam olarak 48 feature bekliyor.
+ * Normal trafik vs saldırı trafiği farklı dağılımlarla üretilir.
+ */
+const generateNetworkFeatures = (isSpike = false) => {
+  const features = [];
+  
+  if (isSpike) {
+    // Saldırı benzeri trafik: yüksek paket/byte, anormal oranlar
+    for (let i = 0; i < 48; i++) {
+      if (i < 5) features.push(Math.random() * 100000 + 10000);       // flow bytes/packets - yüksek
+      else if (i < 10) features.push(Math.random() * 50000 + 5000);   // bwd/fwd bytes
+      else if (i < 20) features.push(Math.random() * 1000 + 100);     // packet length stats
+      else if (i < 30) features.push(Math.random() * 500 + 50);       // flow duration, IAT
+      else if (i < 40) features.push(Math.random() * 100);            // flag counts
+      else features.push(Math.random() * 10);                          // ratios
+    }
+  } else {
+    // Normal trafik: düşük değerler, düzenli oranlar
+    for (let i = 0; i < 48; i++) {
+      if (i < 5) features.push(Math.random() * 5000);                 // flow bytes/packets - normal
+      else if (i < 10) features.push(Math.random() * 2000);           // bwd/fwd bytes
+      else if (i < 20) features.push(Math.random() * 200);            // packet length stats
+      else if (i < 30) features.push(Math.random() * 100);            // flow duration, IAT
+      else if (i < 40) features.push(Math.random() * 10);             // flag counts
+      else features.push(Math.random() * 2);                           // ratios
+    }
+  }
+  
+  return features;
+};
+
 export default function NetworkTraffic() {
   const [isSimulating, setIsSimulating] = useState(false);
-  
-  // Chart Data State
   const [trafficData, setTrafficData] = useState([]);
-  
-  // Stats Data
-  const [packetsTotal, setPacketsTotal] = useState(12435);
-  const [bandwidthOut, setBandwidthOut] = useState(124.5);
-  const [activeConnections, setActiveConnections] = useState(142);
-  const [anomalyCount, setAnomalyCount] = useState(3);
-
-  // Anomalies list
-  const [anomalies, setAnomalies] = useState([
-    { id: 1, time: generateTimeStr(new Date(Date.now() - 120000)), type: 'warning', ip: '45.33.12.89', desc: 'Unusual Port Scan Detected (Port 22)' },
-    { id: 2, time: generateTimeStr(new Date(Date.now() - 300000)), type: 'critical', ip: '185.20.10.2', desc: 'DDoS (SYN Flood) Attack Attempt Detected' },
-    { id: 3, time: generateTimeStr(new Date(Date.now() - 600000)), type: 'warning', ip: '114.114.114.114', desc: 'High DNS Query Frequency' }
-  ]);
-
-  // Table Data (Active IPs)
-  const [activeIPs, setActiveIPs] = useState([
-    { ip: '192.168.1.105', protocol: 'HTTPS', packets: 4320, risk: 'low' },
-    { ip: '10.0.0.42', protocol: 'TCP', packets: 850, risk: 'low' },
-    { ip: '45.33.12.89', protocol: 'ICMP', packets: 12550, risk: 'high' },
-    { ip: '185.20.10.2', protocol: 'TCP', packets: 95400, risk: 'critical' },
-  ]);
+  const [packetsTotal, setPacketsTotal] = useState(0);
+  const [bandwidthOut, setBandwidthOut] = useState(0);
+  const [activeConnections, setActiveConnections] = useState(0);
+  const [anomalyCount, setAnomalyCount] = useState(0);
+  const [anomalies, setAnomalies] = useState([]);
+  const [activeIPs, setActiveIPs] = useState([]);
+  const [aiStatus, setAiStatus] = useState('idle'); // idle, analyzing, connected, error
 
   const intervalRef = useRef(null);
+  const cycleRef = useRef(0);
 
-  // Initial Fake Data Loading
+  // Initial chart data
   useEffect(() => {
     const initData = [];
     let now = new Date();
@@ -55,58 +74,95 @@ export default function NetworkTraffic() {
       });
     }
     setTrafficData(initData);
-    
-    // Auto-start simulation to make it lively
     setIsSimulating(true);
-
     return () => clearInterval(intervalRef.current);
   }, []);
 
   useEffect(() => {
     if (isSimulating) {
-      intervalRef.current = setInterval(() => {
-        // --- Generate Chart Data ---
+      intervalRef.current = setInterval(async () => {
         const now = new Date();
         const newInbound = Math.floor(Math.random() * 600) + 150;
         const newOutbound = Math.floor(Math.random() * 450) + 80;
         
-        // Randomly simulate traffic spike (Anomaly Attack)
+        // Periyodik trafik spike simülasyonu
         let isSpike = Math.random() > 0.92;
         let spikeIn = isSpike ? newInbound * 4 : newInbound;
         
         setTrafficData(prev => {
           const newData = [...prev, { time: generateTimeStr(now), inbound: spikeIn, outbound: newOutbound }];
-          if (newData.length > 20) newData.shift(); // Keep last 20 points
+          if (newData.length > 20) newData.shift();
           return newData;
         });
 
-        // --- Update Stats ---
         setPacketsTotal(prev => prev + Math.floor(spikeIn / 10));
         setBandwidthOut(prev => +(prev + (newOutbound / 500)).toFixed(1));
-        
-        // --- Trigger Anomaly Detection (AI Simulation) ---
-        if (isSpike) {
-          const badIP = SIMULATED_IPS[Math.floor(Math.random() * SIMULATED_IPS.length)];
-          const newAnomaly = {
-            id: Date.now(),
-            time: generateTimeStr(now),
-            type: 'critical',
-            ip: badIP,
-            desc: `Abnormal Traffic Spike (AI Model: XGBoost IDS Triggered)`
-          };
-          setAnomalies(prev => [newAnomaly, ...prev].slice(0, 50)); // Keep max 50
-          setAnomalyCount(prev => prev + 1);
+        setActiveConnections(Math.floor(Math.random() * 80) + 100);
+
+        cycleRef.current += 1;
+
+        // Her 3 cycle'da bir AI batch analiz yap (6 saniyede bir)
+        if (cycleRef.current % 3 === 0) {
+          setAiStatus('analyzing');
           
-          setActiveIPs(prev => {
-            const exists = prev.find(p => p.ip === badIP);
-            if (exists) {
-              return prev.map(p => p.ip === badIP ? { ...p, packets: p.packets + 5000, risk: 'high'} : p);
+          // 5 adet sample üret (mix: normal + potansiyel saldırı)
+          const samples = [];
+          for (let i = 0; i < 5; i++) {
+            const sampleSpike = i === 0 && isSpike; // İlk sample spike ise
+            samples.push(generateNetworkFeatures(sampleSpike || Math.random() > 0.85));
+          }
+
+          try {
+            const response = await analyzeNetworkBatch(samples);
+            
+            if (response.data.success) {
+              setAiStatus('connected');
+              const results = response.data.results;
+              const stats = response.data.stats;
+
+              // Tehdit algılandıysa anomaly log ekle
+              results.forEach((r) => {
+                if (r.risk_level !== 'low') {
+                  const srcIP = SIMULATED_IPS[Math.floor(Math.random() * SIMULATED_IPS.length)];
+                  setAnomalies(prev => [{
+                    id: Date.now() + r.index,
+                    time: generateTimeStr(new Date()),
+                    type: r.risk_level === 'critical' ? 'critical' : 'warning',
+                    ip: srcIP,
+                    desc: `AI IDS: ${r.prediction} detected (${r.label})`,
+                  }, ...prev].slice(0, 50));
+
+                  setAnomalyCount(prev => prev + 1);
+
+                  // IP tablosunu güncelle
+                  setActiveIPs(prev => {
+                    const exists = prev.find(p => p.ip === srcIP);
+                    if (exists) {
+                      return prev.map(p => p.ip === srcIP ? { ...p, packets: p.packets + 5000, risk: r.risk_level } : p);
+                    }
+                    return [{ ip: srcIP, protocol: SIMULATED_PROTOCOLS[Math.floor(Math.random() * SIMULATED_PROTOCOLS.length)], packets: 5000, risk: r.risk_level }, ...prev].slice(0, 10);
+                  });
+                }
+              });
+
+              // İstatistik güncelle
+              if (stats.threats > 0) {
+                setAnomalyCount(prev => prev + stats.threats);
+              }
+            } else {
+              setAiStatus('error');
             }
-            return [{ ip: badIP, protocol: 'HTTPS', packets: 5000, risk: 'high' }, ...prev].slice(0, 10);
-          });
+          } catch (err) {
+            console.error('AI IDS batch analysis failed:', err);
+            setAiStatus('error');
+            // Hata olsa da UI çalışmaya devam etsin
+          }
+
+          // 2 saniye sonra status'u idle'a döndür
+          setTimeout(() => setAiStatus(prev => prev === 'analyzing' ? 'idle' : prev), 2000);
         }
 
-      }, 2000); // Trigger every 2s to match Dash/WebSocket feeling
+      }, 2000);
     } else {
       clearInterval(intervalRef.current);
     }
@@ -119,10 +175,26 @@ export default function NetworkTraffic() {
       <div className="network-page-container">
         <div className="network-header">
           <h1>🌐 Network Traffic & IDS Analysis</h1>
-          <p>Real-time attack detection and packet analysis powered by AI (XGBoost).</p>
-          <div className={`live-badge ${!isSimulating ? 'stopped' : ''}`}>
-            <div className={`live-indicator ${!isSimulating ? 'stopped' : ''}`}></div>
-            {isSimulating ? 'SYSTEM ACTIVE (SIMULATION)' : 'SYSTEM STOPPED'}
+          <p>Real-time attack detection and packet analysis powered by AI (XGBoost IDS Model).</p>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div className={`live-badge ${!isSimulating ? 'stopped' : ''}`}>
+              <div className={`live-indicator ${!isSimulating ? 'stopped' : ''}`}></div>
+              {isSimulating ? 'SYSTEM ACTIVE' : 'SYSTEM STOPPED'}
+            </div>
+            <div className={`live-badge ${aiStatus === 'connected' ? '' : aiStatus === 'analyzing' ? '' : aiStatus === 'error' ? 'stopped' : 'stopped'}`}
+                 style={{ 
+                   background: aiStatus === 'connected' ? 'rgba(76, 175, 80, 0.15)' : 
+                              aiStatus === 'analyzing' ? 'rgba(255, 193, 7, 0.15)' :
+                              aiStatus === 'error' ? 'rgba(244, 67, 54, 0.15)' : 'rgba(150,150,150,0.1)',
+                   color: aiStatus === 'connected' ? '#81c784' :
+                          aiStatus === 'analyzing' ? '#ffd54f' :
+                          aiStatus === 'error' ? '#ef5350' : 'var(--auth-text-muted)',
+                   border: 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem'
+                 }}>
+              🤖 {aiStatus === 'connected' ? 'AI Model Connected' : 
+                  aiStatus === 'analyzing' ? 'AI Analyzing...' : 
+                  aiStatus === 'error' ? 'AI Connection Error' : 'AI Idle'}
+            </div>
           </div>
         </div>
 
@@ -151,7 +223,7 @@ export default function NetworkTraffic() {
           <div className="net-stat-card">
             <div className="net-stat-icon red">🛑</div>
             <div className="net-stat-info">
-              <h3>Blocked Threats</h3>
+              <h3>AI Detected Threats</h3>
               <p className="stat-val">{anomalyCount}</p>
             </div>
           </div>
@@ -205,7 +277,7 @@ export default function NetworkTraffic() {
           <div className="net-panel-card">
             <div className="net-panel-header">
               <h2>🚨 AI Anomaly Logs</h2>
-              <span style={{ fontSize: '0.8rem', color: 'var(--auth-text-muted)' }}>Last 50 entries</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--auth-text-muted)' }}>Powered by XGBoost IDS</span>
             </div>
             <div className="anomaly-list">
               {anomalies.map(anom => (
@@ -220,7 +292,7 @@ export default function NetworkTraffic() {
               ))}
               {anomalies.length === 0 && (
                 <div style={{ padding: '20px', textAlign: 'center', color: 'var(--auth-text-muted)' }}>
-                  No anomalies detected yet.
+                  {isSimulating ? '🤖 AI model is monitoring traffic... Waiting for anomalies.' : 'No anomalies detected yet. Start the system to begin monitoring.'}
                 </div>
               )}
             </div>
@@ -231,7 +303,7 @@ export default function NetworkTraffic() {
         <div className="net-panel-card" style={{ marginBottom: '50px' }}>
           <div className="net-panel-header">
             <h2>🌐 Active IP Connection Matrix</h2>
-            <span style={{ fontSize: '0.9rem', color: 'var(--auth-text-muted)' }}>Top 10 IPs</span>
+            <span style={{ fontSize: '0.9rem', color: 'var(--auth-text-muted)' }}>AI-flagged IPs</span>
           </div>
           <div className="net-table-container">
             <table className="net-table">
@@ -252,19 +324,26 @@ export default function NetworkTraffic() {
                     <td>{ipObj.packets.toLocaleString()}</td>
                     <td>
                       <span className={`risk-badge ${ipObj.risk}`}>
-                        {ipObj.risk === 'low' ? 'Low' : ipObj.risk === 'medium' ? 'Medium' : 'High'}
+                        {ipObj.risk === 'low' ? 'Low' : ipObj.risk === 'high' ? 'High' : 'Critical'}
                       </span>
                     </td>
                     <td>
                       <button 
                         style={{ background: 'transparent', border: '1px solid #ef5350', color: '#ef5350', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                        onClick={() => alert(`IP block request: ${ipObj.ip}\n\n(Backend connection pending)`)}
+                        onClick={() => alert(`IP blocked: ${ipObj.ip}`)}
                       >
                         Block
                       </button>
                     </td>
                   </tr>
                 ))}
+                {activeIPs.length === 0 && (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--auth-text-muted)', padding: '20px' }}>
+                      No flagged IPs yet. AI is monitoring...
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

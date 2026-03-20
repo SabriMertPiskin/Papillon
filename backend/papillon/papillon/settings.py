@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'phishing',
     'password_ai',
     'malware_analysis',
+    'network_ids',
 ]
 
 MIDDLEWARE = [
