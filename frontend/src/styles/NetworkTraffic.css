@@ -10,7 +10,11 @@
 
 .network-header {
   margin-bottom: 30px;
-  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .network-header h1 {
@@ -33,9 +37,6 @@
 }
 
 .network-header .live-badge {
-  position: absolute;
-  top: 5px;
-  right: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -44,8 +45,9 @@
   color: #4caf50;
   padding: 8px 16px;
   border-radius: 20px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .network-header .live-badge.stopped {

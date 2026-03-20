@@ -174,22 +174,26 @@ export default function NetworkTraffic() {
     <DashboardLayout>
       <div className="network-page-container">
         <div className="network-header">
-          <h1>🌐 Network Traffic & IDS Analysis</h1>
-          <p>Real-time attack detection and packet analysis powered by AI (XGBoost IDS Model).</p>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div>
+            <h1>🌐 Network Traffic & IDS Analysis</h1>
+            <p>Real-time attack detection and packet analysis powered by AI (XGBoost IDS Model).</p>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
             <div className={`live-badge ${!isSimulating ? 'stopped' : ''}`}>
               <div className={`live-indicator ${!isSimulating ? 'stopped' : ''}`}></div>
               {isSimulating ? 'SYSTEM ACTIVE' : 'SYSTEM STOPPED'}
             </div>
-            <div className={`live-badge ${aiStatus === 'connected' ? '' : aiStatus === 'analyzing' ? '' : aiStatus === 'error' ? 'stopped' : 'stopped'}`}
-                 style={{ 
+            <div style={{ 
+                   display: 'flex', alignItems: 'center', gap: '8px',
                    background: aiStatus === 'connected' ? 'rgba(76, 175, 80, 0.15)' : 
                               aiStatus === 'analyzing' ? 'rgba(255, 193, 7, 0.15)' :
                               aiStatus === 'error' ? 'rgba(244, 67, 54, 0.15)' : 'rgba(150,150,150,0.1)',
                    color: aiStatus === 'connected' ? '#81c784' :
                           aiStatus === 'analyzing' ? '#ffd54f' :
                           aiStatus === 'error' ? '#ef5350' : 'var(--auth-text-muted)',
-                   border: 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem'
+                   border: aiStatus === 'connected' ? '1px solid rgba(76,175,80,0.4)' :
+                           aiStatus === 'error' ? '1px solid rgba(244,67,54,0.4)' : '1px solid transparent',
+                   padding: '8px 16px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap'
                  }}>
               🤖 {aiStatus === 'connected' ? 'AI Model Connected' : 
                   aiStatus === 'analyzing' ? 'AI Analyzing...' : 
