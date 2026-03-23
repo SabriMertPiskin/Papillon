@@ -46,7 +46,7 @@ export default function UserProfile() {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:8000/user/change-password', {
+      const response = await axios.post('http://localhost:8000/auth/change-password/', {
         current_password: currentPassword,
         new_password: newPassword
       }, { withCredentials: true });
@@ -72,7 +72,7 @@ export default function UserProfile() {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8000/user/update-domain', {
+      const response = await axios.post('http://localhost:8000/auth/update-domain/', {
         domain: newDomain.trim()
       }, { withCredentials: true });
 
@@ -125,7 +125,21 @@ export default function UserProfile() {
               </div>
               <div className="info-item">
                 <label>Corporate Domain</label>
-                <div className="info-value">{user.domain || 'Not specified'}</div>
+                <div className="info-value">
+                  {user.domain ? (
+                    <span className="domain-badge set">{user.domain}</span>
+                  ) : (
+                    <span className="domain-badge unset">Not specified</span>
+                  )}
+                </div>
+              </div>
+              <div className="info-item">
+                <label>Outlook Status</label>
+                <div className="info-value">
+                  <span className={`status-badge ${user.outlook_connected ? 'connected' : 'disconnected'}`}>
+                    {user.outlook_connected ? '🔗 Connected' : '○ Disconnected'}
+                  </span>
+                </div>
               </div>
               <div className="info-item">
                 <label>MFA Status</label>

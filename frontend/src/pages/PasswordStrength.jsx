@@ -13,9 +13,20 @@ export default function PasswordStrength() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  const getStrengthClass = (level) => {
+    const normalized = String(level || '').toLowerCase();
+    if (normalized.includes('strong')) return 'strong';
+    if (normalized.includes('moderate') || normalized.includes('normal')) return 'medium';
+    return 'weak';
+  };
+
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    if (!isAuthenticated) { navigate('/login'); }
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
     const theme = localStorage.getItem('papillon-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
   }, [navigate]);
@@ -33,21 +44,37 @@ export default function PasswordStrength() {
       { label: 'Contains uppercase letter', passed: /[A-Z]/.test(pwd) },
       { label: 'Contains lowercase letter', passed: /[a-z]/.test(pwd) },
       { label: 'Contains number', passed: /\d/.test(pwd) },
-      { label: 'Contains special character (!@#$%^&*)', passed: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd) },
-      { label: 'Not a common password', passed: !['123456', 'password', 'qwerty', '123456789', '12345678', '111111', '1234567', 'sunshine', 'iloveyou', 'princess'].includes(pwd.toLowerCase()) },
+      { label: 'Contains special character (!@#$%^&*)', passed: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(pwd) },
+      {
+        label: 'Not a common password',
+        passed: !['123456', 'password', 'qwerty', '123456789', '12345678', '111111', '1234567', 'sunshine', 'iloveyou', 'princess'].includes(pwd.toLowerCase())
+      },
     ];
 
     setCriteria(checks);
 
-    const passedCount = checks.filter(c => c.passed).length;
+    const passedCount = checks.filter((c) => c.passed).length;
     let level = 'Very Weak';
     let color = '#ef5350';
     let percent = 10;
 
-    if (passedCount >= 7) { level = 'Very Strong'; color = '#4caf50'; percent = 100; }
-    else if (passedCount >= 5) { level = 'Strong'; color = '#66bb6a'; percent = 75; }
-    else if (passedCount >= 4) { level = 'Moderate'; color = '#ff9800'; percent = 50; }
-    else if (passedCount >= 2) { level = 'Weak'; color = '#ff5722'; percent = 30; }
+    if (passedCount >= 7) {
+      level = 'Very Strong';
+      color = '#4caf50';
+      percent = 100;
+    } else if (passedCount >= 5) {
+      level = 'Strong';
+      color = '#66bb6a';
+      percent = 75;
+    } else if (passedCount >= 4) {
+      level = 'Moderate';
+      color = '#ff9800';
+      percent = 50;
+    } else if (passedCount >= 2) {
+      level = 'Weak';
+      color = '#ff5722';
+      percent = 30;
+    }
 
     setStrength({ level, color, percent });
   };
@@ -61,8 +88,10 @@ export default function PasswordStrength() {
 
   const handleAiCheck = async () => {
     if (!password) return;
+
     setLoading(true);
     setAiResult(null);
+
     try {
       const response = await predictPasswordStrength(password);
 
@@ -80,98 +109,118 @@ export default function PasswordStrength() {
 
   return (
     <DashboardLayout>
-      <div className="password-layout">
-        <div className="password-header">
-          <div className="header-icon-wrapper">🔑</div>
-          <div>
-            <h1>Password Strength Analysis</h1>
-            <p>AI-powered password security assessment. Detect and improve your weak passwords.</p>
+      <div className="ps-layout">
+        <div className="ps-header">
+          <div className="ps-title-group">
+            <div className="ps-header-icon">🔑</div>
+            <div>
+              <h1>Password Strength Analysis</h1>
+              <p>AI-powered password security assessment. Detect and improve weak passwords.</p>
+            </div>
           </div>
+          <button className="back-btn" onClick={() => navigate('/dashboard')}>
+            ← Dashboard
+          </button>
         </div>
 
-        <div className="password-content">
-          <div className="password-card main-card">
-            <h2>Test Your Password</h2>
-            <div className="password-input-group">
+        <div className="ps-card">
+          <div className="ps-input-group">
+            <div className="ps-input-wrapper">
+              <span className="ps-input-icon">🔒</span>
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={handleChange}
                 placeholder="Type a password to test..."
-                className="password-test-input"
+                className="ps-input"
                 autoFocus
               />
-              <button className="toggle-visibility" onClick={() => setShowPassword(!showPassword)}>
+              <button
+                type="button"
+                className="ps-eye-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label="Toggle password visibility"
+              >
                 {showPassword ? '🙈' : '👁️'}
               </button>
             </div>
-
-            {strength && (
-              <div className="strength-bar-container">
-                <div className="strength-bar">
-                  <div
-                    className="strength-bar-fill"
-                    style={{ width: `${strength.percent}%`, backgroundColor: strength.color }}
-                  />
-                </div>
-                <div className="strength-label" style={{ color: strength.color }}>
-                  {strength.level} ({strength.percent}%)
-                </div>
-              </div>
-            )}
-
-            {criteria.length > 0 && (
-              <div className="criteria-list">
-                <h3>Security Criteria</h3>
-                {criteria.map((c, i) => (
-                  <div key={i} className={`criteria-item ${c.passed ? 'passed' : 'failed'}`}>
-                    <span className="criteria-icon">{c.passed ? '✅' : '❌'}</span>
-                    <span>{c.label}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {password && (
-              <button className="ai-check-btn" onClick={handleAiCheck} disabled={loading}>
-                {loading ? '🤖 AI Analyzing...' : '🤖 Run AI Assessment'}
-              </button>
-            )}
-
-            {aiResult && (
-              <div className={`ai-result-card ${aiResult.error ? 'error' : ''}`}>
-                <h3>🧠 AI Assessment Result</h3>
-                {aiResult.error ? (
-                  <p className="ai-error">{aiResult.error}</p>
-                ) : (
-                  <>
-                    <div className="ai-prediction">
-                      <strong>Prediction:</strong> <span style={{ color: aiResult.prediction === 'Strong' ? '#4caf50' : '#ef5350' }}>{aiResult.prediction}</span>
-                    </div>
-                    {aiResult.suggestions && aiResult.suggestions.length > 0 && (
-                      <div className="ai-suggestions">
-                        <strong>Suggestions:</strong>
-                        <ul>
-                          {aiResult.suggestions.map((s, i) => <li key={i}>{s}</li>)}
-                        </ul>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
+            <button className="ps-analyze-btn" onClick={handleAiCheck} disabled={loading || !password}>
+              {loading ? 'Analyzing...' : 'AI Check'}
+            </button>
           </div>
 
-          <div className="password-card tips-card">
-            <h3>💡 Strong Password Tips</h3>
-            <ul className="tips-list">
+          {!password && (
+            <div className="ps-idle">
+              <div className="ps-idle-icon">🔑</div>
+              <div>Enter a password to start strength analysis.</div>
+            </div>
+          )}
+
+          {strength && (
+            <>
+              <div className="ps-score-display">
+                <div className={`ps-score-circle ${getStrengthClass(strength.level)}`}>
+                  {strength.percent}
+                </div>
+                <div className="ps-score-info">
+                  <h3>{strength.level}</h3>
+                  <p>Estimated security score</p>
+                </div>
+              </div>
+
+              <div className="ps-meter-section">
+                <div className="ps-meter-label">
+                  <span className="ps-meter-title">Strength meter</span>
+                  <span className={`ps-meter-result ${getStrengthClass(strength.level)}`}>
+                    {strength.level}
+                  </span>
+                </div>
+                <div className="ps-meter-track">
+                  <div
+                    className={`ps-meter-fill ${getStrengthClass(strength.level)}`}
+                    style={{ width: `${strength.percent}%` }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {criteria.length > 0 && (
+            <div className="ps-criteria-grid">
+              {criteria.map((c, i) => (
+                <div key={i} className={`ps-criteria-item ${c.passed ? 'pass' : 'fail'}`}>
+                  <span className="ps-criteria-dot"></span>
+                  <span>{c.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {aiResult && (
+            <>
+              {aiResult.error ? (
+                <div className="ps-alert">⚠ {aiResult.error}</div>
+              ) : (
+                <div className="ps-suggestions">
+                  <h4>🤖 AI Assessment: {aiResult.prediction}</h4>
+                  <ul>
+                    {(aiResult.suggestions || []).map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="ps-suggestions" style={{ marginTop: '20px' }}>
+            <h4>💡 Strong Password Tips</h4>
+            <ul>
               <li>Use at least 12 characters (longer is more secure)</li>
               <li>Mix uppercase, lowercase, numbers and symbols</li>
-              <li>Avoid personal information (name, birthdate, etc.)</li>
-              <li>Don't use common dictionary words</li>
-              <li>Create a unique password for each account</li>
-              <li>Consider using a password manager</li>
-              <li>Enable two-factor authentication (MFA) for extra security</li>
+              <li>Avoid personal information such as names and dates</li>
+              <li>Use unique passwords for different systems</li>
+              <li>Enable MFA for an extra security layer</li>
             </ul>
           </div>
         </div>

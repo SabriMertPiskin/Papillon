@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Register from './pages/Register';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import OutlookIntegration from './pages/OutlookIntegration';
 import CVEList from './pages/CVEList';
 import Encryption from './pages/Encryption';
 import OutlookCallback from './pages/OutlookCallback';
@@ -32,6 +33,7 @@ function App() {
 
         {/* Protected routes */}
         <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />} />
+        <Route path="/outlook-integration" element={isAuthenticated ? <OutlookIntegration /> : <Navigate to="/login" replace />} />
         <Route path="/cve" element={isAuthenticated ? <CVEList /> : <Navigate to="/login" replace />} />
         <Route path="/encryption" element={isAuthenticated ? <Encryption /> : <Navigate to="/login" replace />} />
         <Route path="/mfa-settings" element={isAuthenticated ? <MFASettings /> : <Navigate to="/login" replace />} />

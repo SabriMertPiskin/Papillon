@@ -23,6 +23,7 @@ export default function Sidebar({ user, onLogout }) {
         { icon: '🗺️', label: 'Vulnerability Map', path: '/vulnerability-map' },
         { icon: '🌐', label: 'Network Traffic', path: '/network-traffic' },
         { icon: '🦠', label: 'Malware Analysis', path: '/malware-analysis' },
+        { icon: '📧', label: 'Outlook Integration', path: '/outlook-integration' },
         { icon: '🔑', label: 'Password Analysis', path: '/password-strength' },
         { icon: '🚫', label: 'IP Blacklist', path: '/blacklist' },
         { icon: '🎣', label: 'Phishing History', path: '/phishing-history' },

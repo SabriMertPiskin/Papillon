@@ -54,7 +54,8 @@ DB_PORT=3306
 ```bash
 cd papillon 
 
-python .\manage.py migrate 
+python .\manage.py migrate
+python .\manage.py makemigrations
 python .\manage.py runserver # For running backend with KMS vault, check the "For the KMS Vault" section!!
 ```
 

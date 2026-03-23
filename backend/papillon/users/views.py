@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import CustomUser
 from .forms import RegistrationForm, LoginForm
+from outlook.models import OutlookAccount
 import json
 import pyotp
 import qrcode
@@ -127,13 +128,7 @@ def login(request):
             'success': True,
             'mfa_required': False,
             'detail': f'Welcome back, {user.username}!',
-            'user': {
-                'username': user.username,
-                'email': user.email,
-                'domain': user.domain,
-                'created_at': user.created_at.isoformat(),
-                'mfa_enabled': user.mfa_enabled
-            }
+            'user': _get_user_auth_data(user)
         }, status=200)
     
     except json.JSONDecodeError:
@@ -151,6 +146,27 @@ def _generate_mfa_token(username):
 def _generate_backup_code():
     """6 haneli rastgele yedek kod üret"""
     return f"{secrets.randbelow(10**6):06d}"
+
+
+def _get_user_auth_data(user):
+    """User login response'u için temel data hazırla (outlook_connected dahil)"""
+    from outlook.models import OutlookAccount
+    
+    outlook_connected = False
+    try:
+        outlook_account = OutlookAccount.objects.get(user=user)
+        outlook_connected = bool(outlook_account.outlook_email and outlook_account._access_token)
+    except OutlookAccount.DoesNotExist:
+        outlook_connected = False
+    
+    return {
+        'username': user.username,
+        'email': user.email,
+        'domain': user.domain or '',
+        'created_at': user.created_at.isoformat(),
+        'mfa_enabled': user.mfa_enabled,
+        'outlook_connected': outlook_connected
+    }
 
 
 @csrf_exempt
@@ -225,13 +241,7 @@ def verify_mfa(request):
                 'success': True,
                 'detail': f'Welcome back, {user.username}!',
                 'new_backup_code': new_backup_code,
-                'user': {
-                    'username': user.username,
-                    'email': user.email,
-                    'domain': user.domain,
-                    'created_at': user.created_at.isoformat(),
-                    'mfa_enabled': user.mfa_enabled
-                }
+                'user': _get_user_auth_data(user)
             }, status=200)
         
         # TOTP doğrula
@@ -255,13 +265,7 @@ def verify_mfa(request):
         return JsonResponse({
             'success': True,
             'detail': f'Welcome back, {user.username}!',
-            'user': {
-                'username': user.username,
-                'email': user.email,
-                'domain': user.domain,
-                'created_at': user.created_at.isoformat(),
-                'mfa_enabled': user.mfa_enabled
-            }
+            'user': _get_user_auth_data(user)
         }, status=200)
     
     except json.JSONDecodeError:
@@ -498,3 +502,103 @@ def dashboard(request):
         )
     except Exception as e:
         return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def change_password(request):
+    """Change user password"""
+    try:
+        if 'user_id' not in request.session:
+            return JsonResponse(
+                {'success': False, 'detail': 'Not authenticated'},
+                status=401
+            )
+        
+        username = request.session.get('user_id')
+        data = json.loads(request.body)
+        current_password = data.get('current_password', '')
+        new_password = data.get('new_password', '')
+        
+        if not current_password or not new_password:
+            return JsonResponse(
+                {'success': False, 'detail': 'Current and new password are required'},
+                status=400
+            )
+        
+        # Get user
+        try:
+            user = CustomUser.objects.get(username=username)
+        except CustomUser.DoesNotExist:
+            return JsonResponse(
+                {'success': False, 'detail': f'User not found: {username}'},
+                status=404
+            )
+        
+        # Verify current password
+        if not check_password(current_password, user.password):
+            return JsonResponse(
+                {'success': False, 'detail': 'Current password is incorrect'},
+                status=401
+            )
+        
+        # Update password
+        user.set_password(new_password)
+        user.save()
+        
+        return JsonResponse({
+            'success': True,
+            'detail': 'Password changed successfully'
+        }, status=200)
+    
+    except json.JSONDecodeError as e:
+        return JsonResponse({'success': False, 'detail': f'Invalid JSON: {str(e)}'}, status=400)
+    except Exception as e:
+        import traceback
+        error_detail = f'{str(e)} - {traceback.format_exc()}'
+        return JsonResponse({'success': False, 'detail': error_detail}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_domain(request):
+    """Update user domain"""
+    try:
+        if 'user_id' not in request.session:
+            return JsonResponse(
+                {'success': False, 'detail': 'Not authenticated - no session user_id'},
+                status=401
+            )
+        
+        username = request.session.get('user_id')
+        data = json.loads(request.body)
+        domain = data.get('domain', '').strip()
+        
+        # Get user
+        try:
+            user = CustomUser.objects.get(username=username)
+        except CustomUser.DoesNotExist:
+            return JsonResponse(
+                {'success': False, 'detail': f'User not found: {username}'},
+                status=404
+            )
+        
+        # Update domain
+        user.domain = domain
+        user.save()
+        
+        # Verify save worked
+        user.refresh_from_db()
+        
+        return JsonResponse({
+            'success': True,
+            'detail': 'Domain updated successfully',
+            'domain': user.domain
+        }, status=200)
+    
+    except json.JSONDecodeError as e:
+        return JsonResponse({'success': False, 'detail': f'Invalid JSON: {str(e)}'}, status=400)
+    except Exception as e:
+        import traceback
+        error_detail = f'{str(e)} - {traceback.format_exc()}'
+        return JsonResponse({'success': False, 'detail': error_detail}, status=500)

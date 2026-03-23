@@ -13,4 +13,8 @@ urlpatterns = [
     path('mfa/verify/', views.verify_mfa, name='verify_mfa'),
     path('mfa/disable/', views.mfa_disable, name='mfa_disable'),
     path('mfa/status/', views.mfa_status, name='mfa_status'),
+    
+    # Profile management endpoints
+    path('change-password/', views.change_password, name='change_password'),
+    path('update-domain/', views.update_domain, name='update_domain'),
 ]

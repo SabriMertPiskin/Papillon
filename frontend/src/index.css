@@ -8,12 +8,59 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --scrollbar-size: 12px;
+  --scrollbar-track: rgba(10, 22, 40, 0.85);
+  --scrollbar-track-border: rgba(30, 136, 229, 0.2);
+  --scrollbar-thumb: linear-gradient(180deg, #1e88e5 0%, #0ea5c6 100%);
+  --scrollbar-thumb-hover: linear-gradient(180deg, #42a5f5 0%, #26c6da 100%);
+  --scrollbar-thumb-active: linear-gradient(180deg, #64b5f6 0%, #4dd0e1 100%);
+}
+
+[data-theme='light'] {
+  --scrollbar-track: rgba(222, 232, 245, 0.95);
+  --scrollbar-track-border: rgba(21, 101, 192, 0.2);
+  --scrollbar-thumb: linear-gradient(180deg, #1976d2 0%, #0288d1 100%);
+  --scrollbar-thumb-hover: linear-gradient(180deg, #1e88e5 0%, #00acc1 100%);
+  --scrollbar-thumb-active: linear-gradient(180deg, #42a5f5 0%, #26c6da 100%);
 }
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #1e88e5 var(--scrollbar-track);
+}
+
+/* App-wide scrollbar theming */
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border: 1px solid var(--scrollbar-track-border);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 2px solid var(--scrollbar-track);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
 }
 
 body {

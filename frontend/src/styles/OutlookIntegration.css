@@ -1,0 +1,251 @@
+.outlook-page {
+  padding: 8px 4px 28px;
+}
+
+.outlook-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.outlook-page-header h1 {
+  margin: 0 0 6px;
+  color: var(--auth-text-primary, #e8edf5);
+}
+
+.outlook-page-header p {
+  margin: 0;
+  color: var(--auth-text-secondary, #8899b4);
+}
+
+.outlook-nav-btn {
+  border: 1px solid var(--auth-glass-border, rgba(30,136,229,0.15));
+  background: var(--auth-glass, rgba(15, 25, 50, 0.45));
+  color: var(--auth-text-primary, #e8edf5);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.outlook-status-card,
+.latest-mail-box {
+  background: var(--auth-glass, rgba(15, 25, 50, 0.45));
+  border: 1px solid var(--auth-glass-border, rgba(30,136,229,0.15));
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.status-title {
+  font-size: 0.95rem;
+  color: var(--auth-text-secondary, #8899b4);
+  margin-bottom: 10px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.status-chip.connected {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+}
+
+.status-chip.disconnected {
+  background: rgba(108, 117, 125, 0.15);
+  color: #9aa8bd;
+}
+
+.status-email {
+  margin-top: 10px;
+  color: var(--auth-text-primary, #e8edf5);
+}
+
+.outlook-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.outlook-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.outlook-btn.connect {
+  background: linear-gradient(135deg, #1e88e5, #00bcd4);
+  color: #fff;
+}
+
+.outlook-btn.fetch {
+  background: rgba(30, 136, 229, 0.15);
+  color: #1e88e5;
+  border: 1px solid rgba(30,136,229,0.35);
+}
+
+.outlook-btn.warning {
+  background: rgba(255, 152, 0, 0.15);
+  color: #ff9800;
+  border: 1px solid rgba(255,152,0,0.35);
+}
+
+.outlook-btn.disconnect {
+  background: rgba(244, 67, 54, 0.12);
+  color: #ef5350;
+  border: 1px solid rgba(244,67,54,0.35);
+}
+
+.outlook-btn.secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--auth-text-primary, #e8edf5);
+  border: 1px solid var(--auth-glass-border, rgba(30,136,229,0.15));
+}
+
+.latest-mail-box {
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.latest-mail-box:hover {
+  border-color: rgba(30, 136, 229, 0.35);
+  transform: translateY(-1px);
+}
+
+.latest-mail-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--auth-text-primary, #e8edf5);
+}
+
+.latest-mail-meta-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.latest-mail-meta-row,
+.mail-detail-row {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.meta-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #93a7c8;
+}
+
+.meta-value {
+  color: var(--auth-text-primary, #e8edf5);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.latest-mail-preview {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(8, 18, 36, 0.65);
+  border: 1px solid rgba(30, 136, 229, 0.18);
+}
+
+.latest-mail-preview p {
+  margin: 8px 0 0;
+  color: #c9d5ea;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.status-loading {
+  color: var(--auth-text-secondary, #8899b4);
+}
+
+.outlook-page .modal-content h2,
+.outlook-page .modal-content h3,
+.outlook-page .modal-content h4 {
+  color: var(--auth-text-primary, #e8edf5);
+}
+
+.outlook-page .modal-content p,
+.outlook-page .modal-content li {
+  color: #c5d3ea;
+}
+
+.mail-detail-panel {
+  background: var(--auth-input-bg, rgba(10,22,40,0.6));
+  border: 1px solid var(--auth-glass-border, rgba(30,136,229,0.15));
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.mail-content-box {
+  background: rgba(6, 15, 30, 0.75);
+  border: 1px solid rgba(30, 136, 229, 0.18);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+  min-height: 180px;
+}
+
+.mail-content-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #93a7c8;
+  margin-bottom: 8px;
+}
+
+.mail-content-text {
+  color: #d3def1;
+  line-height: 1.68;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.scan-result {
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.scan-result.clean {
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.scan-result.danger {
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+@media (max-width: 768px) {
+  .outlook-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .latest-mail-meta-row,
+  .mail-detail-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
