@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
-import { getPhishingHistory } from '../services/api';
+import {
+  getPhishingHistory,
+  outlookStatus,
+  outlookLatestMail,
+  predictPhishing,
+} from '../services/api';
 import '../styles/PhishingHistory.css';
 
 export default function PhishingHistory() {
@@ -11,6 +16,11 @@ export default function PhishingHistory() {
   const [stats, setStats] = useState({ total_phishing: 0, total_suspicious: 0, total_clean: 0, total_scanned: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [outlookConnected, setOutlookConnected] = useState(false);
+  const [outlookEmail, setOutlookEmail] = useState('');
+  const [loadingOutlookStatus, setLoadingOutlookStatus] = useState(true);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanMessage, setScanMessage] = useState({ type: '', text: '' });
 
   // Backend'den veri çek
   const fetchHistory = async () => {
@@ -54,6 +64,90 @@ export default function PhishingHistory() {
 
   const closeModal = () => setSelectedLog(null);
 
+  const fetchOutlookConnectionStatus = async () => {
+    setLoadingOutlookStatus(true);
+    try {
+      const response = await outlookStatus();
+      if (response.data.success) {
+        setOutlookConnected(Boolean(response.data.is_connected));
+        setOutlookEmail(response.data.outlook_email || '');
+      }
+    } catch (err) {
+      setOutlookConnected(false);
+      setOutlookEmail('');
+    } finally {
+      setLoadingOutlookStatus(false);
+    }
+  };
+
+  const handleScanLatestMail = async () => {
+    if (!outlookConnected) {
+      setScanMessage({
+        type: 'error',
+        text: 'Outlook account is not connected. Connect Outlook first to scan latest mail.',
+      });
+      return;
+    }
+
+    setScanLoading(true);
+    setScanMessage({ type: '', text: '' });
+
+    try {
+      const latestMailResponse = await outlookLatestMail();
+      if (!latestMailResponse.data.success || !latestMailResponse.data.email) {
+        setScanMessage({
+          type: 'error',
+          text: latestMailResponse.data.detail || 'No latest mail found to scan.',
+        });
+        return;
+      }
+
+      const latestMail = latestMailResponse.data.email;
+      const emailText = (latestMail.body || latestMail.preview || '').trim();
+
+      if (!emailText) {
+        setScanMessage({
+          type: 'error',
+          text: 'Latest email has no readable body/preview to scan.',
+        });
+        return;
+      }
+
+      const scanResponse = await predictPhishing(
+        emailText,
+        latestMail.from || '',
+        latestMail.subject || ''
+      );
+
+      if (!scanResponse.data.success) {
+        setScanMessage({
+          type: 'error',
+          text: scanResponse.data.detail || 'Phishing scan failed.',
+        });
+        return;
+      }
+
+      const result = scanResponse.data.result;
+      setScanMessage({
+        type: 'success',
+        text: `Latest mail scanned successfully. Result: ${result.status?.toUpperCase()} (Score: ${result.score}/100).`,
+      });
+
+      await fetchHistory();
+    } catch (err) {
+      setScanMessage({
+        type: 'error',
+        text: err.response?.data?.detail || 'Could not scan latest mail.',
+      });
+    } finally {
+      setScanLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOutlookConnectionStatus();
+  }, []);
+
   return (
     <DashboardLayout>
       <div className="phishing-page-container">
@@ -78,6 +172,37 @@ export default function PhishingHistory() {
             </div>
           </div>
         </div>
+
+        <div className="phishing-actions-card">
+          <div className="phishing-actions-left">
+            <h3>Quick Scan</h3>
+            {loadingOutlookStatus ? (
+              <p className="phishing-action-note">Checking Outlook connection...</p>
+            ) : outlookConnected ? (
+              <p className="phishing-action-note success">
+                Outlook connected{outlookEmail ? `: ${outlookEmail}` : ''}
+              </p>
+            ) : (
+              <p className="phishing-action-note warning">
+                Outlook disconnected. You can still review history below.
+              </p>
+            )}
+          </div>
+
+          <button
+            className="scan-latest-btn"
+            onClick={handleScanLatestMail}
+            disabled={!outlookConnected || scanLoading || loadingOutlookStatus}
+          >
+            {scanLoading ? 'Scanning latest mail...' : 'Scan Latest Mail'}
+          </button>
+        </div>
+
+        {scanMessage.text && (
+          <div className={`scan-feedback ${scanMessage.type}`}>
+            {scanMessage.type === 'success' ? '✅' : '⚠️'} {scanMessage.text}
+          </div>
+        )}
 
         <div className="phishing-filters">
           <input 

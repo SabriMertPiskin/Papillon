@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import BlacklistedIP
+from users.models import CustomUser
 
 
 # IPv4, IPv6, CIDR validasyonu
@@ -14,6 +15,15 @@ IP_REGEX = re.compile(
 )
 
 
+def _get_authenticated_user(request):
+    if 'user_id' not in request.session:
+        return None, JsonResponse({'success': False, 'detail': 'Not authenticated'}, status=401)
+    try:
+        return CustomUser.objects.get(username=request.session['user_id']), None
+    except CustomUser.DoesNotExist:
+        return None, JsonResponse({'success': False, 'detail': 'User not found'}, status=404)
+
+
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def blacklist_list_create(request):
@@ -21,6 +31,10 @@ def blacklist_list_create(request):
     GET  /blacklist/     — Tüm blacklist'i listele
     POST /blacklist/     — Yeni IP ekle
     """
+    user, auth_error = _get_authenticated_user(request)
+    if auth_error:
+        return auth_error
+
     if request.method == "GET":
         entries = BlacklistedIP.objects.all()
         data = [{
@@ -39,6 +53,12 @@ def blacklist_list_create(request):
 
     # POST — Yeni IP ekle
     try:
+        if not (user.domain or '').strip():
+            return JsonResponse({
+                'success': False,
+                'detail': 'IP blacklist additions are locked. Please add your domain from Profile & Account first.'
+            }, status=403)
+
         body = json.loads(request.body)
         ip_address = body.get('ip_address', '').strip()
         reason = body.get('reason', '').strip() or 'Manual block'
@@ -65,7 +85,7 @@ def blacklist_list_create(request):
         entry = BlacklistedIP.objects.create(
             ip_address=ip_address,
             reason=reason,
-            blocked_by='admin',
+            blocked_by=user.username,
         )
 
         return JsonResponse({
@@ -99,6 +119,10 @@ def blacklist_delete(request, pk):
     DELETE /blacklist/<id>/ — IP'yi blacklist'ten kaldır
     """
     try:
+        _, auth_error = _get_authenticated_user(request)
+        if auth_error:
+            return auth_error
+
         entry = BlacklistedIP.objects.get(pk=pk)
         ip = entry.ip_address
         entry.delete()

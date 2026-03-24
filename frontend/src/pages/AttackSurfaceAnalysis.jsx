@@ -64,6 +64,7 @@ function AccordionSection({ title, count, icon, children, defaultOpen = false })
 
 export default function AttackSurfaceAnalysis() {
   const [domain, setDomain] = useState('');
+  const [registeredDomain, setRegisteredDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [error, setError] = useState('');
@@ -73,16 +74,34 @@ export default function AttackSurfaceAnalysis() {
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
     if (!isAuthenticated) { navigate('/login'); }
+
+    const userRaw = localStorage.getItem('user');
+    if (userRaw) {
+      try {
+        const parsedUser = JSON.parse(userRaw);
+        const savedDomain = (parsedUser?.domain || '').trim();
+        if (savedDomain) {
+          setRegisteredDomain(savedDomain);
+          setDomain(savedDomain);
+        }
+      } catch (e) {
+        // Domain parsing error, allow user to enter manually
+      }
+    }
+
     const theme = localStorage.getItem('papillon-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
   }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!domain.trim()) { setError('Please enter a domain to scan.'); return; }
+
+    const targetDomain = (registeredDomain || domain).trim();
+    if (!targetDomain) { setError('Please enter a domain to start scanning.'); return; }
+
     setLoading(true); setError(''); setResults(null);
     try {
-      const response = await axios.post('http://localhost:8000/attack-surface/scan/', { domain: domain.trim() }, { withCredentials: true });
+      const response = await axios.post('http://localhost:8000/attack-surface/scan/', { domain: targetDomain }, { withCredentials: true });
       if (response.data.success) { setResults(response.data.results); }
       else { setError(response.data.detail || 'Scan failed.'); }
     } catch (err) {
@@ -205,8 +224,14 @@ export default function AttackSurfaceAnalysis() {
             {error && (<div className="alert-error"><IconAlert /> {error}</div>)}
             <form onSubmit={handleSubmit} className="scan-form">
               <div className="scan-input-group">
-                <label>Target Domain / IP Address</label>
-                <input type="text" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="e.g., github.com" disabled={loading} />
+                <label>Domain to Scan</label>
+                <input
+                  type="text"
+                  value={registeredDomain || domain}
+                  onChange={(e) => setDomain(e.target.value)}
+                  placeholder="example.com"
+                  disabled={loading}
+                />
               </div>
               <button type="submit" disabled={loading} className="scan-btn">
                 {loading ? (<><div className="spinner"></div> Scanning...</>) : (<><span>🔍</span> Start Analysis</>)}

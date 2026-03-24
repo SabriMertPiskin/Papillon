@@ -137,6 +137,13 @@
   box-shadow: 0 8px 20px rgba(239, 83, 80, 0.4);
 }
 
+.add-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 /* --- Alerts --- */
 .bl-alert {
   padding: 14px 20px;
@@ -158,6 +165,30 @@
   background: rgba(76, 175, 80, 0.1);
   border: 1px solid rgba(76, 175, 80, 0.3);
   color: #4caf50;
+}
+
+.bl-alert.info {
+  background: rgba(30, 136, 229, 0.1);
+  border: 1px solid rgba(30, 136, 229, 0.3);
+  color: #90caf9;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.bl-link-btn {
+  border: 1px solid rgba(100, 181, 246, 0.5);
+  background: rgba(30, 136, 229, 0.15);
+  color: #bbdefb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.bl-link-btn:hover {
+  background: rgba(30, 136, 229, 0.24);
 }
 
 /* --- Table --- */

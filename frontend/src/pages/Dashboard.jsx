@@ -79,79 +79,109 @@ export default function Dashboard() {
     });
   };
 
-  // Module cards data
-  const moduleCards = [
+  // Categorized module cards data
+  const moduleCategories = [
     {
-      icon: '🛡️',
-      iconClass: 'blue',
-      title: 'CVE Vulnerabilities',
-      desc: 'Browse the latest CVE vulnerabilities and track security threats.',
-      path: '/cve'
+      category: 'General Tools',
+      items: [
+        {
+          icon: '🔑',
+          iconClass: 'red',
+          title: 'Password Strength Analysis',
+          desc: 'AI-powered password security assessment. Detect your weak passwords.',
+          path: '/password-strength'
+        },
+        {
+          icon: '🔐',
+          iconClass: 'purple',
+          title: 'Text Encryption',
+          desc: 'Securely encrypt your text with AES and RSA algorithms.',
+          path: '/encryption'
+        },
+        {
+          icon: '🛡️',
+          iconClass: 'blue',
+          title: 'CVE Vulnerabilities',
+          desc: 'Browse the latest CVE vulnerabilities and track security threats.',
+          path: '/cve'
+        },
+      ]
     },
     {
-      icon: '🔐',
-      iconClass: 'purple',
-      title: 'Text Encryption',
-      desc: 'Securely encrypt your text with AES and RSA algorithms.',
-      path: '/encryption'
+      category: 'Network Tools',
+      items: [
+        {
+          icon: '🎯',
+          iconClass: 'teal',
+          title: 'Attack Surface Analysis',
+          desc: 'Port scanning, DNS, SSL, subdomain enumeration and more for target domains.',
+          path: '/attack-surface'
+        },
+        {
+          icon: '🌐',
+          iconClass: 'blue',
+          title: 'Network Traffic Analysis',
+          desc: 'Real-time network traffic analysis and anomaly/attack detection with AI models.',
+          path: '/network-traffic'
+        },
+        {
+          icon: '🗺️',
+          iconClass: 'teal',
+          title: 'Vulnerability Map',
+          desc: 'Visualize system topology and potential vulnerabilities across your infrastructure.',
+          path: '/vulnerability-map'
+        },
+      ]
     },
     {
-      icon: '🎯',
-      iconClass: 'teal',
-      title: 'Attack Surface Analysis',
-      desc: 'Port scanning, DNS, SSL, subdomain enumeration and more for target domains.',
-      path: '/attack-surface'
+      category: 'Email & Threats',
+      items: [
+        {
+          icon: '📧',
+          iconClass: 'orange',
+          title: 'Outlook Integration',
+          desc: 'Manage Outlook connection, check status, fetch latest mail and disconnect.',
+          path: '/outlook-integration'
+        },
+        {
+          icon: '🎣',
+          iconClass: 'orange',
+          title: 'Phishing History',
+          desc: 'Review historical phishing detections and analyze email threats.',
+          path: '/phishing-history'
+        },
+        {
+          icon: '🦠',
+          iconClass: 'red',
+          title: 'Malware Analysis',
+          desc: 'Analyze your files with our AI-powered engine using static/dynamic analysis to detect 0-day threats.',
+          path: '/malware-analysis'
+        },
+      ]
     },
     {
-      icon: '🌐',
-      iconClass: 'blue',
-      title: 'Network Traffic Analysis',
-      desc: 'Real-time network traffic analysis and anomaly/attack detection with AI models.',
-      path: '/network-traffic'
-    },
-    {
-      icon: '🦠',
-      iconClass: 'red',
-      title: 'Malware Analysis',
-      desc: 'Analyze your files with our AI-powered engine using static/dynamic analysis to detect 0-day threats.',
-      path: '/malware-analysis'
-    },
-    {
-      icon: '🛡️',
-      iconClass: 'green',
-      title: 'MFA Settings',
-      desc: 'Manage two-factor authentication and enhance your account security.',
-      path: '/mfa-settings'
-    },
-    {
-      icon: '📧',
-      iconClass: 'orange',
-      title: 'Outlook Integration',
-      desc: 'Manage Outlook connection, check status, fetch latest mail and disconnect.',
-      path: '/outlook-integration'
-    },
-    {
-      icon: '🔑',
-      iconClass: 'red',
-      title: 'Password Strength Analysis',
-      desc: 'AI-powered password security assessment. Detect your weak passwords.',
-      path: '/password-strength'
-    },
-    {
-      icon: '🚫',
-      iconClass: 'purple',
-      title: 'IP Blacklist',
-      desc: 'Block suspicious IP addresses. IPv4 and IPv6 CIDR format supported.',
-      path: '/blacklist'
-    },
-    {
-      icon: '👤',
-      iconClass: 'teal',
-      title: 'Profile & Account',
-      desc: 'View your account information, change your password, update domain.',
-      path: '/profile'
-    },
+      category: 'Account & Security',
+      items: [
+        {
+          icon: '👤',
+          iconClass: 'teal',
+          title: 'Profile & Account',
+          desc: 'View your account information, change your password, update domain, and manage MFA.',
+          path: '/profile'
+        },
+        {
+          icon: '🚫',
+          iconClass: 'purple',
+          title: 'IP Blacklist',
+          desc: 'Block suspicious IP addresses. IPv4 and IPv6 CIDR format supported.',
+          path: '/blacklist'
+        },
+      ]
+    }
   ];
+
+  // Flatten for backwards compatibility
+  const moduleCards = moduleCategories.flatMap(cat => cat.items);
 
   if (!user) {
     return (
@@ -189,14 +219,6 @@ export default function Dashboard() {
 
         {/* Stats Cards */}
         <div className="dashboard-stats">
-          <div className="stat-card blue">
-            <div className="stat-card-header">
-              <div className="stat-icon">🛡️</div>
-              <span className="stat-trend up">↑ Active</span>
-            </div>
-            <div className="stat-value">12</div>
-            <div className="stat-label">Security Modules</div>
-          </div>
           <div className="stat-card teal">
             <div className="stat-card-header">
               <div className="stat-icon">🔑</div>
@@ -208,46 +230,57 @@ export default function Dashboard() {
             <div className="stat-card-header">
               <div className="stat-icon">📧</div>
             </div>
-            <div className="stat-value">{outlookStatus?.is_connected ? 'Connected' : '—'}</div>
+            <div className="stat-value">{outlookStatus?.is_connected ? 'Connected' : 'Disconnected'}</div>
             <div className="stat-label">Outlook Status</div>
           </div>
           <div className="stat-card orange">
             <div className="stat-card-header">
-              <div className="stat-icon">📅</div>
+              <div className="stat-icon">🌐</div>
             </div>
-            <div className="stat-value">{new Date(user.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</div>
-            <div className="stat-label">Registration Date</div>
+            <div className="stat-value">{user.domain ? 'Configured' : 'Not Set'}</div>
+            <div className="stat-label">Domain Status</div>
+          </div>
+          <div className="stat-card green">
+            <div className="stat-card-header">
+              <div className="stat-icon">📊</div>
+            </div>
+            <div className="stat-value">{user.domain ? 'Active' : 'Inactive'}</div>
+            <div className="stat-label">Network Monitoring</div>
           </div>
         </div>
 
-        {/* Module Cards */}
-        <div className="dashboard-modules">
-          <h2>Security Modules</h2>
-          <div className="modules-grid">
-            {moduleCards.map((mod, i) => (
-              <div
-                key={i}
-                className="module-card"
-                onClick={() => {
-                  if (mod.comingSoon) return;
-                  if (mod.action) { mod.action(); return; }
-                  if (mod.path) navigate(mod.path);
-                }}
-                style={mod.comingSoon ? { opacity: 0.6, cursor: 'default' } : {}}
-              >
-                <div className={`module-card-icon ${mod.iconClass}`}>{mod.icon}</div>
-                <div className="module-card-title">
-                  {mod.title}
-                  {mod.comingSoon
-                    ? <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,152,0,0.12)', color: '#ff9800' }}>Coming Soon</span>
-                    : <span className="module-arrow">→</span>
-                  }
+        {/* Module Cards - Categorized */}
+        {moduleCategories.map((section) => (
+          <div key={section.category}>
+            <h2 style={{ marginTop: '36px', marginBottom: '16px', fontSize: '1.4rem', color: 'var(--auth-text-primary)' }}>
+              {section.category}
+            </h2>
+            <div className="modules-grid">
+              {section.items.map((mod, i) => (
+                <div
+                  key={i}
+                  className="module-card"
+                  onClick={() => {
+                    if (mod.comingSoon) return;
+                    if (mod.action) { mod.action(); return; }
+                    if (mod.path) navigate(mod.path);
+                  }}
+                  style={mod.comingSoon ? { opacity: 0.6, cursor: 'default' } : {}}
+                >
+                  <div className={`module-card-icon ${mod.iconClass}`}>{mod.icon}</div>
+                  <div className="module-card-title">
+                    {mod.title}
+                    {mod.comingSoon
+                      ? <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,152,0,0.12)', color: '#ff9800' }}>Coming Soon</span>
+                      : <span className="module-arrow">→</span>
+                    }
+                  </div>
+                  <div className="module-card-desc">{mod.desc}</div>
                 </div>
-                <div className="module-card-desc">{mod.desc}</div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        ))}
 
         {/* Chart Placeholders */}
         <div className="dashboard-charts">

@@ -4,6 +4,7 @@ import numpy as np
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from users.models import CustomUser
 
 # ============================================
 # AI Model — Lazy Loading
@@ -16,6 +17,18 @@ _model = None
 _label_encoder = None
 _scaler = None
 _loaded = False
+
+
+def _get_authenticated_user(request):
+    if 'user_id' not in request.session:
+        return None, JsonResponse({'success': False, 'detail': 'Not authenticated'}, status=401)
+
+    try:
+        user = CustomUser.objects.get(username=request.session['user_id'])
+    except CustomUser.DoesNotExist:
+        return None, JsonResponse({'success': False, 'detail': 'User not found'}, status=404)
+
+    return user, None
 
 
 def _load_model():
@@ -66,6 +79,10 @@ def predict_intrusion(request):
     Body: { "features": [f1, f2, ..., fN] }
     """
     try:
+        _, auth_error = _get_authenticated_user(request)
+        if auth_error:
+            return auth_error
+
         data = json.loads(request.body)
         features = data.get('features')
 
@@ -134,6 +151,10 @@ def analyze_batch(request):
     Body: { "samples": [[f1,f2,...], [f1,f2,...], ...] }
     """
     try:
+        _, auth_error = _get_authenticated_user(request)
+        if auth_error:
+            return auth_error
+
         data = json.loads(request.body)
         samples = data.get('samples')
 

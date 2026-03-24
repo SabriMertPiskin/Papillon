@@ -36,6 +36,7 @@
 .sidebar-logo {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
   padding: 24px 20px;
   border-bottom: 1px solid var(--auth-glass-border, rgba(30, 136, 229, 0.15));
@@ -46,8 +47,9 @@
 
 .dashboard-sidebar.collapsed .sidebar-logo {
   flex-direction: column;
-  padding: 24px 0;
+  padding: 24px 12px;
   gap: 20px;
+  justify-content: center;
 }
 
 .sidebar-logo .logo-icon {
@@ -131,6 +133,10 @@
   flex-shrink: 0;
 }
 
+.dashboard-sidebar.collapsed .sidebar-section {
+  padding: 16px 6px 8px;
+}
+
 .sidebar-section-title {
   font-size: 0.68rem;
   font-weight: 600;
@@ -145,10 +151,7 @@
 }
 
 .dashboard-sidebar.collapsed .sidebar-section-title {
-  opacity: 0;
-  height: 0;
-  margin: 0;
-  padding: 0;
+  display: none;
 }
 
 /* Nav Items */
@@ -174,12 +177,13 @@
   font-weight: 500;
   transition: all 0.2s ease;
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   width: 100%;
   text-align: left;
   font-family: inherit;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .sidebar-nav-link:hover {
@@ -213,13 +217,20 @@
 
 .sidebar-nav-label {
   opacity: 1;
+  flex: 1;
   transition: opacity 0.2s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dashboard-sidebar.collapsed .sidebar-nav-label {
-  opacity: 0;
-  width: 0;
-  overflow: hidden;
+  display: none;
+}
+
+.dashboard-sidebar.collapsed .sidebar-nav-link {
+  gap: 0;
+  padding: 11px 12px;
+  justify-content: center;
 }
 
 /* Nav Badge */
@@ -230,6 +241,7 @@
   border-radius: 10px;
   font-weight: 600;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .sidebar-nav-badge.active {
@@ -254,13 +266,23 @@
   flex-shrink: 0;
 }
 
+.dashboard-sidebar.collapsed .sidebar-footer {
+  padding: 16px 6px;
+}
+
 .sidebar-user {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   padding: 10px;
   border-radius: 10px;
   margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.dashboard-sidebar.collapsed .sidebar-user {
+  justify-content: center;
 }
 
 .sidebar-avatar {
@@ -278,13 +300,13 @@
 }
 
 .sidebar-user-info {
-  overflow: hidden;
+  flex: 1;
+  min-width: 0;
   transition: opacity 0.2s ease;
 }
 
 .dashboard-sidebar.collapsed .sidebar-user-info {
-  opacity: 0;
-  width: 0;
+  display: none;
 }
 
 .sidebar-username {

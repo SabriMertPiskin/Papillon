@@ -7,7 +7,6 @@ import OutlookIntegration from './pages/OutlookIntegration';
 import CVEList from './pages/CVEList';
 import Encryption from './pages/Encryption';
 import OutlookCallback from './pages/OutlookCallback';
-import MFASettings from './pages/MFASettings';
 import AttackSurfaceAnalysis from './pages/AttackSurfaceAnalysis';
 import PasswordStrength from './pages/PasswordStrength';
 import Blacklist from './pages/Blacklist';
@@ -36,7 +35,6 @@ function App() {
         <Route path="/outlook-integration" element={isAuthenticated ? <OutlookIntegration /> : <Navigate to="/login" replace />} />
         <Route path="/cve" element={isAuthenticated ? <CVEList /> : <Navigate to="/login" replace />} />
         <Route path="/encryption" element={isAuthenticated ? <Encryption /> : <Navigate to="/login" replace />} />
-        <Route path="/mfa-settings" element={isAuthenticated ? <MFASettings /> : <Navigate to="/login" replace />} />
         <Route path="/attack-surface" element={isAuthenticated ? <AttackSurfaceAnalysis /> : <Navigate to="/login" replace />} />
         <Route path="/password-strength" element={isAuthenticated ? <PasswordStrength /> : <Navigate to="/login" replace />} />
         <Route path="/blacklist" element={isAuthenticated ? <Blacklist /> : <Navigate to="/login" replace />} />
@@ -45,6 +43,9 @@ function App() {
         <Route path="/malware-analysis" element={isAuthenticated ? <MalwareAnalysis /> : <Navigate to="/login" replace />} />
         <Route path="/phishing-history" element={isAuthenticated ? <PhishingHistory /> : <Navigate to="/login" replace />} />
         <Route path="/vulnerability-map" element={isAuthenticated ? <VulnerabilityMap /> : <Navigate to="/login" replace />} />
+
+        {/* Redirect MFA settings to profile */}
+        <Route path="/mfa-settings" element={<Navigate to="/profile" replace />} />
 
         {/* Outlook OAuth callback (public) */}
         <Route path="/outlook/callback" element={<OutlookCallback />} />

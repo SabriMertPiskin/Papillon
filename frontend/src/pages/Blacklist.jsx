@@ -8,6 +8,7 @@ export default function Blacklist() {
   const [blacklist, setBlacklist] = useState([]);
   const [newIP, setNewIP] = useState('');
   const [reason, setReason] = useState('');
+  const [domainMissing, setDomainMissing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -18,6 +19,19 @@ export default function Blacklist() {
     if (!isAuthenticated) { navigate('/login'); }
     const theme = localStorage.getItem('papillon-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
+
+    const userRaw = localStorage.getItem('user');
+    if (userRaw) {
+      try {
+        const parsedUser = JSON.parse(userRaw);
+        setDomainMissing(!(parsedUser?.domain || '').trim());
+      } catch (e) {
+        setDomainMissing(true);
+      }
+    } else {
+      setDomainMissing(true);
+    }
+
     fetchBlacklist();
   }, [navigate]);
 
@@ -46,6 +60,11 @@ export default function Blacklist() {
 
     if (!newIP.trim()) {
       setError('Please enter an IP address.');
+      return;
+    }
+
+    if (domainMissing) {
+      setError('Please add your domain in Profile & Account first. Then you can add IP addresses to blacklist.');
       return;
     }
 
@@ -100,6 +119,18 @@ export default function Blacklist() {
           {/* Add Form */}
           <div className="blacklist-card add-card">
             <h2>Block New IP Address</h2>
+            {domainMissing && (
+              <div className="bl-alert info">
+                Domain-based protection is active. Add your domain first to enable blacklist additions.
+                <button
+                  type="button"
+                  className="bl-link-btn"
+                  onClick={() => navigate('/profile')}
+                >
+                  Go to Profile & Account
+                </button>
+              </div>
+            )}
             {error && <div className="bl-alert error">{error}</div>}
             {success && <div className="bl-alert success">{success}</div>}
             
@@ -112,6 +143,7 @@ export default function Blacklist() {
                     value={newIP}
                     onChange={(e) => setNewIP(e.target.value)}
                     placeholder="e.g., 192.168.1.100 or 10.0.0.0/24"
+                    disabled={domainMissing}
                   />
                 </div>
                 <div className="form-group">
@@ -121,9 +153,10 @@ export default function Blacklist() {
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="e.g., Port scanning detected"
+                    disabled={domainMissing}
                   />
                 </div>
-                <button type="submit" className="add-btn">
+                <button type="submit" className="add-btn" disabled={domainMissing}>
                   Add to Blacklist
                 </button>
               </div>

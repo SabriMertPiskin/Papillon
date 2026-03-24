@@ -15,31 +15,34 @@ export default function Sidebar({ user, onLogout }) {
       ]
     },
     {
-      section: 'Security Modules',
+      section: 'General Tools',
       items: [
-        { icon: '🛡️', label: 'CVE Vulnerabilities', path: '/cve' },
-        { icon: '🔐', label: 'Encryption', path: '/encryption' },
-        { icon: '🎯', label: 'Attack Surface', path: '/attack-surface' },
-        { icon: '🗺️', label: 'Vulnerability Map', path: '/vulnerability-map' },
-        { icon: '🌐', label: 'Network Traffic', path: '/network-traffic' },
-        { icon: '🦠', label: 'Malware Analysis', path: '/malware-analysis' },
-        { icon: '📧', label: 'Outlook Integration', path: '/outlook-integration' },
         { icon: '🔑', label: 'Password Analysis', path: '/password-strength' },
-        { icon: '🚫', label: 'IP Blacklist', path: '/blacklist' },
-        { icon: '🎣', label: 'Phishing History', path: '/phishing-history' },
+        { icon: '🔐', label: 'Text Encryption', path: '/encryption' },
+        { icon: '🛡️', label: 'CVE Vulnerabilities', path: '/cve' },
       ]
     },
     {
-      section: 'Account',
+      section: 'Network Tools',
       items: [
-        {
-          icon: '🛡️',
-          label: 'MFA Settings',
-          path: '/mfa-settings',
-          badge: user?.mfa_enabled ? 'Active' : 'Inactive',
-          badgeClass: user?.mfa_enabled ? 'active' : 'inactive'
-        },
+        { icon: '🎯', label: 'Attack Surface', path: '/attack-surface' },
+        { icon: '🌐', label: 'Network Traffic', path: '/network-traffic' },
+        { icon: '🗺️', label: 'Vulnerability Map', path: '/vulnerability-map' },
+      ]
+    },
+    {
+      section: 'Email & Threats',
+      items: [
+        { icon: '📧', label: 'Outlook Integration', path: '/outlook-integration' },
+        { icon: '🎣', label: 'Phishing History', path: '/phishing-history' },
+        { icon: '🦠', label: 'Malware Analysis', path: '/malware-analysis' },
+      ]
+    },
+    {
+      section: 'Account & Security',
+      items: [
         { icon: '👤', label: 'Profile & Account', path: '/profile' },
+        { icon: '🚫', label: 'IP Blacklist', path: '/blacklist' },
       ]
     }
   ];

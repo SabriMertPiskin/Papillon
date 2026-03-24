@@ -48,6 +48,7 @@ const generateNetworkFeatures = (isSpike = false) => {
 };
 
 export default function NetworkTraffic() {
+  const [domainAccessAllowed, setDomainAccessAllowed] = useState(true);
   const [isSimulating, setIsSimulating] = useState(false);
   const [trafficData, setTrafficData] = useState([]);
   const [packetsTotal, setPacketsTotal] = useState(0);
@@ -63,6 +64,27 @@ export default function NetworkTraffic() {
 
   // Initial chart data
   useEffect(() => {
+    const userRaw = localStorage.getItem('user');
+    if (userRaw) {
+      try {
+        const parsedUser = JSON.parse(userRaw);
+        const savedDomain = (parsedUser?.domain || '').trim();
+        if (!savedDomain) {
+          setDomainAccessAllowed(false);
+          setIsSimulating(false);
+          return;
+        }
+      } catch (e) {
+        setDomainAccessAllowed(false);
+        setIsSimulating(false);
+        return;
+      }
+    } else {
+      setDomainAccessAllowed(false);
+      setIsSimulating(false);
+      return;
+    }
+
     const initData = [];
     let now = new Date();
     for (let i = 20; i >= 0; i--) {
@@ -79,6 +101,11 @@ export default function NetworkTraffic() {
   }, []);
 
   useEffect(() => {
+    if (!domainAccessAllowed) {
+      clearInterval(intervalRef.current);
+      return;
+    }
+
     if (isSimulating) {
       intervalRef.current = setInterval(async () => {
         const now = new Date();
@@ -167,7 +194,40 @@ export default function NetworkTraffic() {
       clearInterval(intervalRef.current);
     }
     return () => clearInterval(intervalRef.current);
-  }, [isSimulating]);
+  }, [isSimulating, domainAccessAllowed]);
+
+  if (!domainAccessAllowed) {
+    return (
+      <DashboardLayout>
+        <div className="network-page-container">
+          <div className="network-header">
+            <div>
+              <h1>🌐 Network Traffic & IDS Analysis</h1>
+              <p>Real-time attack detection and packet analysis powered by AI (XGBoost IDS Model).</p>
+            </div>
+          </div>
+
+          <div className="net-panel-card" style={{ maxWidth: '760px', margin: '30px auto' }}>
+            <div className="net-panel-header">
+              <h2>🔒 Module Access Locked</h2>
+            </div>
+            <div style={{ padding: '8px 2px', color: 'var(--auth-text-secondary)', lineHeight: 1.7 }}>
+              Domain-based analysis modules are available after you add your organization domain in Profile & Account.
+              Once your domain is saved, this module will become active automatically.
+            </div>
+            <div style={{ marginTop: '18px' }}>
+              <button
+                className="net-btn start"
+                onClick={() => { window.location.href = '/profile'; }}
+              >
+                Go to Profile & Account
+              </button>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
 
   return (

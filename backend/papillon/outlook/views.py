@@ -17,6 +17,59 @@ CLIENT_SECRET = get_secret('OUTLOOK_CLIENT_SECRET', vault_path='papillon/outlook
 TENANT_ID = get_secret('OUTLOOK_TENANT_ID', vault_path='papillon/outlook', default=None)
 REDIRECT_URI = 'http://localhost:8000/outlook/callback'
 
+
+def _resolve_client_credentials(outlook_account):
+    """Resolve OAuth client credentials from per-user stored values, then fallback to Vault."""
+    client_id = outlook_account.client_id or CLIENT_ID
+    client_secret = outlook_account.client_secret or CLIENT_SECRET
+    return client_id, client_secret
+
+
+def _refresh_outlook_access_token(outlook_account):
+    """Refresh Outlook access token using stored refresh token."""
+    refresh_token = outlook_account.refresh_token
+    if not refresh_token:
+        return False, 'No refresh token available'
+
+    client_id, client_secret = _resolve_client_credentials(outlook_account)
+    if not client_id or not client_secret:
+        return False, 'Client credentials are missing. Please reconnect Outlook.'
+
+    token_url = 'https://login.microsoftonline.com/common/oauth2/v2.0/token'
+    token_data = {
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'refresh_token': refresh_token,
+        'grant_type': 'refresh_token',
+        'scope': 'https://graph.microsoft.com/User.Read https://graph.microsoft.com/Mail.Read offline_access'
+    }
+
+    try:
+        token_response = requests.post(token_url, data=token_data)
+        token_response.raise_for_status()
+        tokens = token_response.json()
+
+        new_access_token = tokens.get('access_token')
+        if not new_access_token:
+            return False, 'Token refresh response does not contain access_token'
+
+        outlook_account.access_token = new_access_token
+
+        new_refresh_token = tokens.get('refresh_token')
+        if new_refresh_token:
+            outlook_account.refresh_token = new_refresh_token
+
+        expires_in = int(tokens.get('expires_in', 3600))
+        outlook_account.expires_at = timezone.now() + timedelta(seconds=expires_in)
+        outlook_account.is_connected = True
+        outlook_account.save()
+
+        return True, None
+    except requests.exceptions.RequestException as e:
+        return False, f'Failed to refresh token: {str(e)}'
+    except Exception as e:
+        return False, f'Unexpected refresh error: {str(e)}'
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def save_client_id(request):
@@ -42,6 +95,18 @@ def save_client_id(request):
         request.session['outlook_temp_client_id'] = client_id
         request.session['outlook_temp_client_secret'] = client_secret
         request.session.modified = True
+
+        # If user already has an OutlookAccount, persist credentials for future token refresh.
+        try:
+            user = CustomUser.objects.get(username=request.session['user_id'])
+            outlook_account = OutlookAccount.objects.filter(user=user).first()
+            if outlook_account:
+                outlook_account.client_id = client_id
+                outlook_account.client_secret = client_secret
+                outlook_account.save(update_fields=['_client_id', '_client_secret', 'updated_at'])
+        except Exception:
+            # Do not block OAuth start if optional credential persistence fails.
+            pass
         
         return JsonResponse({
             'success': True
@@ -164,6 +229,8 @@ def callback(request):
             defaults={
                 'access_token': tokens['access_token'],
                 'refresh_token': tokens.get('refresh_token', ''),
+                'client_id': client_id,
+                'client_secret': client_secret,
                 'expires_at': timezone.now() + timedelta(seconds=tokens.get('expires_in', 3600)),
                 'is_connected': True,
                 'outlook_email': outlook_email
@@ -274,6 +341,15 @@ def get_latest_mail(request):
                 'success': False,
                 'detail': 'Outlook account not connected'
             }, status=400)
+
+        # Refresh token proactively if expiration time is reached.
+        if outlook_account.expires_at and timezone.now() >= outlook_account.expires_at:
+            refreshed, refresh_error = _refresh_outlook_access_token(outlook_account)
+            if not refreshed:
+                return JsonResponse({
+                    'success': False,
+                    'detail': f'Outlook session expired. {refresh_error}'
+                }, status=400)
         
         access_token = outlook_account.access_token
         
@@ -292,6 +368,21 @@ def get_latest_mail(request):
             'https://graph.microsoft.com/v1.0/me/messages?$top=1&$orderby=receivedDateTime desc&$select=subject,from,receivedDateTime,bodyPreview',
             headers=headers
         )
+
+        # If token is invalid/expired unexpectedly, try one refresh + retry.
+        if me_response.status_code == 401:
+            refreshed, refresh_error = _refresh_outlook_access_token(outlook_account)
+            if not refreshed:
+                return JsonResponse({
+                    'success': False,
+                    'detail': f'Outlook authorization expired. {refresh_error}'
+                }, status=400)
+
+            headers['Authorization'] = f"Bearer {outlook_account.access_token}"
+            me_response = requests.get(
+                'https://graph.microsoft.com/v1.0/me/messages?$top=1&$orderby=receivedDateTime desc&$select=subject,from,receivedDateTime,bodyPreview',
+                headers=headers
+            )
         
         me_response.raise_for_status()
         response_data = me_response.json()

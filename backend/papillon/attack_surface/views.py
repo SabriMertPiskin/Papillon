@@ -11,20 +11,60 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
+from users.models import CustomUser
 
 # Add the tools directory to path (relative to this file)
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'attack_surface_analysis_tools'))
+
+
+def _normalize_domain(value):
+    """Normalize a domain-like value for comparison."""
+    if not value:
+        return ''
+    value = value.strip().lower()
+    if value.startswith('http://'):
+        value = value[7:]
+    elif value.startswith('https://'):
+        value = value[8:]
+    value = value.split('/')[0].split(':')[0].strip('.')
+    return value
+
+
+def _is_allowed_target(user_domain, target_domain):
+    """Allow exact domain or any subdomain of user's registered domain."""
+    base = _normalize_domain(user_domain)
+    target = _normalize_domain(target_domain)
+    if not base or not target:
+        return False
+    return target == base or target.endswith('.' + base)
+
+
+def _get_authenticated_user(request):
+    if 'user_id' not in request.session:
+        return None, JsonResponse({'success': False, 'detail': 'Not authenticated'}, status=401)
+    try:
+        return CustomUser.objects.get(username=request.session['user_id']), None
+    except CustomUser.DoesNotExist:
+        return None, JsonResponse({'success': False, 'detail': 'User not found'}, status=404)
 
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def attack_surface_scan(request):
     try:
+        user, auth_error = _get_authenticated_user(request)
+        if auth_error:
+            return auth_error
+
         data = json.loads(request.body)
-        domain = data.get('domain', '').strip()
+        requested_domain = data.get('domain', '').strip()
+        domain = _normalize_domain(requested_domain)
 
         if not domain:
             return JsonResponse({'success': False, 'detail': 'Domain is required'}, status=400)
+
+        # Note: Users can scan any domain, not just their registered domain
+        # This allows flexibility in attack surface analysis
 
         # Resolve domain to IP
         try:
