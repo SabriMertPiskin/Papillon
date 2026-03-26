@@ -69,8 +69,12 @@ export const getLatestCVEs = (limit = 10) =>
 // =========================================
 // ATTACK SURFACE
 // =========================================
-export const attackSurfaceScan = (domain) =>
-  API.post('/attack-surface/scan/', { domain });
+export const attackSurfaceScan = (domain, forAnalyst = null) => {
+  const url = forAnalyst
+    ? `/attack-surface/scan/?for_analyst=${encodeURIComponent(forAnalyst)}`
+    : '/attack-surface/scan/';
+  return API.post(url, { domain });
+};
 
 // =========================================
 // OUTLOOK
@@ -85,9 +89,26 @@ export const outlookLatestMail = () => API.get('/outlook/latest-mail');
 // =========================================
 // VM LAB
 // =========================================
-export const vmLabStatus = () => API.get('/vm-lab/status');
-export const vmLabStart = () => API.post('/vm-lab/start');
-export const vmLabTerminate = () => API.post('/vm-lab/terminate');
+export const vmLabStatus = (forAnalyst = null) => {
+  const url = forAnalyst
+    ? `/vm-lab/status?for_analyst=${encodeURIComponent(forAnalyst)}`
+    : '/vm-lab/status';
+  return API.get(url);
+};
+
+export const vmLabStart = (forAnalyst = null) => {
+  const url = forAnalyst
+    ? `/vm-lab/start?for_analyst=${encodeURIComponent(forAnalyst)}`
+    : '/vm-lab/start';
+  return API.post(url);
+};
+
+export const vmLabTerminate = (forAnalyst = null) => {
+  const url = forAnalyst
+    ? `/vm-lab/terminate?for_analyst=${encodeURIComponent(forAnalyst)}`
+    : '/vm-lab/terminate';
+  return API.post(url);
+};
 
 // =========================================
 // AI MODULES
@@ -108,8 +129,15 @@ export const predictIntrusion = (features) =>
 export const analyzeNetworkBatch = (samples) =>
   API.post('/ai/network-ids/analyze-batch/', { samples });
 
-export const monitorNetworkSnapshot = (domain) =>
-  API.post('/ai/network-ids/monitor-snapshot/', { domain });
+export const monitorNetworkSnapshot = (domain, forAnalyst = null) => {
+  const url = forAnalyst 
+    ? `/ai/network-ids/monitor-snapshot/?for_analyst=${encodeURIComponent(forAnalyst)}`
+    : '/ai/network-ids/monitor-snapshot/';
+  return API.post(url, { domain });
+};
+
+export const resolveAnalystDomain = (username) =>
+  API.get(`/ai/network-ids/resolve-analyst-domain/?username=${encodeURIComponent(username)}`);
 
 export const analyzeMalware = (formData) =>
   API.post('/ai/malware/analyze/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import {
   getPhishingHistory,
@@ -9,6 +10,7 @@ import {
 import '../styles/PhishingHistory.css';
 
 export default function PhishingHistory() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedLog, setSelectedLog] = useState(null);
@@ -145,8 +147,20 @@ export default function PhishingHistory() {
   };
 
   useEffect(() => {
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    if (storedUser.role === 'admin') {
+      navigate('/dashboard');
+      return;
+    }
+
     fetchOutlookConnectionStatus();
-  }, []);
+  }, [navigate]);
 
   return (
     <DashboardLayout>

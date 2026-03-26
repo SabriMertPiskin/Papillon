@@ -48,6 +48,35 @@ def _get_authenticated_user(request):
         return None, JsonResponse({'success': False, 'detail': 'User not found'}, status=404)
 
 
+def _get_target_domain(request, user):
+    """
+    Get the target domain based on user role.
+    - Analyst: Returns their own domain
+    - Admin: Returns specified analyst's domain via ?for_analyst=username
+    """
+    if user.role == 'analyst':
+        return user.domain
+    
+    elif user.role == 'admin':
+        analyst_username = request.GET.get('for_analyst') or request.POST.get('for_analyst')
+        if not analyst_username:
+            return JsonResponse(
+                {'success': False, 'detail': 'Admin must specify ?for_analyst=username parameter'},
+                status=400
+            )
+        
+        try:
+            analyst = CustomUser.objects.get(username=analyst_username, role='analyst')
+            return analyst.domain
+        except CustomUser.DoesNotExist:
+            return JsonResponse(
+                {'success': False, 'detail': f'Analyst user "{analyst_username}" not found'},
+                status=404
+            )
+    
+    return user.domain
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def attack_surface_scan(request):
@@ -56,15 +85,14 @@ def attack_surface_scan(request):
         if auth_error:
             return auth_error
 
-        data = json.loads(request.body)
-        requested_domain = data.get('domain', '').strip()
-        domain = _normalize_domain(requested_domain)
+        # Get target domain based on role
+        domain_result = _get_target_domain(request, user)
+        if isinstance(domain_result, JsonResponse):
+            return domain_result
+        domain = _normalize_domain(domain_result)
 
         if not domain:
-            return JsonResponse({'success': False, 'detail': 'Domain is required'}, status=400)
-
-        # Note: Users can scan any domain, not just their registered domain
-        # This allows flexibility in attack surface analysis
+            return JsonResponse({'success': False, 'detail': 'Domain is required. Please configure in Profile or pass ?for_analyst=username as Admin.'}, status=400)
 
         # Resolve domain to IP
         try:

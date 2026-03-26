@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { canManageVM } from '../utils/roleUtils';
 
 export default function Sidebar({ user, onLogout }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -20,6 +21,7 @@ export default function Sidebar({ user, onLogout }) {
         { icon: '🔑', label: 'Password Analysis', path: '/password-strength' },
         { icon: '🔐', label: 'Text Encryption', path: '/encryption' },
         { icon: '🛡️', label: 'CVE Vulnerabilities', path: '/cve' },
+        { icon: '🗺️', label: 'Vulnerability Map', path: '/vulnerability-map' },
       ]
     },
     {
@@ -27,18 +29,17 @@ export default function Sidebar({ user, onLogout }) {
       items: [
         { icon: '🎯', label: 'Attack Surface', path: '/attack-surface' },
         { icon: '🌐', label: 'Network Traffic', path: '/network-traffic' },
-        { icon: '🖥️', label: 'VM Lab', path: '/vm-lab' },
-        { icon: '🗺️', label: 'Vulnerability Map', path: '/vulnerability-map' },
+        ...(canManageVM() ? [{ icon: '🖥️', label: 'VM Lab', path: '/vm-lab' }] : []),
       ]
     },
-    {
+    ...(user?.role === 'analyst' ? [{
       section: 'Email & Threats',
       items: [
         { icon: '📧', label: 'Outlook Integration', path: '/outlook-integration' },
         { icon: '🎣', label: 'Phishing History', path: '/phishing-history' },
         { icon: '🦠', label: 'Malware Analysis', path: '/malware-analysis' },
       ]
-    },
+    }] : []),
     {
       section: 'Account & Security',
       items: [

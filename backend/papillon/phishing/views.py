@@ -7,6 +7,7 @@ from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 from .models import PhishingLog
 from users.models import CustomUser
+from users.views import require_role
 
 # ai_models klasörünü path'e ekle (attack_surface ile aynı pattern)
 sys.path.append(os.path.join(
@@ -80,6 +81,7 @@ def _generate_ai_reasons(prediction_result, sender='', subject=''):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@require_role('analyst')
 def predict_phishing(request):
     """
     POST /ai/phishing/predict/
@@ -173,7 +175,9 @@ def predict_phishing(request):
         }, status=500)
 
 
+@csrf_exempt
 @require_http_methods(["GET"])
+@require_role('analyst')
 def get_phishing_history(request):
     """
     GET /ai/phishing/history/

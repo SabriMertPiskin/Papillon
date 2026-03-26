@@ -37,6 +37,12 @@ export default function OutlookIntegration() {
       return;
     }
 
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    if (storedUser.role === 'admin') {
+      navigate('/dashboard');
+      return;
+    }
+
     const theme = localStorage.getItem('papillon-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
 

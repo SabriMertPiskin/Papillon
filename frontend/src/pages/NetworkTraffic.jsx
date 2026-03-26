@@ -3,7 +3,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import DashboardLayout from '../components/DashboardLayout';
-import { monitorNetworkSnapshot } from '../services/api';
+import { monitorNetworkSnapshot, resolveAnalystDomain } from '../services/api';
+import { isAdmin } from '../utils/roleUtils';
 import '../styles/NetworkTraffic.css';
 
 const generateTimeStr = (date) => {
@@ -11,8 +12,14 @@ const generateTimeStr = (date) => {
 };
 
 export default function NetworkTraffic() {
+  const [user, setUser] = useState(null);
   const [domainAccessAllowed, setDomainAccessAllowed] = useState(true);
   const [monitoredDomain, setMonitoredDomain] = useState('');
+  const [selectedAnalyst, setSelectedAnalyst] = useState(''); // Confirmed analyst username
+  const [analystInput, setAnalystInput] = useState('');
+  const [selectedAnalystDomain, setSelectedAnalystDomain] = useState('');
+  const [selectorLoading, setSelectorLoading] = useState(false);
+  const [selectorMessage, setSelectorMessage] = useState({ type: '', text: '' });
   const [isSimulating, setIsSimulating] = useState(false);
 
   const [trafficData, setTrafficData] = useState([]);
@@ -28,10 +35,14 @@ export default function NetworkTraffic() {
 
   const fetchSnapshot = async () => {
     if (!monitoredDomain) return;
+    if (isAdmin() && !selectedAnalyst.trim()) {
+      setAiStatus('idle');
+      return;
+    }
 
     setAiStatus('analyzing');
     try {
-      const response = await monitorNetworkSnapshot(monitoredDomain);
+      const response = await monitorNetworkSnapshot(monitoredDomain, selectedAnalyst || null);
       if (!response.data.success || !response.data.snapshot) {
         setAiStatus('error');
         return;
@@ -84,15 +95,24 @@ export default function NetworkTraffic() {
 
     try {
       const parsedUser = JSON.parse(userRaw);
+      setUser(parsedUser);
+      const isAdminUser = parsedUser?.role === 'admin';
       const savedDomain = (parsedUser?.domain || '').trim();
-      if (!savedDomain) {
-        setDomainAccessAllowed(false);
-        setIsSimulating(false);
-        return;
-      }
 
-      setMonitoredDomain(savedDomain);
-      setDomainAccessAllowed(true);
+      if (isAdminUser) {
+        setMonitoredDomain('');
+        setDomainAccessAllowed(true);
+        setIsSimulating(false);
+      } else {
+        if (!savedDomain) {
+          setDomainAccessAllowed(false);
+          setIsSimulating(false);
+          return;
+        }
+        setMonitoredDomain(savedDomain);
+        setDomainAccessAllowed(true);
+        setIsSimulating(true);
+      }
 
       const initData = [];
       const now = new Date();
@@ -105,7 +125,6 @@ export default function NetworkTraffic() {
         });
       }
       setTrafficData(initData);
-      setIsSimulating(true);
     } catch (e) {
       setDomainAccessAllowed(false);
       setIsSimulating(false);
@@ -113,6 +132,48 @@ export default function NetworkTraffic() {
 
     return () => clearInterval(intervalRef.current);
   }, []);
+
+  const handleApplyAnalyst = async () => {
+    const username = analystInput.trim();
+    if (!username) {
+      setSelectorMessage({ type: 'error', text: 'Please enter an analyst username.' });
+      setIsSimulating(false);
+      return;
+    }
+
+    setSelectorLoading(true);
+    setSelectorMessage({ type: '', text: '' });
+
+    try {
+      const response = await resolveAnalystDomain(username);
+      if (!response.data.success) {
+        setSelectorMessage({ type: 'error', text: response.data.detail || 'Could not validate analyst.' });
+        setSelectedAnalyst('');
+        setSelectedAnalystDomain('');
+        setMonitoredDomain('');
+        setIsSimulating(false);
+        return;
+      }
+
+      setSelectedAnalyst(response.data.analyst_username || username);
+      setSelectedAnalystDomain(response.data.domain || '');
+      setMonitoredDomain(response.data.domain || '');
+      setSelectorMessage({
+        type: 'success',
+        text: `Analyst selected: ${response.data.analyst_username} (${response.data.domain})`,
+      });
+      setIsSimulating(true);
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Could not validate analyst.';
+      setSelectorMessage({ type: 'error', text: msg });
+      setSelectedAnalyst('');
+      setSelectedAnalystDomain('');
+      setMonitoredDomain('');
+      setIsSimulating(false);
+    } finally {
+      setSelectorLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!domainAccessAllowed || !monitoredDomain) {
@@ -129,7 +190,7 @@ export default function NetworkTraffic() {
     }
 
     return () => clearInterval(intervalRef.current);
-  }, [isSimulating, monitoredDomain, domainAccessAllowed]);
+  }, [isSimulating, monitoredDomain, domainAccessAllowed, selectedAnalyst]);
 
   if (!domainAccessAllowed) {
     return (
@@ -170,7 +231,9 @@ export default function NetworkTraffic() {
         <div className="network-header">
           <div>
             <h1>🌐 Network Traffic & IDS Analysis</h1>
-            <p>Monitoring domain traffic with AI intrusion detection: <strong>{monitoredDomain}</strong></p>
+            <p>
+              Monitoring domain traffic with AI intrusion detection: <strong>{isAdmin() ? (selectedAnalystDomain || 'select analyst') : monitoredDomain}</strong>
+            </p>
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
             <div className={`live-badge ${!isSimulating ? 'stopped' : ''}`}>
@@ -195,6 +258,70 @@ export default function NetworkTraffic() {
             </div>
           </div>
         </div>
+
+        {/* Analyst Selector for Admin */}
+        {isAdmin() && (
+          <div style={{
+            background: 'rgba(63,81,181,0.08)',
+            border: '1px solid rgba(63,81,181,0.3)',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <label style={{ fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--auth-text-primary)' }}>
+              👤 Monitoring for Analyst:
+            </label>
+            <input
+              type="text"
+              placeholder="Enter analyst username (e.g., analyst1)"
+              value={analystInput}
+              onChange={(e) => setAnalystInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleApplyAnalyst();
+                }
+              }}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                border: '1px solid rgba(150,150,150,0.3)',
+                borderRadius: '6px',
+                background: 'var(--auth-input-bg)',
+                color: 'var(--auth-text-primary)',
+                fontSize: '0.9rem'
+              }}
+            />
+            <button
+              type="button"
+              className="net-btn start"
+              onClick={handleApplyAnalyst}
+              disabled={selectorLoading}
+            >
+              {selectorLoading ? '...' : '➜'}
+            </button>
+            {selectedAnalyst && <span style={{ fontSize: '0.85rem', color: 'var(--auth-text-muted)' }}>ℹ️ Using {selectedAnalyst} / {selectedAnalystDomain}</span>}
+          </div>
+        )}
+
+        {isAdmin() && selectorMessage.text && (
+          <div className="net-panel-card" style={{ marginBottom: '20px' }}>
+            <div style={{ color: selectorMessage.type === 'error' ? '#ef5350' : '#81c784', lineHeight: 1.6 }}>
+              {selectorMessage.text}
+            </div>
+          </div>
+        )}
+
+        {isAdmin() && !selectedAnalyst.trim() && (
+          <div className="net-panel-card" style={{ marginBottom: '20px' }}>
+            <div style={{ color: 'var(--auth-text-secondary)', lineHeight: 1.6 }}>
+              Enter an analyst username to start monitoring. Admin access does not require a personal domain.
+            </div>
+          </div>
+        )}
 
         <div className="network-stats-row">
           <div className="net-stat-card">

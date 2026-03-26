@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import DashboardLayout from '../components/DashboardLayout';
+import { isAdmin } from '../utils/roleUtils';
+import { attackSurfaceScan, resolveAnalystDomain } from '../services/api';
 import '../styles/AttackSurface.css';
 
 // --- Icons ---
@@ -69,6 +70,11 @@ export default function AttackSurfaceAnalysis() {
   const [results, setResults] = useState(null);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [selectedAnalyst, setSelectedAnalyst] = useState('');
+  const [analystInput, setAnalystInput] = useState('');
+  const [selectedAnalystDomain, setSelectedAnalystDomain] = useState('');
+  const [selectorLoading, setSelectorLoading] = useState(false);
+  const [selectorMessage, setSelectorMessage] = useState({ type: '', text: '' });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -79,8 +85,9 @@ export default function AttackSurfaceAnalysis() {
     if (userRaw) {
       try {
         const parsedUser = JSON.parse(userRaw);
+        const isAdminUser = parsedUser?.role === 'admin';
         const savedDomain = (parsedUser?.domain || '').trim();
-        if (savedDomain) {
+        if (!isAdminUser && savedDomain) {
           setRegisteredDomain(savedDomain);
           setDomain(savedDomain);
         }
@@ -96,17 +103,56 @@ export default function AttackSurfaceAnalysis() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const targetDomain = (registeredDomain || domain).trim();
+    const isAdminUser = isAdmin();
+    const targetDomain = isAdminUser ? selectedAnalystDomain.trim() : (registeredDomain || domain).trim();
     if (!targetDomain) { setError('Please enter a domain to start scanning.'); return; }
+    if (isAdminUser && !selectedAnalyst.trim()) {
+      setError('Please select an analyst first using the arrow button.');
+      return;
+    }
 
     setLoading(true); setError(''); setResults(null);
     try {
-      const response = await axios.post('http://localhost:8000/attack-surface/scan/', { domain: targetDomain }, { withCredentials: true });
+      const response = await attackSurfaceScan(targetDomain, isAdminUser ? selectedAnalyst : null);
       if (response.data.success) { setResults(response.data.results); }
       else { setError(response.data.detail || 'Scan failed.'); }
     } catch (err) {
       setError(err.response?.data?.detail || 'A server error occurred during the scan.');
     } finally { setLoading(false); }
+  };
+
+  const handleApplyAnalyst = async () => {
+    const username = analystInput.trim();
+    if (!username) {
+      setSelectorMessage({ type: 'error', text: 'Please enter an analyst username.' });
+      return;
+    }
+
+    setSelectorLoading(true);
+    setSelectorMessage({ type: '', text: '' });
+    setError('');
+
+    try {
+      const response = await resolveAnalystDomain(username);
+      if (!response.data.success) {
+        setSelectorMessage({ type: 'error', text: response.data.detail || 'Could not validate analyst.' });
+        setSelectedAnalyst('');
+        setSelectedAnalystDomain('');
+        return;
+      }
+
+      const resolvedUsername = response.data.analyst_username || username;
+      const resolvedDomain = response.data.domain || '';
+      setSelectedAnalyst(resolvedUsername);
+      setSelectedAnalystDomain(resolvedDomain);
+      setSelectorMessage({ type: 'success', text: `Analyst selected: ${resolvedUsername} (${resolvedDomain})` });
+    } catch (err) {
+      setSelectedAnalyst('');
+      setSelectedAnalystDomain('');
+      setSelectorMessage({ type: 'error', text: err.response?.data?.detail || 'Could not validate analyst.' });
+    } finally {
+      setSelectorLoading(false);
+    }
   };
 
   const renderValue = (v) => {
@@ -222,15 +268,85 @@ export default function AttackSurfaceAnalysis() {
         <div className="attack-content">
           <div className="scan-card">
             {error && (<div className="alert-error"><IconAlert /> {error}</div>)}
+            
+            {/* Analyst Selector for Admin */}
+            {isAdmin() && (
+              <div style={{
+                background: 'rgba(63,81,181,0.08)',
+                border: '1px solid rgba(63,81,181,0.3)',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <label style={{ fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--auth-text-primary)' }}>
+                  👤 Monitoring for Analyst:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter analyst username (e.g., analyst1)"
+                  value={analystInput}
+                  onChange={(e) => setAnalystInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleApplyAnalyst();
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    border: '1px solid rgba(150,150,150,0.3)',
+                    borderRadius: '6px',
+                    background: 'var(--auth-input-bg)',
+                    color: 'var(--auth-text-primary)',
+                    fontSize: '0.9rem'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyAnalyst}
+                  disabled={selectorLoading}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    border: '1px solid rgba(76, 175, 80, 0.4)',
+                    background: 'rgba(76, 175, 80, 0.2)',
+                    color: '#81c784',
+                    minWidth: '56px'
+                  }}
+                >
+                  {selectorLoading ? '...' : '➜'}
+                </button>
+              </div>
+            )}
+
+            {isAdmin() && selectedAnalyst && (
+              <div style={{ marginBottom: '12px', color: 'var(--auth-text-secondary)', fontSize: '0.92rem' }}>
+                Using analyst: <strong>{selectedAnalyst}</strong> ({selectedAnalystDomain})
+              </div>
+            )}
+
+            {isAdmin() && selectorMessage.text && (
+              <div style={{ marginBottom: '12px', color: selectorMessage.type === 'error' ? '#ef5350' : '#81c784' }}>
+                {selectorMessage.text}
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} className="scan-form">
               <div className="scan-input-group">
                 <label>Domain to Scan</label>
                 <input
                   type="text"
-                  value={registeredDomain || domain}
+                  value={isAdmin() ? (selectedAnalystDomain || '') : (registeredDomain || domain)}
                   onChange={(e) => setDomain(e.target.value)}
-                  placeholder="example.com"
-                  disabled={loading}
+                  placeholder={isAdmin() ? 'Domain will be fetched after analyst selection' : 'example.com'}
+                  disabled={loading || isAdmin()}
                 />
               </div>
               <button type="submit" disabled={loading} className="scan-btn">

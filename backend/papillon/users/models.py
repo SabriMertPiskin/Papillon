@@ -2,10 +2,16 @@ from django.db import models
 from django.contrib.auth.hashers import make_password
 
 class CustomUser(models.Model):
+    ROLE_CHOICES = [
+        ('admin', 'Administrator'),
+        ('analyst', 'Security Analyst'),
+    ]
+    
     username = models.CharField(max_length=150, unique=True, primary_key=True)
     email = models.EmailField(unique=True, null=False)
     password = models.CharField(max_length=255)
     domain = models.CharField(max_length=255, blank=True, null=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='analyst')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -21,6 +27,12 @@ class CustomUser(models.Model):
     def set_password(self, raw_password):
         """Hash the password using Django's make_password"""
         self.password = make_password(raw_password)
+
+    def save(self, *args, **kwargs):
+        # Admin accounts must not keep a personal domain.
+        if self.role == 'admin':
+            self.domain = ''
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return self.username

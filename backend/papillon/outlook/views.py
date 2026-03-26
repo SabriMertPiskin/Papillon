@@ -10,6 +10,7 @@ import os
 from datetime import datetime, timedelta
 from .models import OutlookAccount
 from users.models import CustomUser
+from users.views import require_role
 from papillon.vault_service import get_secret
 
 CLIENT_ID = get_secret('OUTLOOK_CLIENT_ID', vault_path='papillon/outlook', default=None)
@@ -72,6 +73,7 @@ def _refresh_outlook_access_token(outlook_account):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@require_role('analyst')
 def save_client_id(request):
     """Save Client ID and Client Secret to session for OAuth flow"""
     
@@ -119,6 +121,7 @@ def save_client_id(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@require_role('analyst')
 def authorize(request):
     """Redirect user to Microsoft OAuth authorization"""
     
@@ -156,6 +159,7 @@ def authorize(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@require_role('analyst')
 def callback(request):
     """Handle OAuth callback from Microsoft"""
     
@@ -256,6 +260,7 @@ def callback(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@require_role('analyst')
 def disconnect(request):
     """Disconnect Outlook account"""
     
@@ -292,7 +297,9 @@ def disconnect(request):
         }, status=500)
 
 
+@csrf_exempt
 @require_http_methods(["GET"])
+@require_role('analyst')
 def get_outlook_status(request):
     """Get Outlook connection status"""
     
@@ -323,6 +330,7 @@ def get_outlook_status(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@require_role('analyst')
 def get_latest_mail(request):
     """Get latest email from Outlook inbox"""
     

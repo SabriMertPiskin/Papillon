@@ -149,7 +149,7 @@ def _generate_backup_code():
 
 
 def _get_user_auth_data(user):
-    """User login response'u için temel data hazırla (outlook_connected dahil)"""
+    """User login response'u için temel data hazırla (outlook_connected + role dahil)"""
     from outlook.models import OutlookAccount
     
     outlook_connected = False
@@ -159,10 +159,19 @@ def _get_user_auth_data(user):
     except OutlookAccount.DoesNotExist:
         outlook_connected = False
     
+    # Ensure admin accounts never expose a personal domain.
+    domain_value = user.domain or ''
+    if user.role == 'admin':
+        if user.domain:
+            user.domain = ''
+            user.save(update_fields=['domain', 'updated_at'])
+        domain_value = ''
+
     return {
         'username': user.username,
         'email': user.email,
-        'domain': user.domain or '',
+        'domain': domain_value,
+        'role': user.role,
         'created_at': user.created_at.isoformat(),
         'mfa_enabled': user.mfa_enabled,
         'outlook_connected': outlook_connected
@@ -482,12 +491,20 @@ def dashboard(request):
             )
         
         user = CustomUser.objects.get(username=request.session['user_id'])
+        domain_value = user.domain or ''
+        if user.role == 'admin':
+            if user.domain:
+                user.domain = ''
+                user.save(update_fields=['domain', 'updated_at'])
+            domain_value = ''
+
         return JsonResponse({
             'success': True,
             'user': {
                 'username': user.username,
                 'email': user.email,
-                'domain': user.domain,
+                'domain': domain_value,
+                'role': user.role,
                 'created_at': user.created_at.isoformat(),
                 'updated_at': user.updated_at.isoformat(),
                 'mfa_enabled': user.mfa_enabled
@@ -582,6 +599,12 @@ def update_domain(request):
                 {'success': False, 'detail': f'User not found: {username}'},
                 status=404
             )
+
+        if user.role == 'admin':
+            return JsonResponse(
+                {'success': False, 'detail': 'Admin users cannot store a personal domain'},
+                status=403
+            )
         
         # Update domain
         user.domain = domain
@@ -602,3 +625,43 @@ def update_domain(request):
         import traceback
         error_detail = f'{str(e)} - {traceback.format_exc()}'
         return JsonResponse({'success': False, 'detail': error_detail}, status=500)
+
+
+# ==================== RBAC Decorator ====================
+
+def require_role(*allowed_roles):
+    """
+    Decorator to restrict view access by user role.
+    Usage:
+        @require_role('admin')
+        @require_role('admin', 'analyst')
+    """
+    def decorator(view_func):
+        def wrapper(request, *args, **kwargs):
+            # Check if user is authenticated
+            user_id = request.session.get('user_id')
+            if not user_id:
+                return JsonResponse(
+                    {'success': False, 'detail': 'Not authenticated'},
+                    status=401
+                )
+            
+            try:
+                user = CustomUser.objects.get(username=user_id)
+            except CustomUser.DoesNotExist:
+                request.session.flush()
+                return JsonResponse(
+                    {'success': False, 'detail': 'User not found'},
+                    status=401
+                )
+            
+            # Check if user has required role
+            if user.role not in allowed_roles:
+                return JsonResponse(
+                    {'success': False, 'detail': f'Access denied: required role {allowed_roles}, current role: {user.role}'},
+                    status=403
+                )
+            
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator

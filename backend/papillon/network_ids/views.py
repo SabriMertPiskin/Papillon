@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from users.models import CustomUser
+from users.views import require_role
 from .models import DomainTrafficEvent
 
 # ============================================
@@ -36,6 +37,76 @@ def _get_authenticated_user(request):
         return None, JsonResponse({'success': False, 'detail': 'User not found'}, status=404)
 
     return user, None
+
+
+def _get_target_domain(request, user):
+    """
+    Get the target domain based on user role.
+    - Analyst: Returns their own domain
+    - Admin: Returns specified analyst's domain via ?for_analyst=username
+    """
+    if user.role == 'analyst':
+        return user.domain
+    
+    elif user.role == 'admin':
+        # Try to get analyst username from query params or POST body
+        analyst_username = request.GET.get('for_analyst') or request.POST.get('for_analyst')
+        if not analyst_username:
+            return JsonResponse(
+                {'success': False, 'detail': 'Admin must specify ?for_analyst=username parameter'},
+                status=400
+            )
+        
+        try:
+            analyst = CustomUser.objects.get(username=analyst_username, role='analyst')
+            return analyst.domain
+        except CustomUser.DoesNotExist:
+            return JsonResponse(
+                {'success': False, 'detail': f'Analyst user "{analyst_username}" not found'},
+                status=404
+            )
+    
+    return user.domain
+
+
+@require_http_methods(["GET"])
+@require_role('admin')
+def resolve_analyst_domain(request):
+    """
+    GET /ai/network-ids/resolve-analyst-domain/?username=analyst_username
+    Admin-only helper to validate analyst username and fetch their configured domain.
+    """
+    try:
+        analyst_username = (request.GET.get('username') or '').strip()
+        if not analyst_username:
+            return JsonResponse(
+                {'success': False, 'detail': 'Analyst username is required'},
+                status=400
+            )
+
+        try:
+            analyst = CustomUser.objects.get(username=analyst_username, role='analyst')
+        except CustomUser.DoesNotExist:
+            return JsonResponse(
+                {'success': False, 'detail': f'Analyst user "{analyst_username}" not found'},
+                status=404
+            )
+
+        domain = _normalize_domain(analyst.domain)
+        if not domain:
+            return JsonResponse(
+                {'success': False, 'detail': f'Analyst "{analyst_username}" has no configured domain'},
+                status=400
+            )
+
+        return JsonResponse({
+            'success': True,
+            'analyst_username': analyst.username,
+            'domain': domain,
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
 
 
 def _load_model():
@@ -338,7 +409,8 @@ def analyze_batch(request):
 def monitor_snapshot(request):
     """
     POST /ai/network-ids/monitor-snapshot/
-    Body: { "domain": "example.com" }
+    Body: { "domain": "example.com" } (optional for analyst, ignored for admin)
+    Query: ?for_analyst=username (admin only)
     Returns domain-conditioned traffic snapshot + IDS batch analysis.
     """
     try:
@@ -346,24 +418,14 @@ def monitor_snapshot(request):
         if auth_error:
             return auth_error
 
-        data = json.loads(request.body)
-        requested_domain = _normalize_domain(data.get('domain', ''))
-        user_domain = _normalize_domain(getattr(user, 'domain', ''))
+        # Get target domain based on role
+        domain_result = _get_target_domain(request, user)
+        if isinstance(domain_result, JsonResponse):
+            return domain_result
+        requested_domain = _normalize_domain(domain_result)
 
         if not requested_domain:
             return JsonResponse({'success': False, 'detail': 'Domain is required.'}, status=400)
-
-        if not user_domain:
-            return JsonResponse({
-                'success': False,
-                'detail': 'Please save your domain in Profile & Account first.'
-            }, status=403)
-
-        if not _is_allowed_target(user_domain, requested_domain):
-            return JsonResponse({
-                'success': False,
-                'detail': f'Only your domain ({user_domain}) or its subdomains can be monitored.'
-            }, status=403)
 
         model, label_encoder, scaler = _load_model()
         if model is None:
@@ -522,6 +584,7 @@ def monitor_snapshot(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@require_role('admin', 'analyst')
 def ingest_event(request):
     """
     Optional external collector endpoint.

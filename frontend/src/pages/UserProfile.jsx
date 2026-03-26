@@ -23,6 +23,7 @@ export default function UserProfile() {
   const [mfaBackupCode, setMfaBackupCode] = useState('');
   const [mfaStep, setMfaStep] = useState('idle');
   const [mfaMessage, setMfaMessage] = useState({ type: '', text: '' });
+  const isAdminUser = user?.role === 'admin';
 
   useEffect(() => {
     const theme = localStorage.getItem('papillon-theme') || 'dark';
@@ -229,7 +230,11 @@ export default function UserProfile() {
           <div className="header-icon-wrapper">👤</div>
           <div>
             <h1>Profile & Account</h1>
-            <p>View your account information, change password, manage domain settings, and configure MFA security</p>
+            <p>
+              {isAdminUser
+                ? 'View your account information, change password, and configure MFA security'
+                : 'View your account information, change password, manage domain settings, and configure MFA security'}
+            </p>
           </div>
         </div>
 
@@ -252,24 +257,28 @@ export default function UserProfile() {
                 <label>Email Address</label>
                 <div className="info-value">{user.email}</div>
               </div>
-              <div className="info-item">
-                <label>Corporate Domain</label>
-                <div className="info-value">
-                  {user.domain ? (
-                    <span className="domain-badge set">{user.domain}</span>
-                  ) : (
-                    <span className="domain-badge unset">Not specified</span>
-                  )}
+              {!isAdminUser && (
+                <div className="info-item">
+                  <label>Corporate Domain</label>
+                  <div className="info-value">
+                    {user.domain ? (
+                      <span className="domain-badge set">{user.domain}</span>
+                    ) : (
+                      <span className="domain-badge unset">Not specified</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="info-item">
-                <label>Outlook Status</label>
-                <div className="info-value">
-                  <span className={`status-badge ${user.outlook_connected ? 'connected' : 'disconnected'}`}>
-                    {user.outlook_connected ? '🔗 Connected' : '○ Disconnected'}
-                  </span>
+              )}
+              {!isAdminUser && (
+                <div className="info-item">
+                  <label>Outlook Status</label>
+                  <div className="info-value">
+                    <span className={`status-badge ${user.outlook_connected ? 'connected' : 'disconnected'}`}>
+                      {user.outlook_connected ? '🔗 Connected' : '○ Disconnected'}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="info-item">
                 <label>MFA Status</label>
                 <div className="info-value">
@@ -325,33 +334,35 @@ export default function UserProfile() {
           </div>
 
           {/* Domain Update Card */}
-          <div className="profile-card">
-            <h2>Update Domain</h2>
-            <form onSubmit={handleDomainUpdate} className="profile-form">
-              <div className="form-group">
-                <label>Corporate Domain</label>
-                <input
-                  type="text"
-                  value={newDomain}
-                  onChange={(e) => setNewDomain(e.target.value)}
-                  placeholder="e.g., company.com"
-                />
-              </div>
-              <div className="profile-btn-row">
-                <button type="submit" className="profile-btn" disabled={loading}>
-                  {loading ? 'Saving...' : 'Save Domain'}
-                </button>
-                <button
-                  type="button"
-                  className="profile-btn danger"
-                  disabled={loading || !user.domain}
-                  onClick={handleDomainRemove}
-                >
-                  {loading ? 'Processing...' : 'Remove Domain'}
-                </button>
-              </div>
-            </form>
-          </div>
+          {!isAdminUser && (
+            <div className="profile-card">
+              <h2>Update Domain</h2>
+              <form onSubmit={handleDomainUpdate} className="profile-form">
+                <div className="form-group">
+                  <label>Corporate Domain</label>
+                  <input
+                    type="text"
+                    value={newDomain}
+                    onChange={(e) => setNewDomain(e.target.value)}
+                    placeholder="e.g., company.com"
+                  />
+                </div>
+                <div className="profile-btn-row">
+                  <button type="submit" className="profile-btn" disabled={loading}>
+                    {loading ? 'Saving...' : 'Save Domain'}
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-btn danger"
+                    disabled={loading || !user.domain}
+                    onClick={handleDomainRemove}
+                  >
+                    {loading ? 'Processing...' : 'Remove Domain'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
           {/* MFA Settings Card */}
           <div className="profile-card">

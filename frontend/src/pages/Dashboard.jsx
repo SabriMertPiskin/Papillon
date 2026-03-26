@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { logout, outlookStatus as getOutlookStatus } from '../services/api';
 import Sidebar from '../components/Sidebar';
+import { canManageVM } from '../utils/roleUtils';
 import '../styles/Dashboard.css';
 
 export default function Dashboard() {
@@ -26,8 +27,11 @@ export default function Dashboard() {
     if (!userData) {
       navigate('/login');
     } else {
-      setUser(JSON.parse(userData));
-      fetchOutlookStatus();
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      if (parsedUser.role === 'analyst') {
+        fetchOutlookStatus();
+      }
     }
   }, [navigate]);
 
@@ -38,7 +42,11 @@ export default function Dashboard() {
         setOutlookStatus(response.data);
       }
     } catch (error) {
-      console.error('Error fetching Outlook status:', error);
+      // Analyst users will get 403, which is fine - they can't access Outlook
+      // Just log non-403 errors
+      if (error.response?.status !== 403) {
+        console.error('Error fetching Outlook status:', error);
+      }
     }
   };
 
@@ -105,6 +113,13 @@ export default function Dashboard() {
           desc: 'Browse the latest CVE vulnerabilities and track security threats.',
           path: '/cve'
         },
+        {
+          icon: '🗺️',
+          iconClass: 'teal',
+          title: 'Vulnerability Map',
+          desc: 'Visualize system topology and potential vulnerabilities across your infrastructure.',
+          path: '/vulnerability-map'
+        },
       ]
     },
     {
@@ -124,23 +139,16 @@ export default function Dashboard() {
           desc: 'Real-time network traffic analysis and anomaly/attack detection with AI models.',
           path: '/network-traffic'
         },
-        {
+        ...(canManageVM() ? [{
           icon: '🖥️',
           iconClass: 'purple',
           title: 'VM Attack Lab',
           desc: 'Start and terminate your attack simulation machine (TryHackMe-style lab skeleton).',
           path: '/vm-lab'
-        },
-        {
-          icon: '🗺️',
-          iconClass: 'teal',
-          title: 'Vulnerability Map',
-          desc: 'Visualize system topology and potential vulnerabilities across your infrastructure.',
-          path: '/vulnerability-map'
-        },
+        }] : []),
       ]
     },
-    {
+    ...(user?.role === 'analyst' ? [{
       category: 'Email & Threats',
       items: [
         {
@@ -165,7 +173,7 @@ export default function Dashboard() {
           path: '/malware-analysis'
         },
       ]
-    },
+    }] : []),
     {
       category: 'Account & Security',
       items: [
@@ -233,13 +241,15 @@ export default function Dashboard() {
             <div className="stat-value">{user.mfa_enabled ? 'Active' : 'Inactive'}</div>
             <div className="stat-label">MFA Status</div>
           </div>
-          <div className="stat-card purple">
-            <div className="stat-card-header">
-              <div className="stat-icon">📧</div>
+          {user.role === 'analyst' && (
+            <div className="stat-card purple">
+              <div className="stat-card-header">
+                <div className="stat-icon">📧</div>
+              </div>
+              <div className="stat-value">{outlookStatus?.is_connected ? 'Connected' : 'Disconnected'}</div>
+              <div className="stat-label">Outlook Status</div>
             </div>
-            <div className="stat-value">{outlookStatus?.is_connected ? 'Connected' : 'Disconnected'}</div>
-            <div className="stat-label">Outlook Status</div>
-          </div>
+          )}
           <div className="stat-card orange">
             <div className="stat-card-header">
               <div className="stat-icon">🌐</div>
@@ -304,7 +314,8 @@ export default function Dashboard() {
                 {generateBars(18, 130, 'bar-blue')}
               </div>
             </div>
-            <div className="chart-card clickable" onClick={() => navigate('/malware-analysis')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
+            {user.role === 'analyst' && (
+              <div className="chart-card clickable" onClick={() => navigate('/malware-analysis')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
               <div className="chart-card-header">
                 <span className="chart-card-title">Threat Detection (Malware)</span>
                 <span className="chart-card-badge" style={{ background: 'rgba(211, 47, 47, 0.15)', color: '#f44336' }}>Comprehensive Analysis</span>
@@ -312,7 +323,8 @@ export default function Dashboard() {
               <div className="chart-bars">
                 {generateBars(18, 130, 'bar-teal')}
               </div>
-            </div>
+              </div>
+            )}
             <div className="chart-card clickable" onClick={() => navigate('/vulnerability-map')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
               <div className="chart-card-header">
                 <span className="chart-card-title">Vulnerability Map</span>
