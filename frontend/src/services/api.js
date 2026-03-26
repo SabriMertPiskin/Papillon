@@ -83,6 +83,13 @@ export const outlookDisconnect = () => API.post('/outlook/disconnect');
 export const outlookLatestMail = () => API.get('/outlook/latest-mail');
 
 // =========================================
+// VM LAB
+// =========================================
+export const vmLabStatus = () => API.get('/vm-lab/status');
+export const vmLabStart = () => API.post('/vm-lab/start');
+export const vmLabTerminate = () => API.post('/vm-lab/terminate');
+
+// =========================================
 // AI MODULES
 // =========================================
 export const predictPasswordStrength = (password) =>
@@ -100,6 +107,9 @@ export const predictIntrusion = (features) =>
 
 export const analyzeNetworkBatch = (samples) =>
   API.post('/ai/network-ids/analyze-batch/', { samples });
+
+export const monitorNetworkSnapshot = (domain) =>
+  API.post('/ai/network-ids/monitor-snapshot/', { domain });
 
 export const analyzeMalware = (formData) =>
   API.post('/ai/malware/analyze/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });

@@ -27,6 +27,7 @@ export default function Sidebar({ user, onLogout }) {
       items: [
         { icon: '🎯', label: 'Attack Surface', path: '/attack-surface' },
         { icon: '🌐', label: 'Network Traffic', path: '/network-traffic' },
+        { icon: '🖥️', label: 'VM Lab', path: '/vm-lab' },
         { icon: '🗺️', label: 'Vulnerability Map', path: '/vulnerability-map' },
       ]
     },

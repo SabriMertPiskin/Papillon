@@ -38,6 +38,7 @@ urlpatterns = [
     path('ai/password-strength/', include('password_ai.urls')),
     path('ai/malware/', include('malware_analysis.urls')),
     path('ai/network-ids/', include('network_ids.urls')),
+    path('vm-lab/', include('vm_lab.urls')),
     path('blacklist/', include('blacklist.urls')),
     path('vault/health', vault_health, name='vault_health'),
 ]

@@ -361,11 +361,12 @@ def get_latest_mail(request):
         
         headers = {
             'Authorization': f"Bearer {access_token}",
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Prefer': 'outlook.body-content-type="text"'
         }
         
         me_response = requests.get(
-            'https://graph.microsoft.com/v1.0/me/messages?$top=1&$orderby=receivedDateTime desc&$select=subject,from,receivedDateTime,bodyPreview',
+            'https://graph.microsoft.com/v1.0/me/messages?$top=1&$orderby=receivedDateTime desc&$select=subject,from,receivedDateTime,bodyPreview,body',
             headers=headers
         )
 
@@ -380,7 +381,7 @@ def get_latest_mail(request):
 
             headers['Authorization'] = f"Bearer {outlook_account.access_token}"
             me_response = requests.get(
-                'https://graph.microsoft.com/v1.0/me/messages?$top=1&$orderby=receivedDateTime desc&$select=subject,from,receivedDateTime,bodyPreview',
+                'https://graph.microsoft.com/v1.0/me/messages?$top=1&$orderby=receivedDateTime desc&$select=subject,from,receivedDateTime,bodyPreview,body',
                 headers=headers
             )
         
@@ -396,6 +397,9 @@ def get_latest_mail(request):
             }, status=200)
         
         latest_email = emails[0]
+        body_data = latest_email.get('body', {}) if isinstance(latest_email.get('body'), dict) else {}
+        body_content = body_data.get('content', '')
+        body_content_type = body_data.get('contentType', '')
         
         return JsonResponse({
             'success': True,
@@ -404,7 +408,9 @@ def get_latest_mail(request):
                 'from': latest_email.get('from', {}).get('emailAddress', {}).get('address', ''),
                 'from_name': latest_email.get('from', {}).get('emailAddress', {}).get('name', ''),
                 'received_date': latest_email.get('receivedDateTime', ''),
-                'preview': latest_email.get('bodyPreview', '')
+                'preview': latest_email.get('bodyPreview', ''),
+                'body': body_content,
+                'body_content_type': body_content_type
             }
         }, status=200)
         
