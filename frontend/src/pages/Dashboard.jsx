@@ -8,6 +8,7 @@ import '../styles/Dashboard.css';
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [outlookStatus, setOutlookStatus] = useState(null);
+  const [readOnlyMode, setReadOnlyMode] = useState(() => localStorage.getItem('papillon-readonly-mode') === 'true');
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('papillon-theme') || 'dark';
   });
@@ -31,9 +32,20 @@ export default function Dashboard() {
       setUser(parsedUser);
       if (parsedUser.role === 'analyst') {
         fetchOutlookStatus();
+      } else {
+        setReadOnlyMode(false);
+        localStorage.setItem('papillon-readonly-mode', 'false');
       }
     }
   }, [navigate]);
+
+  const toggleReadOnlyMode = () => {
+    setReadOnlyMode((prev) => {
+      const next = !prev;
+      localStorage.setItem('papillon-readonly-mode', String(next));
+      return next;
+    });
+  };
 
   const fetchOutlookStatus = async () => {
     try {
@@ -208,10 +220,13 @@ export default function Dashboard() {
     );
   }
 
+  const isAnalyst = user.role === 'analyst';
+  const showReadOnly = isAnalyst && readOnlyMode;
+
   return (
-    <div className="dashboard-layout">
+    <div className={`dashboard-layout ${showReadOnly ? 'read-only-layout' : ''}`}>
       {/* ============ SIDEBAR ============ */}
-      <Sidebar user={user} onLogout={handleLogout} />
+      {!showReadOnly && <Sidebar user={user} onLogout={handleLogout} />}
 
       {/* ============ MAIN CONTENT ============ */}
       <main className="dashboard-main">
@@ -222,6 +237,15 @@ export default function Dashboard() {
             <p>Welcome to your Papillon security dashboard</p>
           </div>
           <div className="topbar-actions">
+            {isAnalyst && (
+              <button
+                className={`topbar-mode-btn ${showReadOnly ? 'active' : ''}`}
+                onClick={toggleReadOnlyMode}
+                title={showReadOnly ? 'Switch to Interactive Mode' : 'Switch to Read-only Mode'}
+              >
+                {showReadOnly ? 'Exit Read-only Mode' : 'Switch to Read-only Mode'}
+              </button>
+            )}
             <button
               className="topbar-btn"
               onClick={toggleTheme}
@@ -266,41 +290,72 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Module Cards - Categorized */}
-        {moduleCategories.map((section) => (
-          <div key={section.category}>
-            <h2 style={{ marginTop: '36px', marginBottom: '16px', fontSize: '1.4rem', color: 'var(--auth-text-primary)' }}>
-              {section.category}
-            </h2>
-            <div className="modules-grid">
-              {section.items.map((mod, i) => (
-                <div
-                  key={i}
-                  className="module-card"
-                  onClick={() => {
-                    if (mod.comingSoon) return;
-                    if (mod.action) { mod.action(); return; }
-                    if (mod.path) navigate(mod.path);
-                  }}
-                  style={mod.comingSoon ? { opacity: 0.6, cursor: 'default' } : {}}
-                >
-                  <div className={`module-card-icon ${mod.iconClass}`}>{mod.icon}</div>
-                  <div className="module-card-title">
-                    {mod.title}
-                    {mod.comingSoon
-                      ? <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,152,0,0.12)', color: '#ff9800' }}>Coming Soon</span>
-                      : <span className="module-arrow">→</span>
-                    }
-                  </div>
-                  <div className="module-card-desc">{mod.desc}</div>
+        {!showReadOnly && (
+          <>
+            {/* Module Cards - Categorized */}
+            {moduleCategories.map((section) => (
+              <div key={section.category}>
+                <h2 style={{ marginTop: '36px', marginBottom: '16px', fontSize: '1.4rem', color: 'var(--auth-text-primary)' }}>
+                  {section.category}
+                </h2>
+                <div className="modules-grid">
+                  {section.items.map((mod, i) => (
+                    <div
+                      key={i}
+                      className="module-card"
+                      onClick={() => {
+                        if (mod.comingSoon) return;
+                        if (mod.action) { mod.action(); return; }
+                        if (mod.path) navigate(mod.path);
+                      }}
+                      style={mod.comingSoon ? { opacity: 0.6, cursor: 'default' } : {}}
+                    >
+                      <div className={`module-card-icon ${mod.iconClass}`}>{mod.icon}</div>
+                      <div className="module-card-title">
+                        {mod.title}
+                        {mod.comingSoon
+                          ? <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,152,0,0.12)', color: '#ff9800' }}>Coming Soon</span>
+                          : <span className="module-arrow">→</span>
+                        }
+                      </div>
+                      <div className="module-card-desc">{mod.desc}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+            ))}
+          </>
+        )}
+
+        {showReadOnly && (
+          <div className="dashboard-charts">
+            <h2>Read-only Monitoring Overview</h2>
+            <div className="charts-grid">
+              <div className="chart-card">
+                <div className="chart-card-header">
+                  <span className="chart-card-title">Network Traffic Graph</span>
+                  <span className="chart-card-badge" style={{ background: 'rgba(76, 175, 80, 0.15)', color: '#4caf50' }}>
+                    Read-only
+                  </span>
+                </div>
+                <div className="chart-bars">{generateBars(22, 140, 'bar-blue')}</div>
+              </div>
+              <div className="chart-card">
+                <div className="chart-card-header">
+                  <span className="chart-card-title">Phishing History Graph</span>
+                  <span className="chart-card-badge" style={{ background: 'rgba(255, 152, 0, 0.15)', color: '#ff9800' }}>
+                    Read-only
+                  </span>
+                </div>
+                <div className="chart-bars">{generateBars(22, 140, 'bar-teal')}</div>
+              </div>
             </div>
           </div>
-        ))}
+        )}
 
         {/* Chart Placeholders */}
-        <div className="dashboard-charts">
+        {!showReadOnly && (
+          <div className="dashboard-charts">
           <h2>Monitoring & Analysis</h2>
           <div className="charts-grid">
             <div className="chart-card clickable" onClick={() => navigate('/network-traffic')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
@@ -346,7 +401,8 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
+          </div>
+        )}
       </main>
     </div>
   );

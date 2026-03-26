@@ -3,6 +3,63 @@ import { useNavigate, Link } from 'react-router-dom';
 import { register } from '../services/api';
 import '../styles/Auth.css';
 
+const Particles = React.memo(function Particles() {
+  return (
+    <div className="auth-particles">
+      {[...Array(8)].map((_, i) => (
+        <div key={i} className="auth-particle" />
+      ))}
+    </div>
+  );
+});
+
+const BrandPanel = React.memo(function BrandPanel() {
+  return (
+    <div className="auth-brand-panel">
+      <div className="auth-brand-logo">
+        <div className="logo-icon">🦋</div>
+        <h1>Papillon</h1>
+      </div>
+      <p className="auth-brand-tagline">
+        Manage your cybersecurity analyses on a single platform.
+        Advanced threat detection and security intelligence.
+      </p>
+      <div className="auth-floating-icons">
+        <div className="auth-floating-icon" title="Network Security">🛡️</div>
+        <div className="auth-floating-icon" title="Encryption">🔐</div>
+        <div className="auth-floating-icon" title="Threat Analysis">🔍</div>
+        <div className="auth-floating-icon" title="Vulnerability Scanning">⚡</div>
+        <div className="auth-floating-icon" title="AI Analysis">🤖</div>
+      </div>
+    </div>
+  );
+});
+
+const ThemeToggle = React.memo(function ThemeToggle({ theme, toggleTheme }) {
+  return (
+    <div className="auth-theme-toggle">
+      <button
+        onClick={toggleTheme}
+        title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+        type="button"
+      >
+        {theme === 'dark' ? '☀️' : '🌙'}
+      </button>
+    </div>
+  );
+});
+
+const SecurityBadge = React.memo(function SecurityBadge() {
+  return (
+    <div className="auth-footer">
+      <div className="auth-security-badge">
+        <span className="badge-icon">🔒</span>
+        Protected with 256-bit SSL encryption
+      </div>
+    </div>
+  );
+});
+
 export default function Register() {
   const [formData, setFormData] = useState({
     username: '',
@@ -67,63 +124,13 @@ export default function Register() {
     }
   };
 
-  // Shared components to match Login exactly
-  const Particles = () => (
-    <div className="auth-particles">
-      {[...Array(8)].map((_, i) => (
-        <div key={i} className="auth-particle" />
-      ))}
-    </div>
-  );
-
-  const BrandPanel = () => (
-    <div className="auth-brand-panel">
-      <div className="auth-brand-logo">
-        <div className="logo-icon">🦋</div>
-        <h1>Papillon</h1>
-      </div>
-      <p className="auth-brand-tagline">
-        Manage your cybersecurity analyses on a single platform. 
-        Advanced threat detection and security intelligence.
-      </p>
-      <div className="auth-floating-icons">
-        <div className="auth-floating-icon" title="Network Security">🛡️</div>
-        <div className="auth-floating-icon" title="Encryption">🔐</div>
-        <div className="auth-floating-icon" title="Threat Analysis">🔍</div>
-        <div className="auth-floating-icon" title="Vulnerability Scanning">⚡</div>
-        <div className="auth-floating-icon" title="AI Analysis">🤖</div>
-      </div>
-    </div>
-  );
-
-  const ThemeToggle = () => (
-    <div className="auth-theme-toggle">
-      <button
-        onClick={toggleTheme}
-        title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-        type="button"
-      >
-        {theme === 'dark' ? '☀️' : '🌙'}
-      </button>
-    </div>
-  );
-
-  const SecurityBadge = () => (
-    <div className="auth-footer">
-      <div className="auth-security-badge">
-        <span className="badge-icon">🔒</span>
-        Protected with 256-bit SSL encryption
-      </div>
-    </div>
-  );
-
   return (
     <div className="auth-container">
       <Particles />
       <BrandPanel />
 
       <div className="auth-form-panel">
-        <ThemeToggle />
+        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
 
         <div className="auth-box">
           <h2>Create Account</h2>
@@ -136,7 +143,6 @@ export default function Register() {
             <div className="form-group">
               <label>Username</label>
               <div className={`input-wrapper ${errors.username ? 'error' : ''}`}>
-                <span className="input-icon">👤</span>
                 <input
                   type="text"
                   name="username"
@@ -154,7 +160,6 @@ export default function Register() {
             <div className="form-group">
               <label>Email Address</label>
               <div className={`input-wrapper ${errors.email ? 'error' : ''}`}>
-                <span className="input-icon">✉️</span>
                 <input
                   type="email"
                   name="email"
@@ -171,7 +176,6 @@ export default function Register() {
             <div className="form-group">
               <label>Password</label>
               <div className={`input-wrapper ${errors.password ? 'error' : ''}`}>
-                <span className="input-icon">🔑</span>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
@@ -196,7 +200,6 @@ export default function Register() {
             <div className="form-group">
               <label>Confirm Password</label>
               <div className={`input-wrapper ${errors.password_confirm ? 'error' : ''}`}>
-                <span className="input-icon">🔑</span>
                 <input
                   type={showConfirm ? 'text' : 'password'}
                   name="password_confirm"
@@ -221,7 +224,6 @@ export default function Register() {
             <div className="form-group">
               <label>Corporate Domain <span style={{fontSize: '0.8em', color: 'var(--auth-text-muted)', fontWeight: 'normal'}}>(optional)</span></label>
               <div className="input-wrapper">
-                <span className="input-icon">🌐</span>
                 <input
                   type="text"
                   name="domain"

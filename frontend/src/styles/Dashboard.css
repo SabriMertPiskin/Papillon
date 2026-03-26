@@ -389,6 +389,32 @@
   transform: translateY(-1px);
 }
 
+.topbar-mode-btn {
+  border: 1px solid rgba(255, 152, 0, 0.35);
+  background: rgba(255, 152, 0, 0.12);
+  color: #ffb74d;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.topbar-mode-btn:hover {
+  background: rgba(255, 152, 0, 0.2);
+}
+
+.topbar-mode-btn.active {
+  border-color: rgba(76, 175, 80, 0.4);
+  background: rgba(76, 175, 80, 0.16);
+  color: #81c784;
+}
+
+.dashboard-layout.read-only-layout .dashboard-main {
+  margin-left: 0;
+}
+
 /* --- Stats Cards --- */
 .dashboard-stats {
   display: grid;
