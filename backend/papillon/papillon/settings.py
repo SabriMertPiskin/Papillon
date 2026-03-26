@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'password_ai',
     'malware_analysis',
     'network_ids',
+    'vm_lab',
     'blacklist',
 ]
 
@@ -69,6 +70,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'network_ids.middleware.DomainTrafficLoggingMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',

@@ -1,0 +1,143 @@
+.vm-page {
+  padding: 12px 4px 30px;
+}
+
+.vm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.vm-header h1 {
+  margin: 0 0 6px;
+  color: var(--auth-text-primary, #e8edf5);
+}
+
+.vm-header p {
+  margin: 0;
+  color: var(--auth-text-secondary, #8899b4);
+}
+
+.vm-refresh-btn {
+  border: 1px solid var(--auth-glass-border, rgba(30,136,229,0.2));
+  background: var(--auth-glass, rgba(15,25,50,0.45));
+  color: var(--auth-text-primary, #e8edf5);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.vm-card {
+  background: var(--auth-glass, rgba(15, 25, 50, 0.45));
+  border: 1px solid var(--auth-glass-border, rgba(30,136,229,0.15));
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.vm-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.vm-chip.running {
+  background: rgba(76, 175, 80, 0.15);
+  color: #66bb6a;
+}
+
+.vm-chip.stopped {
+  background: rgba(108, 117, 125, 0.15);
+  color: #9aa8bd;
+}
+
+.vm-meta {
+  color: var(--auth-text-secondary, #8899b4);
+  font-size: 0.9rem;
+}
+
+.vm-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.vm-field {
+  background: rgba(8, 18, 36, 0.65);
+  border: 1px solid rgba(30, 136, 229, 0.2);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.vm-field label {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #93a7c8;
+  margin-bottom: 6px;
+}
+
+.vm-field div {
+  color: var(--auth-text-primary, #e8edf5);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.vm-actions {
+  margin-top: 16px;
+}
+
+.vm-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.vm-btn.start {
+  background: linear-gradient(135deg, #1e88e5, #00bcd4);
+  color: #fff;
+}
+
+.vm-btn.terminate {
+  background: rgba(244, 67, 54, 0.12);
+  color: #ef5350;
+  border: 1px solid rgba(244, 67, 54, 0.35);
+}
+
+.vm-alert {
+  margin-bottom: 12px;
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-weight: 600;
+}
+
+.vm-alert.success {
+  background: rgba(76, 175, 80, 0.1);
+  color: #66bb6a;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.vm-alert.error {
+  background: rgba(244, 67, 54, 0.1);
+  color: #ef5350;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}

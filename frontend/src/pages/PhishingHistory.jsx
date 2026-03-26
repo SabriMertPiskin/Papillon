@@ -317,13 +317,6 @@ export default function PhishingHistory() {
               </div>
 
               <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px' }}>
-                <button 
-                  className="modal-btn" 
-                  onClick={() => alert(`Preparing Analysis PDF Report: ${selectedLog.id}_report.pdf`)}
-                  style={{ background: 'transparent', border: '1px solid var(--auth-accent)', color: 'var(--auth-accent)' }}
-                >
-                  📄 Download PDF
-                </button>
                 <button className="modal-btn primary" onClick={closeModal}>Close</button>
               </div>
             </div>

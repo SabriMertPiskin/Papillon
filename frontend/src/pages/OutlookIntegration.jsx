@@ -158,6 +158,11 @@ export default function OutlookIntegration() {
       .trim();
   };
 
+  const handleRunPhishingScanInline = async (e) => {
+    e.stopPropagation();
+    await runPhishingScan();
+  };
+
   const readableMailBody = getReadableMailBody(latestMail);
   const previewText = readableMailBody
     ? `${readableMailBody.slice(0, 220)}${readableMailBody.length > 220 ? '...' : ''}`
@@ -226,6 +231,36 @@ export default function OutlookIntegration() {
               <span className="meta-label">Preview</span>
               <p>{previewText}</p>
             </div>
+            <div className="latest-mail-actions" onClick={(e) => e.stopPropagation()}>
+              <button
+                className="outlook-btn warning"
+                onClick={handleRunPhishingScanInline}
+                disabled={scanLoading}
+              >
+                {scanLoading ? 'Scanning...' : 'Run AI Phishing Scan'}
+              </button>
+              <button
+                className="outlook-btn secondary"
+                onClick={() => setShowMailModal(true)}
+                disabled={scanLoading}
+              >
+                Detailed Info
+              </button>
+            </div>
+
+            {scanResult && (
+              <div
+                className={`scan-result ${scanResult.status === 'clean' ? 'clean' : 'danger'}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <strong>{scanResult.label} — Risk Score: {scanResult.score}/100</strong>
+                {scanResult.ai_reasons?.length > 0 && (
+                  <ul>
+                    {scanResult.ai_reasons.map((reason, idx) => <li key={idx}>{reason}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         )}
 

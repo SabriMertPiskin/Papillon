@@ -125,6 +125,13 @@ export default function Dashboard() {
           path: '/network-traffic'
         },
         {
+          icon: '🖥️',
+          iconClass: 'purple',
+          title: 'VM Attack Lab',
+          desc: 'Start and terminate your attack simulation machine (TryHackMe-style lab skeleton).',
+          path: '/vm-lab'
+        },
+        {
           icon: '🗺️',
           iconClass: 'teal',
           title: 'Vulnerability Map',
