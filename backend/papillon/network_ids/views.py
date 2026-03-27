@@ -262,76 +262,112 @@ def _build_sample_from_ip_stats(stat):
 # ============================================
 # Views
 # ============================================
+import os
+import json
+import joblib
+import numpy as np
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+# Modellerin bulunduğu klasöre git (Dinamik yol)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+AI_MODELS_PATH = os.path.join(BASE_DIR, "ai_models/network_intrusion_classification_module")
+
+# Modelleri yükle
+model = joblib.load(os.path.join(AI_MODELS_PATH, "xgb_model.pkl"))
+encoder = joblib.load(os.path.join(AI_MODELS_PATH, "label_encoder.pkl"))
+
 @csrf_exempt
-@require_http_methods(["POST"])
 def predict_intrusion(request):
-    """
-    POST /ai/network-ids/predict/
-    Network traffic feature'larını analiz et → saldırı sınıflandırması yap.
-    Body: { "features": [f1, f2, ..., fN] }
-    """
-    try:
-        _, auth_error = _get_authenticated_user(request)
-        if auth_error:
-            return auth_error
-
-        data = json.loads(request.body)
-        features = data.get('features')
-
-        if not features or not isinstance(features, list):
-            return JsonResponse({
-                'success': False,
-                'detail': 'Features array is required. Send numeric feature values as a list.'
-            }, status=400)
-
-        model, label_encoder, scaler = _load_model()
-        if model is None:
-            return JsonResponse({
-                'success': False,
-                'detail': 'Network IDS AI model could not be loaded.'
-            }, status=503)
-
-        # Feature array oluştur
-        feature_array = np.array(features, dtype=float).reshape(1, -1)
-
-        # Scaler varsa uygula
-        if scaler is not None:
-            feature_array = scaler.transform(feature_array)
-
-        # Prediction
-        prediction = model.predict(feature_array)
-        predicted_label = str(label_encoder.inverse_transform(prediction)[0])
-
-        # Probability (eğer destekleniyorsa)
+    if request.method == "POST":
         try:
-            probabilities = model.predict_proba(feature_array)[0]
-            confidence = float(max(probabilities))
-        except Exception:
-            confidence = 0.85
+            data = json.loads(request.body)
+            features = data.get("features")
+            
+            # Modelin beklediği 48 özellik kontrolü
+            if not features or len(features) != 48:
+                return JsonResponse({"error": "Hatalı özellik sayısı!"}, status=400)
 
-        # Tehdit seviyesi
-        risk_level, display_label = _classify_threat_level(predicted_label)
+            features_array = np.array(features).reshape(1, -1)
+            prediction = model.predict(features_array)
+            label = encoder.inverse_transform(prediction)[0]
 
-        return JsonResponse({
-            'success': True,
-            'result': {
-                'prediction': predicted_label,
-                'label': display_label,
-                'risk_level': risk_level,
-                'confidence': round(confidence, 4),
-            }
-        }, status=200)
+            return JsonResponse({
+                "prediction": str(label),
+                "is_attack": str(label) != "BENIGN"
+            })
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+# @csrf_exempt
+# @require_http_methods(["POST"])
+# def predict_intrusion(request):
+#     """
+#     POST /ai/network-ids/predict/
+#     Network traffic feature'larını analiz et → saldırı sınıflandırması yap.
+#     Body: { "features": [f1, f2, ..., fN] }
+#     """
+#     try:
+#         _, auth_error = _get_authenticated_user(request)
+#         if auth_error:
+#             return auth_error
 
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'detail': 'Invalid JSON payload'
-        }, status=400)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'detail': str(e)
-        }, status=500)
+#         data = json.loads(request.body)
+#         features = data.get('features')
+
+#         if not features or not isinstance(features, list):
+#             return JsonResponse({
+#                 'success': False,
+#                 'detail': 'Features array is required. Send numeric feature values as a list.'
+#             }, status=400)
+
+#         model, label_encoder, scaler = _load_model()
+#         if model is None:
+#             return JsonResponse({
+#                 'success': False,
+#                 'detail': 'Network IDS AI model could not be loaded.'
+#             }, status=503)
+
+#         # Feature array oluştur
+#         feature_array = np.array(features, dtype=float).reshape(1, -1)
+
+#         # Scaler varsa uygula
+#         if scaler is not None:
+#             feature_array = scaler.transform(feature_array)
+
+#         # Prediction
+#         prediction = model.predict(feature_array)
+#         predicted_label = str(label_encoder.inverse_transform(prediction)[0])
+
+#         # Probability (eğer destekleniyorsa)
+#         try:
+#             probabilities = model.predict_proba(feature_array)[0]
+#             confidence = float(max(probabilities))
+#         except Exception:
+#             confidence = 0.85
+
+#         # Tehdit seviyesi
+#         risk_level, display_label = _classify_threat_level(predicted_label)
+
+#         return JsonResponse({
+#             'success': True,
+#             'result': {
+#                 'prediction': predicted_label,
+#                 'label': display_label,
+#                 'risk_level': risk_level,
+#                 'confidence': round(confidence, 4),
+#             }
+#         }, status=200)
+
+#     except json.JSONDecodeError:
+#         return JsonResponse({
+#             'success': False,
+#             'detail': 'Invalid JSON payload'
+#         }, status=400)
+#     except Exception as e:
+#         return JsonResponse({
+#             'success': False,
+#             'detail': str(e)
+#         }, status=500)
 
 
 @csrf_exempt
