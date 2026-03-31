@@ -171,3 +171,19 @@ Toplam 8 secret Vault'a yazıldı.
 ```powershell
 python manage.py runserver
 ```
+
+
+### Virutal Box Kurulum
+Virtual Box icin:
+https://www.virtualbox.org/wiki/Downloads
+
+Kali iso icin: 
+https://www.kali.org/get-kali/#kali-installer-images
+
+Windows kurulmasi kontrol:
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" list vms
+
+Projede manuel test: 
+http://localhost:5001/start-vm
+
+Agent icin kurulmasi gereken makine ismi: django-kali
