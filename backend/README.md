@@ -187,3 +187,6 @@ Projede manuel test:
 http://localhost:5001/start-vm
 
 Agent icin kurulmasi gereken makine ismi: django-kali
+Agent Path:
+Papillon\backend\ai_models\agent.py
+Lokalde onceden calistirilacak
