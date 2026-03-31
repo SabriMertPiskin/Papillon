@@ -183,44 +183,160 @@ export default function AttackSurfaceAnalysis() {
       pdf.text('Attack Surface Analysis Report', 15, yPosition);
       pdf.setFont(undefined, 'normal'); yPosition += 15;
 
-      const basicData = [['Domain', results.domain || '—'], ['IP Address', results.ip || '—'], ['Scan Date', new Date().toLocaleString()]];
+      // Header with basic info
+      const basicData = [['Target Domain', results.domain || '—'], ['Resolved IP', results.ip || '—'], ['Scan Date', new Date().toLocaleString()]];
       pdf.autoTable({ startY: yPosition, head: [['Info', 'Value']], body: basicData, theme: 'grid', headStyles: { fillColor: [30, 136, 229], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 10 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
       yPosition = pdf.lastAutoTable.finalY + 12;
 
-      if (results.dns_records && Object.keys(results.dns_records).length > 0) {
+      // DNS Records
+      if (results.dns_records && (Array.isArray(results.dns_records) ? results.dns_records.length > 0 : Object.keys(results.dns_records).length > 0)) {
         const check = checkPageBreak(yPosition, pageHeight); if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
         yPosition = addSectionTitle(pdf, 'DNS Records', yPosition, pageHeight);
         const dnsData = [];
-        if (typeof results.dns_records === 'object' && !Array.isArray(results.dns_records)) {
+        
+        if (Array.isArray(results.dns_records)) {
+          results.dns_records.forEach(record => {
+            if (record.error) {
+              dnsData.push(['Error', record.error]);
+            } else if (Array.isArray(record)) {
+              dnsData.push([String(record[0] || '—'), String(record[1] || '—')]);
+            } else {
+              dnsData.push(['Record', String(record)]);
+            }
+          });
+        } else if (typeof results.dns_records === 'object') {
           Object.entries(results.dns_records).forEach(([type, records]) => {
-            if (Array.isArray(records)) { records.forEach(record => dnsData.push([type, String(record).substring(0, 70)])); }
-            else if (typeof records === 'object') { dnsData.push([type, JSON.stringify(records).substring(0, 70)]); }
-            else { dnsData.push([type, String(records).substring(0, 70)]); }
+            if (Array.isArray(records)) { records.forEach(record => dnsData.push([type, String(record)])); }
+            else if (typeof records === 'object') { dnsData.push([type, JSON.stringify(records)]); }
+            else { dnsData.push([type, String(records)]); }
           });
         }
+        
         if (dnsData.length > 0) {
-          pdf.autoTable({ startY: yPosition, head: [['Type', 'Value']], body: dnsData, theme: 'grid', headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
+          pdf.autoTable({ startY: yPosition, head: [['Type', 'Value']], body: dnsData, theme: 'grid', columnWidth: 'wrap', headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 9, cellPadding: 4, minCellHeight: 8, halign: 'left', valign: 'middle' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 }, didDrawCell: (data) => { if (data.row.index >= 0) { data.cell.height = Math.max(data.cell.height, 12); } } });
           yPosition = pdf.lastAutoTable.finalY + 10;
         }
       }
 
+      // Detected Subdomains
       if (results.subdomains && Array.isArray(results.subdomains) && results.subdomains.length > 0) {
         const check = checkPageBreak(yPosition, pageHeight); if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
         yPosition = addSectionTitle(pdf, 'Detected Subdomains', yPosition, pageHeight);
-        const subdomainData = results.subdomains.filter(s => !s.error).map(s => [String(s).substring(0, 90)]);
+        const subdomainData = results.subdomains.filter(s => !s.error).map(s => [String(s)]);
         if (subdomainData.length > 0) {
-          pdf.autoTable({ startY: yPosition, head: [['Subdomain']], body: subdomainData, theme: 'grid', headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
+          pdf.autoTable({ startY: yPosition, head: [['Subdomain']], body: subdomainData, theme: 'grid', columnWidth: 'wrap', headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 9, cellPadding: 4, minCellHeight: 8, halign: 'left', valign: 'middle' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
           yPosition = pdf.lastAutoTable.finalY + 10;
         }
       }
 
-      if (results.open_ports && Array.isArray(results.open_ports) && results.open_ports.length > 0) {
+      // SSL / TLS Certificate
+      if (results.ssl_info) {
         const check = checkPageBreak(yPosition, pageHeight); if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
-        yPosition = addSectionTitle(pdf, 'Open Ports', yPosition, pageHeight);
-        const portData = results.open_ports.filter(p => !p.error).map(p => [String(p.port || '—'), String(p.service || '—')]);
-        if (portData.length > 0) {
-          pdf.autoTable({ startY: yPosition, head: [['Port', 'Service']], body: portData, theme: 'grid', headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 9 }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
+        yPosition = addSectionTitle(pdf, 'SSL / TLS Certificate', yPosition, pageHeight);
+        const sslData = [
+          ['Validity Status', results.ssl_info.valid ? 'Valid' : (results.ssl_info.error ? 'Error' : 'Invalid')],
+          ['Details', results.ssl_info.error ? 'Error: ' + results.ssl_info.error : 'Certificate Available']
+        ];
+        if (results.ssl_info.data) {
+          if (typeof results.ssl_info.data === 'string') {
+            const certSummary = results.ssl_info.data.substring(0, 120);
+            sslData.push(['Certificate Info', certSummary + (results.ssl_info.data.length > 120 ? '...' : '')]);
+          } else if (typeof results.ssl_info.data === 'object') {
+            const fullCert = JSON.stringify(results.ssl_info.data);
+            const certSummary = fullCert.substring(0, 120);
+            sslData.push(['Certificate Info', certSummary + (fullCert.length > 120 ? '...' : '')]);
+          }
+        }
+        pdf.autoTable({ startY: yPosition, head: [['Property', 'Value']], body: sslData, theme: 'grid', columnWidth: [50, 120], headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 9, cellPadding: 4, minCellHeight: 8, halign: 'left', valign: 'top' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
+        yPosition = pdf.lastAutoTable.finalY + 10;
+      }
+
+      // Exposed Admin Panels
+      if (results.admin_panels && Array.isArray(results.admin_panels) && results.admin_panels.length > 0) {
+        const validPanels = results.admin_panels.filter(p => !p.error);
+        if (validPanels.length > 0) {
+          const check = checkPageBreak(yPosition, pageHeight); if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
+          yPosition = addSectionTitle(pdf, 'Exposed Admin Panels', yPosition, pageHeight);
+          const panelData = validPanels.map(p => [String(p.url || p), String(p.status || 'N/A'), String(p.detail || '—')]);
+          if (panelData.length > 0) {
+            pdf.autoTable({ startY: yPosition, head: [['Panel URL', 'HTTP Status', 'Detail']], body: panelData, theme: 'grid', columnStyles: { 0: { cellWidth: 70 }, 1: { cellWidth: 30 }, 2: { cellWidth: 50 } }, headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 }, bodyStyles: { textColor: [40, 40, 40], fontSize: 7, cellPadding: 2, halign: 'left', valign: 'middle' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
+            yPosition = pdf.lastAutoTable.finalY + 10;
+          }
+        }
+      }
+
+      // WHOIS Registration Info
+      if (results.whois && Array.isArray(results.whois) && results.whois.length > 0) {
+        const validWhois = results.whois.filter(w => !w.error);
+        if (validWhois.length > 0) {
+          const check = checkPageBreak(yPosition, pageHeight); if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
+          yPosition = addSectionTitle(pdf, 'WHOIS Registration Info', yPosition, pageHeight);
+          const whoisData = validWhois.map(item => {
+            if (Array.isArray(item)) return [String(item[0]), String(item[1])];
+            return [String(item), ''];
+          });
+          if (whoisData.length > 0) {
+            pdf.autoTable({ startY: yPosition, head: [['Section', 'Value']], body: whoisData, theme: 'grid', columnWidth: 'wrap', headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 8, cellPadding: 3, minCellHeight: 8, halign: 'left', valign: 'top' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
+            yPosition = pdf.lastAutoTable.finalY + 10;
+          }
+        }
+      }
+
+      // Robots.txt Scope
+      if (results.robots_txt && typeof results.robots_txt === 'string' && results.robots_txt.trim() && !results.robots_txt.includes('unavailable') && !results.robots_txt.includes('error')) {
+        const check = checkPageBreak(yPosition, pageHeight); if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
+        yPosition = addSectionTitle(pdf, 'Robots.txt Scope', yPosition, pageHeight);
+        const robotsText = results.robots_txt;
+        pdf.setFontSize(8);
+        const maxWidth = 170;
+        const splitText = pdf.splitTextToSize(robotsText, maxWidth);
+        const lineHeight = 4.5;
+        const totalHeight = splitText.length * lineHeight + 10;
+        
+        // Check if content fits on current page
+        if (yPosition + totalHeight > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+        
+        pdf.text(splitText, 15, yPosition);
+        yPosition += totalHeight;
+        pdf.setFontSize(10);
+      }
+
+      // Device (IP) Information
+      if (results.ip_info) {
+        const check = checkPageBreak(yPosition, pageHeight); if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
+        yPosition = addSectionTitle(pdf, 'Device (IP) Information', yPosition, pageHeight);
+        let ipData = [];
+        if (typeof results.ip_info === 'string') {
+          const lines = results.ip_info.split('\n').slice(0, 15);
+          ipData = lines.map(line => [line]);
+        } else if (typeof results.ip_info === 'object' && !results.ip_info.error) {
+          Object.entries(results.ip_info).forEach(([key, value]) => {
+            ipData.push([String(key), String(value)]);
+          });
+        } else {
+          ipData = [['Status', results.ip_info.error || 'No IP information available']];
+        }
+        if (ipData.length > 0) {
+          const headers = ipData[0].length > 1 ? [['Property', 'Value']] : [['Information']];
+          pdf.autoTable({ startY: yPosition, head: headers, body: ipData, theme: 'grid', columnWidth: 'wrap', headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 9, cellPadding: 4, minCellHeight: 8, halign: 'left', valign: 'middle' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
           yPosition = pdf.lastAutoTable.finalY + 10;
+        }
+      }
+
+      // Open Ports (additional info if available)
+      if (results.open_ports && Array.isArray(results.open_ports) && results.open_ports.length > 0) {
+        const validPorts = results.open_ports.filter(p => !p.error);
+        if (validPorts.length > 0) {
+          const check = checkPageBreak(yPosition, pageHeight); if (check.needsBreak) { pdf.addPage(); yPosition = check.newY; }
+          yPosition = addSectionTitle(pdf, 'Open Network Ports', yPosition, pageHeight);
+          const portData = validPorts.map(p => [String(p.port || '—'), String(p.service || '—')]);
+          if (portData.length > 0) {
+            pdf.autoTable({ startY: yPosition, head: [['Port', 'Service']], body: portData, theme: 'grid', columnWidth: 'wrap', headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' }, bodyStyles: { textColor: [40, 40, 40], fontSize: 9, cellPadding: 4, minCellHeight: 8, halign: 'left', valign: 'middle' }, alternateRowStyles: { fillColor: [248, 250, 252] }, margin: { left: 15, right: 15 } });
+            yPosition = pdf.lastAutoTable.finalY + 10;
+          }
         }
       }
 
