@@ -180,3 +180,13 @@ def terminate_machine(request):
         'machine': _build_machine_payload(None),
         'detail': 'Machine terminated successfully.',
     }, status=200)
+
+from django.http import JsonResponse
+import requests
+
+def start_vm(request):
+    try:
+        requests.get("http://localhost:5001/django-kali")
+        return JsonResponse({"status": "VM started"})
+    except Exception as e:
+        return JsonResponse({"status": "error", "detail": str(e)})
