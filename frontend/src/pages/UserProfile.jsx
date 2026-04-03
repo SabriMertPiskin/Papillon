@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { mfaSetup, mfaVerifySetup, mfaDisable, mfaStatus } from '../services/api';
+import { mfaSetup, mfaVerifySetup, mfaDisable, mfaStatus, updateVmLabPath } from '../services/api';
 import DashboardLayout from '../components/DashboardLayout';
 import '../styles/UserProfile.css';
 
@@ -11,6 +11,7 @@ export default function UserProfile() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newDomain, setNewDomain] = useState('');
+  const [newVmLabPath, setNewVmLabPath] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ export default function UserProfile() {
       const parsed = JSON.parse(userData);
       setUser(parsed);
       setNewDomain(parsed.domain || '');
+      setNewVmLabPath(parsed.vm_lab_path || '');
       fetchMfaStatus();
     }
   }, [navigate]);
@@ -133,6 +135,54 @@ export default function UserProfile() {
         setMessage({ type: 'success', text: 'Domain removed successfully.' });
       } else {
         setMessage({ type: 'error', text: response.data.detail || 'Domain could not be removed.' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.detail || 'Server error.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVmLabPathUpdate = async (e) => {
+    e.preventDefault();
+    setMessage({ type: '', text: '' });
+    setLoading(true);
+
+    try {
+      const response = await updateVmLabPath(newVmLabPath.trim());
+
+      if (response.data.success) {
+        const updatedUser = { ...user, vm_lab_path: newVmLabPath.trim() };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        setMessage({ type: 'success', text: 'VM Lab path updated successfully.' });
+      } else {
+        setMessage({ type: 'error', text: response.data.detail || 'VM Lab path could not be updated.' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.detail || 'Server error.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVmLabPathRemove = async () => {
+    if (!window.confirm('Do you want to remove your saved VM Lab path?')) return;
+
+    setMessage({ type: '', text: '' });
+    setLoading(true);
+
+    try {
+      const response = await updateVmLabPath('');
+
+      if (response.data.success) {
+        const updatedUser = { ...user, vm_lab_path: '' };
+        setUser(updatedUser);
+        setNewVmLabPath('');
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        setMessage({ type: 'success', text: 'VM Lab path removed successfully.' });
+      } else {
+        setMessage({ type: 'error', text: response.data.detail || 'VM Lab path could not be removed.' });
       }
     } catch (err) {
       setMessage({ type: 'error', text: err.response?.data?.detail || 'Server error.' });
@@ -279,6 +329,18 @@ export default function UserProfile() {
                   </div>
                 </div>
               )}
+              {!isAdminUser && (
+                <div className="info-item">
+                  <label>VM Lab Path</label>
+                  <div className="info-value">
+                    {user.vm_lab_path ? (
+                      <span style={{ wordBreak: 'break-all', color: 'var(--auth-text-primary)' }}>{user.vm_lab_path}</span>
+                    ) : (
+                      <span className="domain-badge unset">Not specified</span>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="info-item">
                 <label>MFA Status</label>
                 <div className="info-value">
@@ -358,6 +420,37 @@ export default function UserProfile() {
                     onClick={handleDomainRemove}
                   >
                     {loading ? 'Processing...' : 'Remove Domain'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* VM Lab Path Card */}
+          {!isAdminUser && (
+            <div className="profile-card">
+              <h2>VM Lab Path</h2>
+              <form onSubmit={handleVmLabPathUpdate} className="profile-form">
+                <div className="form-group">
+                  <label>VirtualBox Executable Path</label>
+                  <input
+                    type="text"
+                    value={newVmLabPath}
+                    onChange={(e) => setNewVmLabPath(e.target.value)}
+                    placeholder="D:\\Oracle\\VirtualBox\\VBoxManage.exe"
+                  />
+                </div>
+                <div className="profile-btn-row">
+                  <button type="submit" className="profile-btn" disabled={loading}>
+                    {loading ? 'Saving...' : 'Save Path'}
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-btn danger"
+                    disabled={loading || !user.vm_lab_path}
+                    onClick={handleVmLabPathRemove}
+                  >
+                    {loading ? 'Processing...' : 'Remove Path'}
                   </button>
                 </div>
               </form>

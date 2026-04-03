@@ -17,4 +17,6 @@ urlpatterns = [
     # Profile management endpoints
     path('change-password/', views.change_password, name='change_password'),
     path('update-domain/', views.update_domain, name='update_domain'),
+    path('update-vm-lab-path/', views.update_vm_lab_path, name='update_vm_lab_path'),
+    path('resolve-analyst-vm-lab-path/', views.resolve_analyst_vm_lab_path, name='resolve_analyst_vm_lab_path'),
 ]

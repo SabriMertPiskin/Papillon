@@ -11,6 +11,7 @@ class CustomUser(models.Model):
     email = models.EmailField(unique=True, null=False)
     password = models.CharField(max_length=255)
     domain = models.CharField(max_length=255, blank=True, null=True)
+    vm_lab_path = models.CharField(max_length=500, blank=True, null=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='analyst')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -32,6 +33,7 @@ class CustomUser(models.Model):
         # Admin accounts must not keep a personal domain.
         if self.role == 'admin':
             self.domain = ''
+            self.vm_lab_path = ''
         super().save(*args, **kwargs)
     
     def __str__(self):

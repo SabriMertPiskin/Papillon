@@ -4,14 +4,14 @@ from .models import CustomUser
 
 @admin.register(CustomUser)
 class CustomUserAdmin(admin.ModelAdmin):
-    list_display = ['username', 'email', 'domain', 'role', 'is_active', 'mfa_enabled', 'created_at']
+    list_display = ['username', 'email', 'domain', 'vm_lab_path', 'role', 'is_active', 'mfa_enabled', 'created_at']
     list_filter = ['role', 'is_active', 'mfa_enabled', 'created_at']
-    search_fields = ['username', 'email', 'domain']
+    search_fields = ['username', 'email', 'domain', 'vm_lab_path']
     readonly_fields = ['created_at', 'updated_at']
     
     fieldsets = (
         ('Account Information', {
-            'fields': ('username', 'email', 'password', 'domain')
+            'fields': ('username', 'email', 'password', 'domain', 'vm_lab_path')
         }),
         ('Access Control', {
             'fields': ('role', 'is_active')

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
-import { vmLabStatus, vmLabStart, vmLabTerminate, resolveAnalystDomain } from '../services/api';
+import { vmLabStatus, vmLabStart, vmLabTerminate, resolveAnalystVmLabPath } from '../services/api';
 import { canManageVM } from '../utils/roleUtils';
 import '../styles/VMLab.css';
 
@@ -24,6 +24,9 @@ export default function VMLab() {
 
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const isAdminUser = currentUser?.role === 'admin';
+  const isAnalystUser = currentUser?.role === 'analyst';
+  const currentVmLabPath = (currentUser?.vm_lab_path || '').trim();
+  const missingOwnVmLabPath = isAnalystUser && !currentVmLabPath;
 
   const refreshStatus = async (targetAnalyst = selectedAnalyst) => {
     if (isAdminUser && !targetAnalyst) {
@@ -44,12 +47,17 @@ export default function VMLab() {
   };
 
   useEffect(() => {
+    if (missingOwnVmLabPath) {
+      setLoading(false);
+      return;
+    }
+
     if (!isAdminUser) {
       refreshStatus();
     } else {
       setLoading(false);
     }
-  }, []);
+  }, [isAdminUser, missingOwnVmLabPath, selectedAnalyst]);
 
   const handleApplyAnalyst = async () => {
     const username = analystInput.trim();
@@ -62,7 +70,7 @@ export default function VMLab() {
     setSelectorMessage({ type: '', text: '' });
 
     try {
-      const response = await resolveAnalystDomain(username);
+      const response = await resolveAnalystVmLabPath(username);
       if (!response.data.success) {
         setSelectorMessage({ type: 'error', text: response.data.detail || 'Could not validate analyst.' });
         return;
@@ -70,6 +78,18 @@ export default function VMLab() {
 
       const resolvedUsername = response.data.analyst_username || username;
       const resolvedDomain = response.data.domain || '';
+      const resolvedVmLabPath = (response.data.vm_lab_path || '').trim();
+
+      if (!resolvedVmLabPath) {
+        setSelectedAnalyst('');
+        setSelectedAnalystDomain('');
+        setMachine(null);
+        setSelectorMessage({
+          type: 'error',
+          text: `Analyst "${resolvedUsername}" has no configured VM Lab path. Add it in Profile & Account first.`,
+        });
+        return;
+      }
 
       setSelectedAnalyst(resolvedUsername);
       setSelectedAnalystDomain(resolvedDomain);
@@ -119,6 +139,7 @@ export default function VMLab() {
   };
 
   const isRunning = Boolean(machine?.running);
+  const vmIpAddress = machine?.connection?.ip || machine?.connection?.host || '-';
   const hasAccess = canManageVM();
 
   if (!hasAccess) {
@@ -132,6 +153,27 @@ export default function VMLab() {
             <strong>Access Denied</strong><br />
             Only Security Analysts and Administrators can use the VM Lab feature.
             Please contact your administrator if you need access.
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (missingOwnVmLabPath) {
+    return (
+      <DashboardLayout>
+        <div className="vm-page">
+          <div className="vm-header">
+            <h1>🖥️ VM Attack Lab</h1>
+          </div>
+          <div className="vm-alert error">
+            <strong>Module Locked</strong><br />
+            Please add your VM Lab path in <strong>Profile & Account</strong> before opening this module.
+          </div>
+          <div className="vm-actions" style={{ marginTop: '14px' }}>
+            <button className="vm-btn start" onClick={() => { window.location.href = '/profile'; }}>
+              Go to Profile & Account
+            </button>
           </div>
         </div>
       </DashboardLayout>
@@ -237,10 +279,6 @@ export default function VMLab() {
               <div>{formatDateTime(machine?.started_at)}</div>
             </div>
             <div className="vm-field">
-              <label>Expires At</label>
-              <div>{formatDateTime(machine?.expires_at)}</div>
-            </div>
-            <div className="vm-field">
               <label>Connection</label>
               <div>
                 {machine?.connection
@@ -251,6 +289,9 @@ export default function VMLab() {
             <div className="vm-field">
               <label>Details</label>
               <div>{machine?.detail || 'Machine is not running.'}</div>
+              <div style={{ marginTop: '8px', fontSize: '0.9rem', color: 'var(--auth-text-secondary)' }}>
+                VM IP: <strong>{vmIpAddress}</strong>
+              </div>
             </div>
           </div>
 

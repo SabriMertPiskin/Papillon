@@ -1,5 +1,6 @@
 import uuid
 import json
+import requests
 from datetime import timedelta
 from django.http import JsonResponse
 from django.utils import timezone
@@ -10,6 +11,7 @@ from users.views import require_role
 
 # In-memory skeleton state. Later, this will be replaced by your friend's VM orchestrator integration.
 _MACHINE_SESSIONS = {}
+VM_AGENT_BASE_URL = 'http://localhost:5001'
 
 
 def _get_authenticated_user(request):
@@ -88,6 +90,29 @@ def _resolve_target_user(request, user):
     return None, JsonResponse({'success': False, 'detail': 'Access denied'}, status=403)
 
 
+def _trigger_vm_agent(action, vm_lab_path=None):
+    """Trigger external local Flask VM agent endpoints."""
+    endpoint_map = {
+        'start': '/start-vm',
+        'stop': '/stop-vm',
+    }
+    path = endpoint_map.get(action)
+    if not path:
+        return False, 'Unknown VM agent action.'
+
+    try:
+        request_kwargs = {'timeout': 4}
+        if vm_lab_path and action in ('start', 'stop'):
+            request_kwargs['params'] = {'path': vm_lab_path}
+
+        response = requests.get(f'{VM_AGENT_BASE_URL}{path}', **request_kwargs)
+        if response.status_code >= 400:
+            return False, f'VM agent returned HTTP {response.status_code}'
+        return True, response.text.strip() or 'ok'
+    except requests.RequestException as exc:
+        return False, f'Could not reach VM agent at {VM_AGENT_BASE_URL}{path}: {exc}'
+
+
 @require_http_methods(["GET"])
 def machine_status(request):
     user, auth_error = _get_authenticated_user(request)
@@ -129,6 +154,20 @@ def start_machine(request):
             'detail': 'Machine is already running.',
         }, status=200)
 
+    vm_lab_path = (target_user.vm_lab_path or '').strip()
+    if not vm_lab_path:
+        return JsonResponse({
+            'success': False,
+            'detail': 'Please save your VM Lab path in Profile & Account first.',
+        }, status=400)
+
+    agent_ok, agent_detail = _trigger_vm_agent('start', vm_lab_path)
+    if not agent_ok:
+        return JsonResponse({
+            'success': False,
+            'detail': f'VM start trigger failed. {agent_detail}',
+        }, status=502)
+
     # Skeleton machine boot output. Replace this block with external orchestrator call later.
     now = timezone.now()
     new_state = {
@@ -136,12 +175,14 @@ def start_machine(request):
         'machine_id': f"vm-{uuid.uuid4().hex[:8]}",
         'started_at': now,
         'expires_at': now + timedelta(hours=2),
+        'vm_lab_path': vm_lab_path,
         'connection': {
+            'ip': '127.0.0.1',
             'host': 'vm.placeholder.tryhackme.local',
             'port': 22,
             'protocol': 'ssh',
         },
-        'detail': 'Machine booted successfully (skeleton mode).',
+        'detail': f'Machine booted successfully. Agent response: {agent_detail}',
     }
     _MACHINE_SESSIONS[target_user.username] = new_state
 
@@ -172,21 +213,19 @@ def terminate_machine(request):
             'detail': 'No running machine found.',
         }, status=200)
 
+    vm_lab_path = (existing.get('vm_lab_path') or target_user.vm_lab_path or '').strip()
+    agent_ok, agent_detail = _trigger_vm_agent('stop', vm_lab_path)
+    if not agent_ok:
+        return JsonResponse({
+            'success': False,
+            'detail': f'VM stop trigger failed. {agent_detail}',
+        }, status=502)
+
     # Skeleton terminate output. Replace with orchestrator terminate call later.
     _MACHINE_SESSIONS.pop(target_user.username, None)
 
     return JsonResponse({
         'success': True,
         'machine': _build_machine_payload(None),
-        'detail': 'Machine terminated successfully.',
+        'detail': f'Machine terminated successfully. Agent response: {agent_detail}',
     }, status=200)
-
-from django.http import JsonResponse
-import requests
-
-def start_vm(request):
-    try:
-        requests.get("http://localhost:5001/django-kali")
-        return JsonResponse({"status": "VM started"})
-    except Exception as e:
-        return JsonResponse({"status": "error", "detail": str(e)})

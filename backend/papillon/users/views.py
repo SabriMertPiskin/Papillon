@@ -161,16 +161,20 @@ def _get_user_auth_data(user):
     
     # Ensure admin accounts never expose a personal domain.
     domain_value = user.domain or ''
+    vm_lab_path_value = user.vm_lab_path or ''
     if user.role == 'admin':
-        if user.domain:
+        if user.domain or user.vm_lab_path:
             user.domain = ''
-            user.save(update_fields=['domain', 'updated_at'])
+            user.vm_lab_path = ''
+            user.save(update_fields=['domain', 'vm_lab_path', 'updated_at'])
         domain_value = ''
+        vm_lab_path_value = ''
 
     return {
         'username': user.username,
         'email': user.email,
         'domain': domain_value,
+        'vm_lab_path': vm_lab_path_value,
         'role': user.role,
         'created_at': user.created_at.isoformat(),
         'mfa_enabled': user.mfa_enabled,
@@ -492,11 +496,14 @@ def dashboard(request):
         
         user = CustomUser.objects.get(username=request.session['user_id'])
         domain_value = user.domain or ''
+        vm_lab_path_value = user.vm_lab_path or ''
         if user.role == 'admin':
-            if user.domain:
+            if user.domain or user.vm_lab_path:
                 user.domain = ''
-                user.save(update_fields=['domain', 'updated_at'])
+                user.vm_lab_path = ''
+                user.save(update_fields=['domain', 'vm_lab_path', 'updated_at'])
             domain_value = ''
+            vm_lab_path_value = ''
 
         return JsonResponse({
             'success': True,
@@ -504,6 +511,7 @@ def dashboard(request):
                 'username': user.username,
                 'email': user.email,
                 'domain': domain_value,
+                'vm_lab_path': vm_lab_path_value,
                 'role': user.role,
                 'created_at': user.created_at.isoformat(),
                 'updated_at': user.updated_at.isoformat(),
@@ -618,7 +626,7 @@ def update_domain(request):
             'detail': 'Domain updated successfully',
             'domain': user.domain
         }, status=200)
-    
+
     except json.JSONDecodeError as e:
         return JsonResponse({'success': False, 'detail': f'Invalid JSON: {str(e)}'}, status=400)
     except Exception as e:
@@ -627,7 +635,54 @@ def update_domain(request):
         return JsonResponse({'success': False, 'detail': error_detail}, status=500)
 
 
-# ==================== RBAC Decorator ====================
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_vm_lab_path(request):
+    """Update user VM Lab executable path."""
+    try:
+        if 'user_id' not in request.session:
+            return JsonResponse(
+                {'success': False, 'detail': 'Not authenticated - no session user_id'},
+                status=401
+            )
+
+        username = request.session.get('user_id')
+        data = json.loads(request.body)
+        vm_lab_path = data.get('vm_lab_path', '').strip()
+
+        try:
+            user = CustomUser.objects.get(username=username)
+        except CustomUser.DoesNotExist:
+            return JsonResponse(
+                {'success': False, 'detail': f'User not found: {username}'},
+                status=404
+            )
+
+        if user.role == 'admin':
+            return JsonResponse(
+                {'success': False, 'detail': 'Admin users cannot store a personal VM Lab path'},
+                status=403
+            )
+
+        user.vm_lab_path = vm_lab_path
+        user.save()
+        user.refresh_from_db()
+
+        return JsonResponse({
+            'success': True,
+            'detail': 'VM Lab path updated successfully',
+            'vm_lab_path': user.vm_lab_path or ''
+        }, status=200)
+
+    except json.JSONDecodeError as e:
+        return JsonResponse({'success': False, 'detail': f'Invalid JSON: {str(e)}'}, status=400)
+    except Exception as e:
+        import traceback
+        error_detail = f'{str(e)} - {traceback.format_exc()}'
+        return JsonResponse({'success': False, 'detail': error_detail}, status=500)
+
+
+ # ==================== RBAC Decorator ====================
 
 def require_role(*allowed_roles):
     """
@@ -665,3 +720,56 @@ def require_role(*allowed_roles):
             return view_func(request, *args, **kwargs)
         return wrapper
     return decorator
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('admin')
+def resolve_analyst_vm_lab_path(request):
+    """
+    Admin-only helper for VM Lab.
+    GET /auth/resolve-analyst-vm-lab-path/?username=analyst_username
+    Returns analyst domain and VM Lab path; fails if either is missing.
+    """
+    try:
+        analyst_username = (request.GET.get('username') or '').strip()
+        if not analyst_username:
+            return JsonResponse(
+                {'success': False, 'detail': 'Analyst username is required'},
+                status=400
+            )
+
+        try:
+            analyst = CustomUser.objects.get(username=analyst_username, role='analyst')
+        except CustomUser.DoesNotExist:
+            return JsonResponse(
+                {'success': False, 'detail': f'Analyst user "{analyst_username}" not found'},
+                status=404
+            )
+
+        domain = (analyst.domain or '').strip()
+        vm_lab_path = (analyst.vm_lab_path or '').strip()
+
+        if not domain:
+            return JsonResponse(
+                {'success': False, 'detail': f'Analyst "{analyst_username}" has no configured domain'},
+                status=400
+            )
+
+        if not vm_lab_path:
+            return JsonResponse(
+                {'success': False, 'detail': f'Analyst "{analyst_username}" has no configured VM Lab path'},
+                status=400
+            )
+
+        return JsonResponse({
+            'success': True,
+            'analyst_username': analyst.username,
+            'domain': domain,
+            'vm_lab_path': vm_lab_path,
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+
+

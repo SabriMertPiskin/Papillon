@@ -41,6 +41,12 @@ export const logout = () =>
 export const getDashboard = () =>
   API.get('/auth/dashboard/');
 
+export const updateVmLabPath = (vm_lab_path = '') =>
+  API.post('/auth/update-vm-lab-path/', { vm_lab_path });
+
+export const resolveAnalystVmLabPath = (username) =>
+  API.get(`/auth/resolve-analyst-vm-lab-path/?username=${encodeURIComponent(username)}`);
+
 // =========================================
 // MFA
 // =========================================

@@ -173,20 +173,20 @@ python manage.py runserver
 ```
 
 
-### Virutal Box Kurulum
-Virtual Box icin:
-https://www.virtualbox.org/wiki/Downloads
+### Virutal Box Setup
 
-Kali iso icin: 
-https://www.kali.org/get-kali/#kali-installer-images
+1. Download the Oracle VM VirtualBox:
+`https://www.virtualbox.org/wiki/Downloads`
 
-Windows kurulmasi kontrol:
-& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" list vms
+2. Download Kali iso file: 
+`https://www.kali.org/get-kali/#kali-installer-images`
 
-Projede manuel test: 
-http://localhost:5001/start-vm
+3. Check the setup path:
+`"C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" list vms`
 
-Agent icin kurulmasi gereken makine ismi: django-kali
-Agent Path:
-Papillon\backend\ai_models\agent.py
-Lokalde onceden calistirilacak
+4. Set the machine name for `django-kali`
+
+5. Run for the agent: `python path/to/the/Papillon\backend\ai_models\agent.py`
+
+6. Manuel test for starting virtual machine
+`http://localhost:5001/start-vm`
