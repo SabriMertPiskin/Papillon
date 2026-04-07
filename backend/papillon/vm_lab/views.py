@@ -229,3 +229,24 @@ def terminate_machine(request):
         'machine': _build_machine_payload(None),
         'detail': f'Machine terminated successfully. Agent response: {agent_detail}',
     }, status=200)
+    
+from django.http import JsonResponse
+from .aws_service import start_ec2_instance
+
+
+def start_instance_view(request):
+    instance_id = "i-XXXXXXXXXXXXXXXXX"
+
+    try:
+        result = start_ec2_instance(instance_id)
+
+        return JsonResponse({
+            "success": True,
+            "data": result
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        })
