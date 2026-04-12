@@ -222,6 +222,48 @@ class TestMonitorSnapshot(TestCase):
         self.assertNotEqual(res.status_code, 403)
 
 
+class TestHostingOverview(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+        self.analyst = make_analyst(username='hosting_analyst', email='hosting@test.com')
+        set_session(self.client, self.analyst.username)
+        self.url = '/ai/network-ids/hosting-overview/'
+
+        DomainTrafficEvent.objects.create(
+            domain='example.com',
+            client_ip='10.10.10.10',
+            method='GET',
+            path='/',
+            status_code=200,
+            response_ms=120.0,
+        )
+        DomainTrafficEvent.objects.create(
+            domain='example.com',
+            client_ip='10.10.10.11',
+            method='POST',
+            path='/login',
+            status_code=500,
+            response_ms=880.0,
+        )
+
+    def test_hosting_overview_requires_auth(self):
+        client2 = Client()
+        res = client2.post(self.url, data=json.dumps({}), content_type='application/json')
+        self.assertEqual(res.status_code, 401)
+
+    def test_hosting_overview_returns_cpanel_mapping(self):
+        res = self.client.post(self.url, data=json.dumps({}), content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertTrue(body['success'])
+        overview = body['overview']
+        self.assertEqual(overview['provider_focus'], 'Turhost')
+        self.assertIn('cpanel', overview['panel_name'].lower())
+        self.assertGreaterEqual(len(overview['cpanel_modules']), 3)
+        self.assertIn('structure_name', overview['terminology'])
+
+
 # ---------------------------------------------------------------------------
 # 3. Integration: /ai/network-ids/predict/ — TC-01
 # ---------------------------------------------------------------------------
