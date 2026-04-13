@@ -1,0 +1,253 @@
+.cpanel-data-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding-bottom: 40px;
+}
+
+.cpanel-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  background: var(--auth-glass, rgba(15, 25, 50, 0.45));
+  border: 1px solid var(--auth-glass-border, rgba(30, 136, 229, 0.15));
+  border-radius: 18px;
+  padding: 24px;
+}
+
+.cpanel-hero h1 {
+  margin: 0 0 8px;
+  color: var(--auth-text-primary, #e8edf5);
+  font-size: 1.8rem;
+}
+
+.cpanel-hero p {
+  margin: 0;
+  color: var(--auth-text-secondary, #8899b4);
+  line-height: 1.6;
+  max-width: 720px;
+}
+
+.cpanel-auth-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 14px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.cpanel-auth-badge.password {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81c784;
+}
+
+.cpanel-auth-badge.token {
+  background: rgba(0, 188, 212, 0.15);
+  color: #4dd0e1;
+}
+
+.cpanel-auth-badge.none,
+.cpanel-auth-badge.unknown {
+  background: rgba(255, 152, 0, 0.15);
+  color: #ffb74d;
+}
+
+.cpanel-hero-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cpanel-action-btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--auth-accent, #1e88e5), var(--auth-teal, #00bcd4));
+}
+
+.cpanel-action-btn.secondary {
+  background: var(--auth-surface, rgba(15, 32, 57, 0.7));
+  color: var(--auth-text-secondary, #8899b4);
+  border: 1px solid var(--auth-glass-border, rgba(30, 136, 229, 0.15));
+}
+
+.cpanel-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.cpanel-summary-card,
+.cpanel-data-section,
+.cpanel-empty-panel,
+.cpanel-error-panel,
+.cpanel-loading {
+  background: var(--auth-glass, rgba(15, 25, 50, 0.45));
+  border: 1px solid var(--auth-glass-border, rgba(30, 136, 229, 0.15));
+  border-radius: 16px;
+}
+
+.cpanel-summary-card {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cpanel-summary-card span {
+  color: var(--auth-text-muted, #5a6d8a);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cpanel-summary-card strong {
+  color: var(--auth-text-primary, #e8edf5);
+  font-size: 1.2rem;
+}
+
+.cpanel-data-section {
+  padding: 22px;
+}
+
+.cpanel-data-section-header h2,
+.cpanel-empty-panel h2 {
+  margin: 0 0 6px;
+  color: var(--auth-text-primary, #e8edf5);
+}
+
+.cpanel-data-section-header p,
+.cpanel-empty-panel p {
+  margin: 0;
+  color: var(--auth-text-secondary, #8899b4);
+  line-height: 1.6;
+}
+
+.cpanel-table-shell {
+  margin-top: 18px;
+  overflow-x: auto;
+}
+
+.cpanel-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 540px;
+}
+
+.cpanel-table th,
+.cpanel-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cpanel-table th {
+  color: var(--auth-text-muted, #5a6d8a);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cpanel-table td {
+  color: var(--auth-text-primary, #e8edf5);
+  vertical-align: top;
+}
+
+.cpanel-table td:first-child {
+  color: var(--auth-text-secondary, #8899b4);
+  width: 36%;
+}
+
+.cpanel-empty-state {
+  margin-top: 18px;
+  color: var(--auth-text-muted, #5a6d8a);
+  line-height: 1.7;
+}
+
+.cpanel-raw-json {
+  margin: 16px 0 0;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--auth-input-bg, rgba(10, 22, 40, 0.6));
+  color: var(--auth-text-secondary, #8899b4);
+  overflow: auto;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.cpanel-webalizer-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.cpanel-webalizer-card {
+  border: 1px solid var(--auth-glass-border, rgba(30, 136, 229, 0.15));
+  border-radius: 14px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.cpanel-webalizer-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.cpanel-webalizer-card-head h3 {
+  margin: 0 0 4px;
+  color: var(--auth-text-primary, #e8edf5);
+  font-size: 1rem;
+}
+
+.cpanel-webalizer-card-head p {
+  margin: 0;
+  color: var(--auth-text-muted, #5a6d8a);
+  font-size: 0.82rem;
+}
+
+.cpanel-webalizer-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 188, 212, 0.15);
+  color: #4dd0e1;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cpanel-empty-panel,
+.cpanel-error-panel,
+.cpanel-loading {
+  padding: 24px;
+}
+
+.cpanel-error-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #ff8a80;
+}
+
+.cpanel-loading {
+  color: var(--auth-text-secondary, #8899b4);
+}
+
+@media (max-width: 768px) {
+  .cpanel-hero {
+    flex-direction: column;
+  }
+
+  .cpanel-table {
+    min-width: 100%;
+  }
+}

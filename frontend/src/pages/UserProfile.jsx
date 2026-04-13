@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { mfaSetup, mfaVerifySetup, mfaDisable, mfaStatus, updateVmLabPath } from '../services/api';
+import {
+  getCpanelConfig,
+  mfaSetup,
+  mfaVerifySetup,
+  mfaDisable,
+  mfaStatus,
+  testCpanelConnection,
+  updateCpanelConfig,
+  updateVmLabPath,
+} from '../services/api';
 import DashboardLayout from '../components/DashboardLayout';
 import '../styles/UserProfile.css';
 
@@ -12,6 +21,12 @@ export default function UserProfile() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newDomain, setNewDomain] = useState('');
   const [newVmLabPath, setNewVmLabPath] = useState('');
+  const [cpanelHost, setCpanelHost] = useState('');
+  const [cpanelUsername, setCpanelUsername] = useState('');
+  const [cpanelToken, setCpanelToken] = useState('');
+  const [cpanelPassword, setCpanelPassword] = useState('');
+  const [cpanelVerifySsl, setCpanelVerifySsl] = useState(true);
+  const [cpanelStatus, setCpanelStatus] = useState({ type: '', text: '' });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -38,6 +53,9 @@ export default function UserProfile() {
       setNewDomain(parsed.domain || '');
       setNewVmLabPath(parsed.vm_lab_path || '');
       fetchMfaStatus();
+      if (parsed.role !== 'admin') {
+        fetchCpanelConfigData();
+      }
     }
   }, [navigate]);
 
@@ -49,6 +67,19 @@ export default function UserProfile() {
       }
     } catch (error) {
       console.error('Error fetching MFA status:', error);
+    }
+  };
+
+  const fetchCpanelConfigData = async () => {
+    try {
+      const response = await getCpanelConfig();
+      if (response.data.success && response.data.config) {
+        setCpanelHost(response.data.config.host || '');
+        setCpanelUsername(response.data.config.username || '');
+        setCpanelVerifySsl(response.data.config.verify_ssl !== false);
+      }
+    } catch (error) {
+      console.error('Error fetching cPanel config:', error);
     }
   };
 
@@ -186,6 +217,55 @@ export default function UserProfile() {
       }
     } catch (err) {
       setMessage({ type: 'error', text: err.response?.data?.detail || 'Server error.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCpanelConfigSave = async (e) => {
+    e.preventDefault();
+    setCpanelStatus({ type: '', text: '' });
+
+    if (!cpanelHost || !cpanelUsername || (!cpanelToken && !cpanelPassword)) {
+      setCpanelStatus({ type: 'error', text: 'cPanel host, username, and API token or password are required.' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await updateCpanelConfig({
+        host: cpanelHost.trim(),
+        username: cpanelUsername.trim(),
+        token: cpanelToken.trim(),
+        password: cpanelPassword,
+        verify_ssl: cpanelVerifySsl,
+      });
+      if (response.data.success) {
+        setCpanelToken('');
+        setCpanelPassword('');
+        setCpanelStatus({ type: 'success', text: 'cPanel settings saved securely.' });
+      } else {
+        setCpanelStatus({ type: 'error', text: response.data.detail || 'Could not save cPanel settings.' });
+      }
+    } catch (error) {
+      setCpanelStatus({ type: 'error', text: error.response?.data?.detail || 'Could not save cPanel settings.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCpanelConnectionTest = async () => {
+    setCpanelStatus({ type: '', text: '' });
+    setLoading(true);
+    try {
+      const response = await testCpanelConnection();
+      if (response.data.success) {
+        setCpanelStatus({ type: 'success', text: 'cPanel connection succeeded.' });
+      } else {
+        setCpanelStatus({ type: 'error', text: response.data.detail || 'cPanel connection failed.' });
+      }
+    } catch (error) {
+      setCpanelStatus({ type: 'error', text: error.response?.data?.detail || 'cPanel connection failed.' });
     } finally {
       setLoading(false);
     }
@@ -341,6 +421,16 @@ export default function UserProfile() {
                   </div>
                 </div>
               )}
+              {!isAdminUser && (
+                <div className="info-item">
+                  <label>cPanel Integration</label>
+                  <div className="info-value">
+                    <span className={`status-badge ${(cpanelHost && cpanelUsername) ? 'connected' : 'disconnected'}`}>
+                      {(cpanelHost && cpanelUsername) ? 'Configured' : 'Not configured'}
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className="info-item">
                 <label>MFA Status</label>
                 <div className="info-value">
@@ -451,6 +541,78 @@ export default function UserProfile() {
                     onClick={handleVmLabPathRemove}
                   >
                     {loading ? 'Processing...' : 'Remove Path'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {!isAdminUser && (
+            <div className="profile-card">
+              <h2>Turhost cPanel Integration</h2>
+              <form onSubmit={handleCpanelConfigSave} className="profile-form">
+                <div className="form-group">
+                  <label>cPanel Host</label>
+                  <input
+                    type="text"
+                    value={cpanelHost}
+                    onChange={(e) => setCpanelHost(e.target.value)}
+                    placeholder="cpanel.domain.com"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>cPanel Username</label>
+                  <input
+                    type="text"
+                    value={cpanelUsername}
+                    onChange={(e) => setCpanelUsername(e.target.value)}
+                    placeholder="cpanel username"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>API Token</label>
+                  <input
+                    type="password"
+                    value={cpanelToken}
+                    onChange={(e) => setCpanelToken(e.target.value)}
+                    placeholder="Paste cPanel API token"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>cPanel Password</label>
+                  <input
+                    type="password"
+                    value={cpanelPassword}
+                    onChange={(e) => setCpanelPassword(e.target.value)}
+                    placeholder="Optional now, required for session login flow"
+                  />
+                </div>
+                <label className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={cpanelVerifySsl}
+                    onChange={(e) => setCpanelVerifySsl(e.target.checked)}
+                  />
+                  Verify SSL certificate
+                </label>
+
+                {cpanelStatus.text && (
+                  <div className={`profile-alert ${cpanelStatus.type}`}>
+                    {cpanelStatus.text}
+                  </div>
+                )}
+
+                <div className="profile-btn-row">
+                  <button type="submit" className="profile-btn" disabled={loading}>
+                    {loading ? 'Saving...' : 'Save cPanel Settings'}
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-btn"
+                    onClick={handleCpanelConnectionTest}
+                    disabled={loading || !cpanelHost || !cpanelUsername}
+                  >
+                    {loading ? 'Testing...' : 'Test Connection'}
                   </button>
                 </div>
               </form>

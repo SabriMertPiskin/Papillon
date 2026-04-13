@@ -653,6 +653,94 @@
   font-weight: 500;
 }
 
+.cpanel-telemetry-card {
+  min-height: 320px;
+}
+
+.cpanel-telemetry-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.cpanel-telemetry-block {
+  border: 1px solid var(--auth-glass-border, rgba(30, 136, 229, 0.15));
+  border-radius: 12px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.cpanel-telemetry-heading {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--auth-text-muted, #5a6d8a);
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.cpanel-telemetry-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.85rem;
+}
+
+.cpanel-telemetry-row:last-child {
+  border-bottom: none;
+}
+
+.cpanel-telemetry-row span {
+  color: var(--auth-text-secondary, #8899b4);
+}
+
+.cpanel-telemetry-row strong {
+  color: var(--auth-text-primary, #e8edf5);
+  text-align: right;
+  word-break: break-word;
+}
+
+.cpanel-telemetry-json {
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  background: var(--auth-input-bg, rgba(10, 22, 40, 0.6));
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--auth-text-secondary, #8899b4);
+  font-size: 0.8rem;
+  font-family: 'Courier New', monospace;
+}
+
+.cpanel-telemetry-muted {
+  color: var(--auth-text-muted, #5a6d8a);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.cpanel-telemetry-empty {
+  height: 100%;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.cpanel-telemetry-btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, var(--auth-accent, #1e88e5), var(--auth-teal, #00bcd4));
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Simulated chart bars */
 .chart-bars {
   display: flex;

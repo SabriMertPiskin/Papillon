@@ -12,7 +12,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from users.models import CustomUser
 from users.views import require_role
-from .models import DomainTrafficEvent
+from .models import CPanelCredential, DomainTrafficEvent
+from .cpanel_client import CPanelAPIError, CPanelClient
 
 # ============================================
 # AI Model — Lazy Loading
@@ -67,6 +68,57 @@ def _get_target_domain(request, user):
             )
     
     return user.domain
+
+
+def _get_target_user(request, user):
+    if user.role == 'analyst':
+        return user
+    if user.role == 'admin':
+        analyst_username = request.GET.get('for_analyst') or request.POST.get('for_analyst')
+        if not analyst_username:
+            return JsonResponse(
+                {'success': False, 'detail': 'Admin must specify ?for_analyst=username parameter'},
+                status=400
+            )
+        try:
+            return CustomUser.objects.get(username=analyst_username, role='analyst')
+        except CustomUser.DoesNotExist:
+            return JsonResponse(
+                {'success': False, 'detail': f'Analyst user "{analyst_username}" not found'},
+                status=404
+            )
+    return user
+
+
+def _get_cpanel_credential_for_request(request, user):
+    target_user = _get_target_user(request, user)
+    if isinstance(target_user, JsonResponse):
+        return None, target_user
+    try:
+        return CPanelCredential.objects.get(user=target_user), None
+    except CPanelCredential.DoesNotExist:
+        return None, JsonResponse(
+            {'success': False, 'detail': f'No cPanel configuration found for "{target_user.username}"'},
+            status=404
+        )
+
+
+def _build_cpanel_client(credential):
+    return CPanelClient(
+        host=credential.host,
+        username=credential.username,
+        token=credential.get_token(),
+        password=credential.get_password(),
+        verify_ssl=credential.verify_ssl,
+    )
+
+
+def _cpanel_auth_mode(credential):
+    if credential.get_password():
+        return 'password'
+    if credential.get_token():
+        return 'token'
+    return 'none'
 
 
 @require_http_methods(["GET"])
@@ -257,6 +309,176 @@ def _build_sample_from_ip_stats(stat):
     for i in range(8, 48):
         vec[i] = vec[(i % 8)] * (0.7 + ((i % 5) * 0.06))
     return vec
+
+
+def _classify_host_health(avg_response_ms, error_rate, active_connections):
+    if error_rate >= 15 or avg_response_ms >= 1200:
+        return 'critical'
+    if error_rate >= 5 or avg_response_ms >= 500 or active_connections >= 80:
+        return 'warning'
+    return 'healthy'
+
+
+def _build_cpanel_modules(domain, avg_response_ms, error_rate):
+    domain_label = domain or 'your domain'
+    return [
+        {
+            'name': 'Metrics',
+            'kind': 'section',
+            'cpanel_items': ['Visitors', 'Errors', 'Bandwidth', 'Awstats', 'Raw Access', 'Resource Usage'],
+            'why': f'First stop for understanding request volume, spikes, and 4xx/5xx patterns on {domain_label}.',
+        },
+        {
+            'name': 'Visitors',
+            'kind': 'traffic',
+            'cpanel_items': ['Top visitor IPs', 'Requested URLs', 'User agents', 'Referrers'],
+            'why': 'Closest built-in cPanel view to lightweight traffic analysis.',
+        },
+        {
+            'name': 'Awstats',
+            'kind': 'analytics',
+            'cpanel_items': ['Daily hits', 'Robots/spiders', 'HTTP codes', 'Hosts'],
+            'why': 'Useful for historical traffic patterns and bot-heavy behavior.',
+        },
+        {
+            'name': 'Errors',
+            'kind': 'stability',
+            'cpanel_items': ['Apache/Nginx level error excerpts'],
+            'why': f'Important because current observed error rate is {error_rate}%.',
+        },
+        {
+            'name': 'Resource Usage',
+            'kind': 'host-health',
+            'cpanel_items': ['CPU', 'Memory', 'Entry Processes', 'I/O', 'Concurrent connections'],
+            'why': f'Best place to validate whether average response time of {avg_response_ms} ms is infrastructure pressure.',
+        },
+    ]
+
+
+def _build_hosting_recommendations(error_rate, avg_response_ms, active_connections):
+    recommendations = [
+        'Use cPanel Metrics > Visitors to compare suspicious IPs with the Active IP Connection Matrix.',
+        'Use cPanel Metrics > Errors to correlate 4xx/5xx spikes with anomalies flagged by the IDS model.',
+        'Use cPanel Metrics > Resource Usage to decide whether slowness is application-side or hosting-side.',
+    ]
+    if error_rate >= 5:
+        recommendations.append('Error rate is elevated; prioritize cPanel Errors and application logs before model tuning.')
+    if avg_response_ms >= 500:
+        recommendations.append('Latency is elevated; check Turhost Resource Usage and concurrent process limits.')
+    if active_connections >= 50:
+        recommendations.append('Connection count is relatively high; compare cPanel Visitors/Awstats against bot traffic and bursts.')
+    return recommendations
+
+
+def _extract_usage_percent(entry):
+    if isinstance(entry, dict):
+        for key in ('percent', 'usage_percent', 'percent_usage'):
+            value = entry.get(key)
+            if value not in (None, ''):
+                try:
+                    return float(str(value).replace('%', '').strip())
+                except Exception:
+                    continue
+    return None
+
+
+def _summarize_cpanel_snapshot(snapshot):
+    account_info = snapshot.get('account_info') or {}
+    domains = snapshot.get('domains') or {}
+    domain_details = snapshot.get('domain_details') or []
+    quota = snapshot.get('quota') or {}
+    local_quota = snapshot.get('local_quota') or {}
+    php_versions = snapshot.get('php_versions') or {}
+    php_default = snapshot.get('php_default') or {}
+    php_vhosts = snapshot.get('php_vhosts') or []
+    email_accounts = snapshot.get('email_accounts') or []
+    email_count = snapshot.get('email_count')
+    mysql_databases = snapshot.get('mysql_databases') or []
+    web_domains = snapshot.get('web_domains') or []
+    resource_usage = snapshot.get('resource_usage') or []
+    usage_items = resource_usage if isinstance(resource_usage, list) else resource_usage.get('usage') or resource_usage.get('items') or []
+
+    max_usage_percent = 0.0
+    for item in usage_items:
+        percent = _extract_usage_percent(item)
+        if percent is not None:
+            max_usage_percent = max(max_usage_percent, percent)
+
+    bandwidth = snapshot.get('bandwidth') or []
+    error_entries = snapshot.get('errors') or []
+    access_log = snapshot.get('access_log') or []
+    webalizer_sites = snapshot.get('webalizer_sites') or []
+    analog_sites = snapshot.get('analog_sites') or []
+    analog_domain_stats = snapshot.get('analog_domain_stats') or []
+    archives = snapshot.get('archives') or []
+    report_files = snapshot.get('report_files') or []
+    report_previews = snapshot.get('report_previews') or []
+    discovered_metric_links = snapshot.get('discovered_metric_links') or []
+    html_reports = snapshot.get('html_reports') or []
+    warnings = snapshot.get('warnings') or []
+
+    return {
+        'stats_bar': snapshot.get('stats_bar') or [],
+        'account_info': account_info,
+        'domains': domains,
+        'domain_details': domain_details,
+        'quota': quota,
+        'local_quota': local_quota,
+        'php_versions': php_versions,
+        'php_default': php_default,
+        'php_vhosts': php_vhosts,
+        'email_accounts': email_accounts,
+        'email_count': email_count,
+        'mysql_databases': mysql_databases,
+        'web_domains': web_domains,
+        'resource_usage': usage_items,
+        'resource_peak_percent': round(max_usage_percent, 2),
+        'bandwidth_records': len(bandwidth),
+        'error_log_entries': len(error_entries),
+        'access_log_records': len(access_log),
+        'awstats_daily': snapshot.get('awstats_daily') or {},
+        'bandwidth': bandwidth,
+        'errors': error_entries,
+        'access_log': access_log,
+        'webalizer_sites': webalizer_sites,
+        'analog_sites': analog_sites,
+        'analog_domain_stats': analog_domain_stats,
+        'report_files': report_files,
+        'report_previews': report_previews,
+        'discovered_metric_links': discovered_metric_links,
+        'html_reports': html_reports,
+        'log_archives': archives,
+        'log_settings': snapshot.get('log_settings') or {},
+        'warnings': warnings,
+        'has_live_data': bool(
+            (snapshot.get('stats_bar') or [])
+            or account_info
+            or domains
+            or domain_details
+            or quota
+            or local_quota
+            or php_versions
+            or php_default
+            or php_vhosts
+            or email_accounts
+            or bool(email_count)
+            or mysql_databases
+            or web_domains
+            or usage_items
+            or bandwidth
+            or error_entries
+            or access_log
+            or webalizer_sites
+            or analog_sites
+            or analog_domain_stats
+            or report_files
+            or report_previews
+            or discovered_metric_links
+            or html_reports
+            or archives
+            or (snapshot.get('awstats_daily') or {})
+        ),
+    }
 
 
 @csrf_exempt
@@ -571,6 +793,228 @@ def monitor_snapshot(request):
 
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'detail': 'Invalid JSON payload'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('analyst')
+def update_cpanel_config(request):
+    try:
+        user, auth_error = _get_authenticated_user(request)
+        if auth_error:
+            return auth_error
+
+        data = json.loads(request.body)
+        host = str(data.get('host', '')).strip()
+        username = str(data.get('username', '')).strip()
+        token = str(data.get('token', '')).strip()
+        password = str(data.get('password', '')).strip()
+        verify_ssl = bool(data.get('verify_ssl', True))
+
+        if not host or not username:
+            return JsonResponse({'success': False, 'detail': 'host and username are required'}, status=400)
+        if not token and not password:
+            return JsonResponse({'success': False, 'detail': 'Provide at least an API token or cPanel password'}, status=400)
+
+        credential, _ = CPanelCredential.objects.get_or_create(
+            user=user,
+            defaults={
+                'host': host,
+                'username': username,
+                'token_encrypted': '',
+                'password_encrypted': '',
+                'verify_ssl': verify_ssl,
+            }
+        )
+        credential.host = host
+        credential.username = username
+        credential.verify_ssl = verify_ssl
+        if token:
+            credential.set_token(token)
+        if password:
+            credential.set_password(password)
+        credential.save()
+
+        return JsonResponse({
+            'success': True,
+            'config': {
+                'host': credential.host,
+                'username': credential.username,
+                'verify_ssl': credential.verify_ssl,
+                'has_token': bool(credential.get_token()),
+                'has_password': bool(credential.get_password()),
+                'masked_token': credential.masked_token(),
+                'auth_mode': _cpanel_auth_mode(credential),
+            }
+        }, status=200)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'detail': 'Invalid JSON payload'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+@require_role('analyst')
+def get_cpanel_config(request):
+    try:
+        user, auth_error = _get_authenticated_user(request)
+        if auth_error:
+            return auth_error
+        try:
+            credential = CPanelCredential.objects.get(user=user)
+        except CPanelCredential.DoesNotExist:
+            return JsonResponse({'success': True, 'config': None}, status=200)
+
+        return JsonResponse({
+            'success': True,
+            'config': {
+                'host': credential.host,
+                'username': credential.username,
+                'verify_ssl': credential.verify_ssl,
+                'has_token': bool(credential.get_token()),
+                'has_password': bool(credential.get_password()),
+                'masked_token': credential.masked_token(),
+                'auth_mode': _cpanel_auth_mode(credential),
+            }
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('admin', 'analyst')
+def test_cpanel_connection(request):
+    try:
+        user, auth_error = _get_authenticated_user(request)
+        if auth_error:
+            return auth_error
+        credential, credential_error = _get_cpanel_credential_for_request(request, user)
+        if credential_error:
+            return credential_error
+
+        result = _build_cpanel_client(credential).test_connection()
+        return JsonResponse({'success': True, 'result': result}, status=200)
+    except CPanelAPIError as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=502)
+    except requests.RequestException as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=502)
+    except Exception as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('admin', 'analyst')
+def cpanel_live_snapshot(request):
+    try:
+        user, auth_error = _get_authenticated_user(request)
+        if auth_error:
+            return auth_error
+
+        target_user = _get_target_user(request, user)
+        if isinstance(target_user, JsonResponse):
+            return target_user
+
+        credential, credential_error = _get_cpanel_credential_for_request(request, user)
+        if credential_error:
+            return credential_error
+
+        snapshot = _build_cpanel_client(credential).fetch_live_snapshot(_normalize_domain(target_user.domain))
+        return JsonResponse({'success': True, 'snapshot': _summarize_cpanel_snapshot(snapshot)}, status=200)
+    except CPanelAPIError as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=502)
+    except requests.RequestException as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=502)
+    except Exception as e:
+        return JsonResponse({'success': False, 'detail': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def hosting_overview(request):
+    try:
+        user, auth_error = _get_authenticated_user(request)
+        if auth_error:
+            return auth_error
+
+        domain_result = _get_target_domain(request, user)
+        if isinstance(domain_result, JsonResponse):
+            return domain_result
+        requested_domain = _normalize_domain(domain_result)
+        if not requested_domain:
+            return JsonResponse({'success': False, 'detail': 'Domain is required.'}, status=400)
+
+        now = timezone.now()
+        window_long = now - timezone.timedelta(minutes=10)
+        window_day = now - timezone.timedelta(hours=24)
+
+        domain_filter = Q(domain=requested_domain) | Q(domain__endswith=f'.{requested_domain}')
+        events_qs = DomainTrafficEvent.objects.filter(domain_filter, requested_at__gte=window_day)
+        recent_qs = events_qs.filter(requested_at__gte=window_long)
+
+        total_recent = recent_qs.count()
+        total_day = events_qs.count()
+        error_recent = recent_qs.filter(status_code__gte=400).count()
+        avg_response_ms = round(float(recent_qs.aggregate(avg=Avg('response_ms'))['avg'] or 0.0), 2)
+        active_connections = recent_qs.values('client_ip').exclude(client_ip='').distinct().count()
+        unique_paths = recent_qs.values('path').distinct().count()
+        top_paths = list(recent_qs.values('path').annotate(request_count=Count('id')).order_by('-request_count')[:5])
+        top_ips = list(
+            recent_qs.values('client_ip').exclude(client_ip='').annotate(
+                request_count=Count('id'),
+                error_count=Count('id', filter=Q(status_code__gte=400)),
+            ).order_by('-request_count')[:5]
+        )
+
+        error_rate = round((error_recent / total_recent) * 100, 2) if total_recent else 0.0
+        host_health = _classify_host_health(avg_response_ms, error_rate, active_connections)
+        cpanel_snapshot = None
+
+        target_user = _get_target_user(request, user)
+        if not isinstance(target_user, JsonResponse):
+            try:
+                credential = CPanelCredential.objects.get(user=target_user)
+                cpanel_snapshot = _summarize_cpanel_snapshot(
+                    _build_cpanel_client(credential).fetch_live_snapshot(requested_domain)
+                )
+                if cpanel_snapshot.get('resource_peak_percent', 0) >= 90:
+                    host_health = 'critical'
+                elif host_health == 'healthy' and cpanel_snapshot.get('resource_peak_percent', 0) >= 70:
+                    host_health = 'warning'
+            except (CPanelCredential.DoesNotExist, CPanelAPIError, requests.RequestException):
+                cpanel_snapshot = None
+
+        return JsonResponse({
+            'success': True,
+            'overview': {
+                'domain': requested_domain,
+                'provider_focus': 'Turhost',
+                'panel_name': 'cPanel hosting control panel',
+                'host_health': host_health,
+                'summary': {
+                    'requests_last_10m': total_recent,
+                    'requests_last_24h': total_day,
+                    'error_rate_percent': error_rate,
+                    'avg_response_ms': avg_response_ms,
+                    'active_connections': active_connections,
+                    'unique_paths': unique_paths,
+                },
+                'traffic_insights': {
+                    'top_paths': top_paths,
+                    'top_ips': top_ips,
+                },
+                'cpanel_live': cpanel_snapshot,
+                'cpanel_modules': _build_cpanel_modules(requested_domain, avg_response_ms, error_rate),
+                'recommendations': _build_hosting_recommendations(error_rate, avg_response_ms, active_connections),
+                'terminology': {
+                    'structure_name': 'hosting control panel / hosting observability dashboard',
+                    'best_term_for_this_feature': 'hosting monitoring and traffic analytics',
+                },
+            }
+        }, status=200)
     except Exception as e:
         return JsonResponse({'success': False, 'detail': str(e)}, status=500)
 

@@ -142,6 +142,26 @@ export const monitorNetworkSnapshot = (domain, forAnalyst = null) => {
   return API.post(url, { domain });
 };
 
+export const getCpanelConfig = () =>
+  API.get('/ai/network-ids/cpanel-config/');
+
+export const updateCpanelConfig = (payload) =>
+  API.post('/ai/network-ids/cpanel-config/update/', payload);
+
+export const testCpanelConnection = (forAnalyst = null) => {
+  const url = forAnalyst
+    ? `/ai/network-ids/cpanel-test/?for_analyst=${encodeURIComponent(forAnalyst)}`
+    : '/ai/network-ids/cpanel-test/';
+  return API.post(url, {});
+};
+
+export const getCpanelLiveSnapshot = (forAnalyst = null) => {
+  const url = forAnalyst
+    ? `/ai/network-ids/cpanel-live-snapshot/?for_analyst=${encodeURIComponent(forAnalyst)}`
+    : '/ai/network-ids/cpanel-live-snapshot/';
+  return API.post(url, {});
+};
+
 export const resolveAnalystDomain = (username) =>
   API.get(`/ai/network-ids/resolve-analyst-domain/?username=${encodeURIComponent(username)}`);
 

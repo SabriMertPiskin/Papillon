@@ -509,6 +509,19 @@
   gap: 10px;
 }
 
+.checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--auth-text-secondary, #8899b4);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.checkbox-row input {
+  width: auto;
+}
+
 .profile-btn.danger {
   background: linear-gradient(135deg, #c62828, #ef5350);
   box-shadow: 0 10px 20px rgba(239, 83, 80, 0.25);

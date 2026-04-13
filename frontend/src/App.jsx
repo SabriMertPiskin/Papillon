@@ -12,6 +12,7 @@ import PasswordStrength from './pages/PasswordStrength';
 import Blacklist from './pages/Blacklist';
 import UserProfile from './pages/UserProfile';
 import NetworkTraffic from './pages/NetworkTraffic';
+import CPanelData from './pages/CPanelData';
 import VMLab from './pages/VMLab';
 import MalwareAnalysis from './pages/MalwareAnalysis';
 import PhishingHistory from './pages/PhishingHistory';
@@ -41,6 +42,7 @@ function App() {
         <Route path="/blacklist" element={isAuthenticated ? <Blacklist /> : <Navigate to="/login" replace />} />
         <Route path="/profile" element={isAuthenticated ? <UserProfile /> : <Navigate to="/login" replace />} />
         <Route path="/network-traffic" element={isAuthenticated ? <NetworkTraffic /> : <Navigate to="/login" replace />} />
+        <Route path="/cpanel-data" element={isAuthenticated ? <CPanelData /> : <Navigate to="/login" replace />} />
         <Route path="/vm-lab" element={isAuthenticated ? <VMLab /> : <Navigate to="/login" replace />} />
         <Route path="/malware-analysis" element={isAuthenticated ? <MalwareAnalysis /> : <Navigate to="/login" replace />} />
         <Route path="/phishing-history" element={isAuthenticated ? <PhishingHistory /> : <Navigate to="/login" replace />} />

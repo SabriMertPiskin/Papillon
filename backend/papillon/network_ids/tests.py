@@ -8,7 +8,7 @@ import json
 import time
 from unittest.mock import patch, MagicMock
 from django.test import TestCase, Client
-from network_ids.models import DomainTrafficEvent
+from network_ids.models import CPanelCredential, DomainTrafficEvent
 from users.models import CustomUser
 
 
@@ -262,6 +262,73 @@ class TestHostingOverview(TestCase):
         self.assertIn('cpanel', overview['panel_name'].lower())
         self.assertGreaterEqual(len(overview['cpanel_modules']), 3)
         self.assertIn('structure_name', overview['terminology'])
+
+
+class TestCPanelIntegration(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+        self.analyst = make_analyst(username='cpanel_analyst', email='cpanel@test.com')
+        set_session(self.client, self.analyst.username)
+
+    def test_update_cpanel_config_persists_encrypted_token(self):
+        res = self.client.post(
+            '/ai/network-ids/cpanel-config/update/',
+            data=json.dumps({
+                'host': 'cpanel.example.com',
+                'username': 'cpuser',
+                'token': 'secret-token-value',
+                'password': 'SecretPass123!',
+                'verify_ssl': True,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(res.status_code, 200)
+        credential = CPanelCredential.objects.get(user=self.analyst)
+        self.assertEqual(credential.host, 'cpanel.example.com')
+        self.assertEqual(credential.username, 'cpuser')
+        self.assertNotEqual(credential.token_encrypted, 'secret-token-value')
+        self.assertEqual(credential.get_token(), 'secret-token-value')
+        self.assertNotEqual(credential.password_encrypted, 'SecretPass123!')
+        self.assertEqual(credential.get_password(), 'SecretPass123!')
+
+    @patch('network_ids.views._build_cpanel_client')
+    def test_cpanel_test_endpoint_returns_live_status(self, mock_client_factory):
+        credential = CPanelCredential(user=self.analyst, host='cpanel.example.com', username='cpuser')
+        credential.set_token('secret-token-value')
+        credential.save()
+
+        mock_client = MagicMock()
+        mock_client.test_connection.return_value = {'connected': True, 'stats': []}
+        mock_client_factory.return_value = mock_client
+
+        res = self.client.post('/ai/network-ids/cpanel-test/', data=json.dumps({}), content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json()['success'])
+
+    @patch('network_ids.views._build_cpanel_client')
+    def test_cpanel_live_snapshot_returns_mocked_data(self, mock_client_factory):
+        credential = CPanelCredential(user=self.analyst, host='cpanel.example.com', username='cpuser')
+        credential.set_token('secret-token-value')
+        credential.save()
+
+        mock_client = MagicMock()
+        mock_client.fetch_live_snapshot.return_value = {
+            'stats_bar': [{'name': 'bandwidthusage', 'value': '123 MB'}],
+            'resource_usage': [{'description': 'CPU', 'percent': '42'}],
+            'bandwidth': [{'domain': 'example.com'}],
+            'errors': ['sample error'],
+            'awstats_daily': {'hits': []},
+            'archives': ['access_log-2026-04.gz'],
+        }
+        mock_client_factory.return_value = mock_client
+
+        res = self.client.post('/ai/network-ids/cpanel-live-snapshot/', data=json.dumps({}), content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertTrue(body['success'])
+        self.assertEqual(body['snapshot']['resource_peak_percent'], 42.0)
+        self.assertEqual(body['snapshot']['error_log_entries'], 1)
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { logout, outlookStatus as getOutlookStatus } from '../services/api';
+import {
+  getCpanelConfig,
+  logout,
+  outlookStatus as getOutlookStatus,
+} from '../services/api';
 import Sidebar from '../components/Sidebar';
 import { canManageVM } from '../utils/roleUtils';
 import '../styles/Dashboard.css';
@@ -8,6 +12,7 @@ import '../styles/Dashboard.css';
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [outlookStatus, setOutlookStatus] = useState(null);
+  const [cpanelConfig, setCpanelConfig] = useState(null);
   const [readOnlyMode, setReadOnlyMode] = useState(() => localStorage.getItem('papillon-readonly-mode') === 'true');
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('papillon-theme') || 'dark';
@@ -32,6 +37,7 @@ export default function Dashboard() {
       setUser(parsedUser);
       if (parsedUser.role === 'analyst') {
         fetchOutlookStatus();
+        fetchCpanelConfigState();
       } else {
         setReadOnlyMode(false);
         localStorage.setItem('papillon-readonly-mode', 'false');
@@ -59,6 +65,17 @@ export default function Dashboard() {
       if (error.response?.status !== 403) {
         console.error('Error fetching Outlook status:', error);
       }
+    }
+  };
+
+  const fetchCpanelConfigState = async () => {
+    try {
+      const configResponse = await getCpanelConfig();
+      if (configResponse.data.success) {
+        setCpanelConfig(configResponse.data.config);
+      }
+    } catch (error) {
+      console.error('Error fetching cPanel config:', error);
     }
   };
 
@@ -206,9 +223,6 @@ export default function Dashboard() {
       ]
     }
   ];
-
-  // Flatten for backwards compatibility
-  const moduleCards = moduleCategories.flatMap(cat => cat.items);
 
   if (!user) {
     return (
@@ -367,6 +381,28 @@ export default function Dashboard() {
               </div>
               <div className="chart-bars">
                 {generateBars(18, 130, 'bar-blue')}
+              </div>
+            </div>
+            <div
+              className="chart-card clickable"
+              onClick={() => navigate('/cpanel-data')}
+              style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
+            >
+              <div className="chart-card-header">
+                <span className="chart-card-title">cPanel Telemetry</span>
+                <span className="chart-card-badge" style={{ background: 'rgba(0, 188, 212, 0.15)', color: '#00bcd4' }}>
+                  {cpanelConfig?.has_token ? 'Live cPanel Data' : 'Needs Setup'}
+                </span>
+              </div>
+              <div className="chart-bars">
+                {generateBars(18, 130, 'bar-teal')}
+              </div>
+              <div className="chart-placeholder" style={{ background: 'transparent', border: 'none', height: 'auto', minHeight: 'unset', alignItems: 'flex-start' }}>
+                <span className="chart-placeholder-text">
+                  {cpanelConfig?.has_token
+                    ? `Open /cpanel-data to inspect Metrics, AWStats, Webalizer, errors, bandwidth, and raw log data from ${cpanelConfig.host}.`
+                    : 'Open Profile & Account to add cPanel host, username, and API token.'}
+                </span>
               </div>
             </div>
             {user.role === 'analyst' && (
