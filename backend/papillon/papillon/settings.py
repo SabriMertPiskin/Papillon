@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'malware_analysis',
     'network_ids',
     'vm_lab',
+    'ssh_vm_lab',
     'blacklist',
 ]
 

@@ -235,7 +235,7 @@ from .aws_service import start_ec2_instance
 
 
 def start_instance_view(request):
-    instance_id = "i-XXXXXXXXXXXXXXXXXX"
+    instance_id = "i-0aa4956930191faaa"
 
     try:
         result = start_ec2_instance(instance_id)

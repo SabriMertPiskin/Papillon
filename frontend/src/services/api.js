@@ -117,6 +117,15 @@ export const vmLabTerminate = (forAnalyst = null) => {
 };
 
 // =========================================
+// SSH VM LAB
+// =========================================
+export const sshVmLabStartInstance = () =>
+  API.get('/vm-lab/start-instance/');
+
+export const sshVmLabDownloadKey = () =>
+  API.get('/ssh-vm-lab/download-key/', { responseType: 'blob' });
+
+// =========================================
 // AI MODULES
 // =========================================
 export const predictPasswordStrength = (password) =>

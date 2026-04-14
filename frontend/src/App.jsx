@@ -14,6 +14,7 @@ import UserProfile from './pages/UserProfile';
 import NetworkTraffic from './pages/NetworkTraffic';
 import CPanelData from './pages/CPanelData';
 import VMLab from './pages/VMLab';
+import SSHVMLab from './pages/SSHVMLab';
 import MalwareAnalysis from './pages/MalwareAnalysis';
 import PhishingHistory from './pages/PhishingHistory';
 import VulnerabilityMap from './pages/VulnerabilityMap';
@@ -44,6 +45,7 @@ function App() {
         <Route path="/network-traffic" element={isAuthenticated ? <NetworkTraffic /> : <Navigate to="/login" replace />} />
         <Route path="/cpanel-data" element={isAuthenticated ? <CPanelData /> : <Navigate to="/login" replace />} />
         <Route path="/vm-lab" element={isAuthenticated ? <VMLab /> : <Navigate to="/login" replace />} />
+        <Route path="/ssh-vm-lab" element={isAuthenticated ? <SSHVMLab /> : <Navigate to="/login" replace />} />
         <Route path="/malware-analysis" element={isAuthenticated ? <MalwareAnalysis /> : <Navigate to="/login" replace />} />
         <Route path="/phishing-history" element={isAuthenticated ? <PhishingHistory /> : <Navigate to="/login" replace />} />
         <Route path="/vulnerability-map" element={isAuthenticated ? <VulnerabilityMap /> : <Navigate to="/login" replace />} />

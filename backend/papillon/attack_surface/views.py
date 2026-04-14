@@ -91,9 +91,6 @@ def attack_surface_scan(request):
             return domain_result
         domain = _normalize_domain(domain_result)
 
-        if not domain:
-            return JsonResponse({'success': False, 'detail': 'Domain is required. Please configure in Profile or pass ?for_analyst=username as Admin.'}, status=400)
-
         # Resolve domain to IP
         try:
             ip = socket.gethostbyname(domain)

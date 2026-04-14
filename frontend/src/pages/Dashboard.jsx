@@ -174,6 +174,12 @@ export default function Dashboard() {
           title: 'VM Attack Lab',
           desc: 'Start and terminate your attack simulation machine (TryHackMe-style lab skeleton).',
           path: '/vm-lab'
+        }, {
+          icon: '🔐',
+          iconClass: 'blue',
+          title: 'SSH VM Lab',
+          desc: 'Start AWS instance, copy returned public IP, and download awskey.pem for SSH access.',
+          path: '/ssh-vm-lab'
         }] : []),
       ]
     },

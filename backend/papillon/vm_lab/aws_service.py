@@ -1,11 +1,13 @@
 from time import time
+import time
+import os
 
 import boto3
 
 ##DENEMEK ICIN http://127.0.0.1:8000/vm-lab/start-instance/
-AWS_ACCESS_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-AWS_SECRET_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-REGION = "eu-central-1"
+AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY', '')
+AWS_SECRET_KEY = os.getenv('AWS_SECRET_KEY', '')
+REGION = os.getenv('AWS_REGION', 'eu-central-1')
     
 def start_ec2_instance(instance_id, region=REGION):
     ec2 = boto3.client(
@@ -17,6 +19,8 @@ def start_ec2_instance(instance_id, region=REGION):
 
     # instance start
     ec2.start_instances(InstanceIds=[instance_id])
+
+    time.sleep(10)      # TODO
 
     response = ec2.describe_instances(InstanceIds=[instance_id])
 

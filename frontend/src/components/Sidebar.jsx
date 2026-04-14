@@ -30,7 +30,12 @@ export default function Sidebar({ user, onLogout }) {
         { icon: '🎯', label: 'Attack Surface', path: '/attack-surface' },
         { icon: '🌐', label: 'Network Traffic', path: '/network-traffic' },
         { icon: '📊', label: 'cPanel Data', path: '/cpanel-data' },
-        ...(canManageVM() ? [{ icon: '🖥️', label: 'VM Lab', path: '/vm-lab' }] : []),
+        ...(canManageVM()
+          ? [
+              { icon: '🖥️', label: 'VM Lab', path: '/vm-lab' },
+              { icon: '🔐', label: 'SSH VM Lab', path: '/ssh-vm-lab' },
+            ]
+          : []),
       ]
     },
     ...(user?.role === 'analyst' ? [{
