@@ -1,0 +1,18 @@
+{
+  "accuracy": 0.9671,
+  "precision_phishing": 0.9599,
+  "recall_phishing": 0.9775,
+  "f1_phishing": 0.9686,
+  "precision_safe": 0.9751,
+  "recall_safe": 0.9558,
+  "f1_safe": 0.9654,
+  "total_samples": 164906,
+  "train_samples": 131924,
+  "test_samples": 32982,
+  "confusion_matrix": {
+    "TN": 15134,
+    "FP": 700,
+    "FN": 386,
+    "TP": 16762
+  }
+}

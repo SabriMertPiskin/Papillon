@@ -25,16 +25,30 @@ def _get_detector():
         return None
 
 
-def _score_from_prediction(is_phishing):
+def _score_from_prediction(prediction):
     """
-    AI prediction'ından risk skoru ve status üret.
-    Not: Mevcut model sadece binary (phishing/safe) döndürüyor.
-    Score'u buna göre hesaplıyoruz.
+    Compute risk score (0-100) and status from AI model probability output.
+    Uses p_phishing probability instead of hardcoded values.
+    
+    Thresholds:
+      - score >= 70  → 'phishing'
+      - 40 <= score < 70  → 'suspicious'
+      - score < 40  → 'clean'
     """
-    if is_phishing:
-        return 90, 'phishing'
+    p_phishing = prediction.get('p_phishing', 0.0)
+    
+    # Convert probability (0.0—1.0) to risk score (0—100)
+    score = int(round(p_phishing * 100))
+    score = max(0, min(100, score))  # Clamp to 0-100
+    
+    if score >= 70:
+        status = 'phishing'
+    elif score >= 40:
+        status = 'suspicious'
     else:
-        return 10, 'clean'
+        status = 'clean'
+    
+    return score, status
 
 
 def _generate_ai_reasons(prediction_result, sender='', subject=''):
@@ -121,9 +135,9 @@ def predict_phishing(request):
                 'detail': f'Model prediction error: {prediction["error"]}'
             }, status=500)
 
-        # Score ve status hesapla
+        # Score ve status hesapla (probability-based)
         is_phishing = prediction.get('is_phishing', False)
-        score, status = _score_from_prediction(is_phishing)
+        score, status = _score_from_prediction(prediction)
 
         # AI gerekçeleri üret
         ai_reasons = _generate_ai_reasons(prediction, sender, subject)
@@ -158,6 +172,9 @@ def predict_phishing(request):
                 'label': prediction.get('label', ''),
                 'score': score,
                 'status': status,
+                'confidence': prediction.get('confidence', None),
+                'p_phishing': prediction.get('p_phishing', None),
+                'p_safe': prediction.get('p_safe', None),
                 'ai_reasons': ai_reasons,
                 'scanned_at': log.scanned_at.isoformat()
             }

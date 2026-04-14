@@ -36,14 +36,37 @@ def set_session(client, username):
 
 class TestPhishingHelpers(TestCase):
 
-    def test_phishing_prediction_score_is_90_and_status_phishing(self):
-        score, status = _score_from_prediction(is_phishing=True)
-        self.assertEqual(score, 90)
+    def test_high_probability_returns_phishing_status(self):
+        """p_phishing >= 0.70 should return 'phishing' status."""
+        prediction = {'p_phishing': 0.85, 'p_safe': 0.15}
+        score, status = _score_from_prediction(prediction)
+        self.assertEqual(score, 85)
         self.assertEqual(status, 'phishing')
 
-    def test_clean_prediction_score_is_10_and_status_clean(self):
-        score, status = _score_from_prediction(is_phishing=False)
-        self.assertEqual(score, 10)
+    def test_low_probability_returns_clean_status(self):
+        """p_phishing < 0.40 should return 'clean' status."""
+        prediction = {'p_phishing': 0.15, 'p_safe': 0.85}
+        score, status = _score_from_prediction(prediction)
+        self.assertEqual(score, 15)
+        self.assertEqual(status, 'clean')
+
+    def test_medium_probability_returns_suspicious_status(self):
+        """0.40 <= p_phishing < 0.70 should return 'suspicious' status."""
+        prediction = {'p_phishing': 0.55, 'p_safe': 0.45}
+        score, status = _score_from_prediction(prediction)
+        self.assertEqual(score, 55)
+        self.assertEqual(status, 'suspicious')
+
+    def test_score_is_clamped_0_to_100(self):
+        prediction = {'p_phishing': 1.5, 'p_safe': -0.5}
+        score, status = _score_from_prediction(prediction)
+        self.assertLessEqual(score, 100)
+        self.assertGreaterEqual(score, 0)
+
+    def test_missing_probability_defaults_to_zero(self):
+        prediction = {}
+        score, status = _score_from_prediction(prediction)
+        self.assertEqual(score, 0)
         self.assertEqual(status, 'clean')
 
     def test_generate_reasons_for_phishing_label(self):
@@ -115,9 +138,12 @@ class TestPhishingPredictEndpoint(TestCase):
 
     @patch('phishing.views._get_detector')
     def test_phishing_email_returns_phishing_status(self, mock_get_detector):
-        """TC-02: Phishing email → result.status: 'phishing', result.score ≥ 80."""
+        """TC-02: Phishing email -> result.status: 'phishing', result.score >= 70."""
         mock_detector = MagicMock()
-        mock_detector.predict.return_value = {'is_phishing': True, 'label': 'PHISHING'}
+        mock_detector.predict.return_value = {
+            'is_phishing': True, 'label': 'PHISHING',
+            'confidence': 0.88, 'p_phishing': 0.88, 'p_safe': 0.12
+        }
         mock_get_detector.return_value = mock_detector
 
         res = self._post({
@@ -130,13 +156,17 @@ class TestPhishingPredictEndpoint(TestCase):
         self.assertTrue(body['success'])
         result = body['result']
         self.assertEqual(result['status'], 'phishing')
+        self.assertGreaterEqual(result['score'], 70)
         self.assertGreaterEqual(result['score'], 80)
 
     @patch('phishing.views._get_detector')
     def test_clean_email_returns_clean_status(self, mock_get_detector):
-        """TC-02: Temiz email → result.status: 'clean'."""
+        """TC-02: Clean email -> result.status: 'clean'."""
         mock_detector = MagicMock()
-        mock_detector.predict.return_value = {'is_phishing': False, 'label': 'SAFE'}
+        mock_detector.predict.return_value = {
+            'is_phishing': False, 'label': 'SAFE',
+            'confidence': 0.92, 'p_phishing': 0.08, 'p_safe': 0.92
+        }
         mock_get_detector.return_value = mock_detector
 
         res = self._post({
@@ -148,12 +178,16 @@ class TestPhishingPredictEndpoint(TestCase):
         body = res.json()
         self.assertTrue(body['success'])
         self.assertEqual(body['result']['status'], 'clean')
+        self.assertLess(body['result']['score'], 40)
 
     @patch('phishing.views._get_detector')
     def test_prediction_saved_to_db(self, mock_get_detector):
-        """Analiz sonucu PhishingLog olarak DB'ye kaydedilmeli."""
+        """Analysis result should be saved as PhishingLog in DB."""
         mock_detector = MagicMock()
-        mock_detector.predict.return_value = {'is_phishing': False, 'label': 'SAFE'}
+        mock_detector.predict.return_value = {
+            'is_phishing': False, 'label': 'SAFE',
+            'confidence': 0.85, 'p_phishing': 0.15, 'p_safe': 0.85
+        }
         mock_get_detector.return_value = mock_detector
 
         self._post({
@@ -164,10 +198,13 @@ class TestPhishingPredictEndpoint(TestCase):
         self.assertTrue(PhishingLog.objects.filter(user=self.user).exists())
 
     @patch('phishing.views._get_detector')
-    def test_response_contains_ai_reasons(self, mock_get_detector):
-        """TC-02: Response result.ai_reasons listesi içermeli."""
+    def test_response_contains_ai_reasons_and_probabilities(self, mock_get_detector):
+        """TC-02: Response must include ai_reasons, confidence, and probabilities."""
         mock_detector = MagicMock()
-        mock_detector.predict.return_value = {'is_phishing': True, 'label': 'PHISHING'}
+        mock_detector.predict.return_value = {
+            'is_phishing': True, 'label': 'PHISHING',
+            'confidence': 0.92, 'p_phishing': 0.92, 'p_safe': 0.08
+        }
         mock_get_detector.return_value = mock_detector
 
         res = self._post({
@@ -181,18 +218,26 @@ class TestPhishingPredictEndpoint(TestCase):
         self.assertIn('ai_reasons', result)
         self.assertIsInstance(result['ai_reasons'], list)
         self.assertGreater(len(result['ai_reasons']), 0)
+        # v2: probability fields
+        self.assertIn('confidence', result)
+        self.assertIn('p_phishing', result)
+        self.assertIn('p_safe', result)
 
     @patch('phishing.views._get_detector')
     def test_response_result_contains_required_fields(self, mock_get_detector):
-        """TC-02: result objesi id, is_phishing, label, score, status, scanned_at içermeli."""
+        """TC-02: result must contain all required fields including v2 probability fields."""
         mock_detector = MagicMock()
-        mock_detector.predict.return_value = {'is_phishing': True, 'label': 'PHISHING'}
+        mock_detector.predict.return_value = {
+            'is_phishing': True, 'label': 'PHISHING',
+            'confidence': 0.88, 'p_phishing': 0.88, 'p_safe': 0.12
+        }
         mock_get_detector.return_value = mock_detector
 
         res = self._post({'email_text': 'test phishing', 'sender': 'x@x.com', 'subject': 'test'})
         result = res.json()['result']
-        for field in ['id', 'is_phishing', 'label', 'score', 'status', 'scanned_at']:
-            self.assertIn(field, result, msg=f"'{field}' result'da eksik")
+        for field in ['id', 'is_phishing', 'label', 'score', 'status', 'scanned_at',
+                      'confidence', 'p_phishing', 'p_safe']:
+            self.assertIn(field, result, msg=f"'{field}' missing from result")
 
     def test_missing_email_text_returns_400(self):
         res = self._post({'sender': 'x@x.com', 'subject': 'test'})
@@ -218,7 +263,6 @@ class TestPhishingPredictEndpoint(TestCase):
 
     @patch('phishing.views._get_detector')
     def test_model_error_response_returns_500(self, mock_get_detector):
-        """Model hata döndürürse 500 dönmeli."""
         mock_detector = MagicMock()
         mock_detector.predict.return_value = {'error': 'Model inference failed'}
         mock_get_detector.return_value = mock_detector
@@ -231,6 +275,28 @@ class TestPhishingPredictEndpoint(TestCase):
         mock_get_detector.return_value = None
         res = self._post({'email_text': 'some email', 'sender': '', 'subject': ''})
         self.assertEqual(res.status_code, 503)
+
+    @patch('phishing.views._get_detector')
+    def test_suspicious_email_returns_suspicious_status(self, mock_get_detector):
+        """Score between 40-69 should return 'suspicious' status."""
+        mock_detector = MagicMock()
+        mock_detector.predict.return_value = {
+            'is_phishing': True, 'label': 'PHISHING',
+            'confidence': 0.55, 'p_phishing': 0.55, 'p_safe': 0.45
+        }
+        mock_get_detector.return_value = mock_detector
+
+        res = self._post({
+            'email_text': 'Please review your account settings',
+            'sender': 'support@unknown-service.net',
+            'subject': 'Account review',
+        })
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertTrue(body['success'])
+        self.assertEqual(body['result']['status'], 'suspicious')
+        self.assertGreaterEqual(body['result']['score'], 40)
+        self.assertLess(body['result']['score'], 70)
 
 
 # ---------------------------------------------------------------------------
