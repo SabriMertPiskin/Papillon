@@ -104,7 +104,7 @@ export default function AttackSurfaceAnalysis() {
     e.preventDefault();
 
     const isAdminUser = isAdmin();
-    const targetDomain = isAdminUser ? selectedAnalystDomain.trim() : (registeredDomain || domain).trim();
+    const targetDomain = isAdminUser ? selectedAnalystDomain.trim() : domain.trim();
     if (!targetDomain) { setError('Please enter a domain to start scanning.'); return; }
     if (isAdminUser && !selectedAnalyst.trim()) {
       setError('Please select an analyst first using the arrow button.');
@@ -459,8 +459,8 @@ export default function AttackSurfaceAnalysis() {
                 <label>Domain to Scan</label>
                 <input
                   type="text"
-                  value={isAdmin() ? (selectedAnalystDomain || '') : (registeredDomain || domain)}
-                  onChange={(e) => setDomain(e.target.value)}
+                  value={isAdmin() ? (selectedAnalystDomain || '') : domain}
+                  onChange={(e) => { if (!isAdmin()) setDomain(e.target.value); }}
                   placeholder={isAdmin() ? 'Domain will be fetched after analyst selection' : 'example.com'}
                   disabled={loading || isAdmin()}
                 />
