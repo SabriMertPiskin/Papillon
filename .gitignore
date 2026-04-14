@@ -1,0 +1,54 @@
+# ==========================================
+# Papillon Project - Root .gitignore
+# ==========================================
+
+# --- PDF files ---
+*.pdf
+
+# --- LaTeX build artifacts ---
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+*.tex
+
+# --- Final report / docs ---
+Papillon_Final_Report.*
+final_report/
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+venv/
+.env
+
+# --- Node ---
+node_modules/
+dist/
+dist-ssr/
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+desktop.ini
+__MACOSX/
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# --- Misc ---
+*.local
+*.log
