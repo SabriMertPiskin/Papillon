@@ -130,12 +130,16 @@ export default function CVEList() {
                 <div className="cve-grid">
                   {cves.map((cve, index) => {
                     const severityClass = getSeverityClass(cve.severity);
+                    const nvdUrl = cve.nvd_url || `https://nvd.nist.gov/vuln/detail/${cve.id}`;
                     return (
                       <div key={index} className={`cve-card ${severityClass}`}>
                         
                         <div className="cve-card-header">
                           <div className="cve-title-wrapper">
-                            <h3 className="cve-id">{cve.id}</h3>
+                            <a href={nvdUrl} target="_blank" rel="noopener noreferrer" className="cve-id-link">
+                              <h3 className="cve-id">{cve.id}</h3>
+                              <IconLink />
+                            </a>
                           </div>
                           <span className="severity-badge">
                             {cve.severity || 'UNKNOWN'} {cve.score ? `(${cve.score})` : ''}
@@ -156,23 +160,31 @@ export default function CVEList() {
                             <div className="cve-references">
                               <strong>External Sources ({cve.references.length})</strong>
                               <ul>
-                                {cve.references.slice(0, 3).map((ref, idx) => (
-                                  <li key={idx}>
-                                    <a href={ref} target="_blank" rel="noopener noreferrer" title={ref}>
-                                      <IconLink /> {new URL(ref).hostname || 'Reference Link'}
-                                    </a>
-                                  </li>
-                                ))}
-                                {cve.references.length > 3 && (
+                                {cve.references.slice(0, 5).map((ref, idx) => {
+                                  let hostname = 'Reference Link';
+                                  try { hostname = new URL(ref).hostname; } catch (e) { /* fallback */ }
+                                  return (
+                                    <li key={idx}>
+                                      <a href={ref} target="_blank" rel="noopener noreferrer" title={ref}>
+                                        <IconLink /> {hostname}
+                                      </a>
+                                    </li>
+                                  );
+                                })}
+                                {cve.references.length > 5 && (
                                   <li>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--auth-text-muted)', fontStyle: 'italic' }}>
-                                      + {cve.references.length - 3} more sources...
-                                    </span>
+                                    <a href={nvdUrl} target="_blank" rel="noopener noreferrer" className="more-sources-link">
+                                      + {cve.references.length - 5} more sources — view on NVD
+                                    </a>
                                   </li>
                                 )}
                               </ul>
                             </div>
                           )}
+
+                          <a href={nvdUrl} target="_blank" rel="noopener noreferrer" className="view-on-nvd-btn">
+                            View Full Details on NVD <IconLink />
+                          </a>
                         </div>
                       </div>
                     );

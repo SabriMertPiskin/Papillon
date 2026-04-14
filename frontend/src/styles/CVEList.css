@@ -338,6 +338,65 @@
   border-color: rgba(30, 136, 229, 0.3);
 }
 
+/* CVE ID Link — clickable to NVD */
+.cve-id-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.cve-id-link:hover {
+  color: var(--auth-accent, #1e88e5);
+}
+
+.cve-id-link:hover .cve-id {
+  color: var(--auth-accent, #1e88e5);
+}
+
+.cve-id-link svg {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.cve-id-link:hover svg {
+  opacity: 1;
+}
+
+/* View on NVD Button */
+.view-on-nvd-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(30, 136, 229, 0.1);
+  border: 1px solid rgba(30, 136, 229, 0.2);
+  color: var(--auth-accent, #1e88e5);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.view-on-nvd-btn:hover {
+  background: rgba(30, 136, 229, 0.2);
+  border-color: rgba(30, 136, 229, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(30, 136, 229, 0.15);
+}
+
+/* More sources link */
+.more-sources-link {
+  font-style: italic;
+  font-size: 0.8rem !important;
+}
+
 /* Error */
 .alert-error {
   background: rgba(244, 67, 54, 0.1);
