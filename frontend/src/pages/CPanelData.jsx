@@ -170,8 +170,327 @@ const buildBandwidthSummaries = (reports) => {
     });
 };
 
-function DataSection({ title, subtitle, rows, emptyMessage, raw }) {
-  const hasRows = Array.isArray(rows) && rows.length > 0;
+const toNumber = (value) => {
+  if (value === null || value === undefined) return 0;
+  const n = Number(String(value).replace(/[^\d.-]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+};
+
+const buildWebalizerKpis = (webalizerSummaries) => {
+  if (!Array.isArray(webalizerSummaries) || !webalizerSummaries.length) return [];
+
+  const primary = webalizerSummaries[0];
+  const latest = (primary.rows || []).find((row) => row.period && row.period !== 'Toplamlar');
+  const totals = (primary.rows || []).find((row) => row.period === 'Toplamlar');
+
+  return [
+    {
+      label: 'Webalizer Latest Period',
+      value: latest?.period || '-',
+      tone: 'neutral',
+    },
+    {
+      label: 'Latest Monthly Visits',
+      value: latest ? toNumber(latest.monthlyVisits).toLocaleString('tr-TR') : '-',
+      tone: 'info',
+    },
+    {
+      label: 'Latest Monthly Hits',
+      value: latest ? toNumber(latest.monthlyHits).toLocaleString('tr-TR') : '-',
+      tone: 'info',
+    },
+    {
+      label: 'Total Monthly Visits',
+      value: totals ? toNumber(totals.monthlyVisits).toLocaleString('tr-TR') : '-',
+      tone: 'success',
+    },
+    {
+      label: 'Total Monthly Hits',
+      value: totals ? toNumber(totals.monthlyHits).toLocaleString('tr-TR') : '-',
+      tone: 'success',
+    },
+  ];
+};
+
+const buildWebalizerTrendRows = (webalizerSummaries) => {
+  if (!Array.isArray(webalizerSummaries) || !webalizerSummaries.length) return [];
+
+  const aggregated = new Map();
+  for (const summary of webalizerSummaries) {
+    for (const row of summary?.rows || []) {
+      if (!row?.period || row.period === 'Toplamlar') continue;
+      const period = String(row.period).trim();
+      const visits = toNumber(row.monthlyVisits);
+      const hits = toNumber(row.monthlyHits);
+      const existing = aggregated.get(period) || { period, visits: 0, hits: 0 };
+      existing.visits += visits;
+      existing.hits += hits;
+      aggregated.set(period, existing);
+    }
+  }
+
+  return Array.from(aggregated.values());
+};
+
+const pickDailyMetric = (item, keys) => {
+  for (const key of keys) {
+    if (item?.[key] !== undefined && item?.[key] !== null && item?.[key] !== '') {
+      return item[key];
+    }
+  }
+  return 0;
+};
+
+const normalizeDailyTrafficRows = (awstatsDaily) => {
+  if (!awstatsDaily) return [];
+
+  let source = [];
+  if (Array.isArray(awstatsDaily)) {
+    source = awstatsDaily;
+  } else if (typeof awstatsDaily === 'object') {
+    if (Array.isArray(awstatsDaily.data)) source = awstatsDaily.data;
+    else if (Array.isArray(awstatsDaily.items)) source = awstatsDaily.items;
+    else if (Array.isArray(awstatsDaily.daily)) source = awstatsDaily.daily;
+    else if (Array.isArray(awstatsDaily.stats)) source = awstatsDaily.stats;
+    else {
+      source = Object.entries(awstatsDaily).map(([key, value]) => ({
+        ...(typeof value === 'object' && value !== null ? value : { value }),
+        _periodKey: key,
+      }));
+    }
+  }
+
+  return source
+    .map((item, index) => ({
+      id: `${item?._periodKey || item?.date || item?.day || index}`,
+      period: String(item?.date || item?.day || item?.period || item?.label || item?.name || item?._periodKey || `Day ${index + 1}`),
+      hits: toNumber(pickDailyMetric(item, ['hits', 'daily_hits', 'hit'])),
+      visits: toNumber(pickDailyMetric(item, ['visits', 'daily_visits', 'visit'])),
+      pages: toNumber(pickDailyMetric(item, ['pages', 'daily_pages', 'page'])),
+      files: toNumber(pickDailyMetric(item, ['files', 'daily_files', 'file'])),
+      bytes: toNumber(pickDailyMetric(item, ['bytes', 'bandwidth', 'kbytes', 'kb'])),
+    }))
+    .filter((row) => row.hits || row.visits || row.pages || row.files || row.bytes);
+};
+
+const buildDailyTrafficKpis = (dailyRows) => {
+  if (!Array.isArray(dailyRows) || !dailyRows.length) return [];
+
+  const latest = dailyRows[0];
+  const peakHits = dailyRows.reduce((max, row) => (row.hits > max.hits ? row : max), dailyRows[0]);
+  const avgVisits = dailyRows.reduce((sum, row) => sum + row.visits, 0) / dailyRows.length;
+
+  return [
+    { label: 'Latest Day', value: latest.period, tone: 'neutral' },
+    { label: 'Latest Hits', value: latest.hits.toLocaleString('tr-TR'), tone: 'info' },
+    { label: 'Latest Visits', value: latest.visits.toLocaleString('tr-TR'), tone: 'info' },
+    { label: 'Peak Hits Day', value: `${peakHits.period} (${peakHits.hits.toLocaleString('tr-TR')})`, tone: 'warn' },
+    { label: 'Average Daily Visits', value: Math.round(avgVisits).toLocaleString('tr-TR'), tone: 'success' },
+  ];
+};
+
+const normalizeTopSourceIpRows = (topSourceIps) => {
+  if (!Array.isArray(topSourceIps)) return [];
+  return topSourceIps
+    .map((item, index) => ({
+      id: item?.ip || `ip-${index}`,
+      rank: item?.rank ?? index + 1,
+      ip: item?.ip || '-',
+      requestCount: toNumber(item?.request_count ?? item?.count ?? item?.requests),
+      sharePercent: toNumber(item?.share_percent ?? item?.percent ?? item?.share),
+    }))
+    .filter((row) => row.ip !== '-' && row.requestCount > 0);
+};
+
+const normalizeIpRequestFrequencyRows = (rows) => {
+  if (!Array.isArray(rows)) return [];
+
+  return rows
+    .map((item, index) => ({
+      id: item?.ip || `freq-${index}`,
+      ip: item?.ip || '-',
+      requestCount: toNumber(item?.request_count ?? item?.requests ?? item?.count),
+      timestampCount: toNumber(item?.timestamp_count ?? item?.timestamps),
+      coveragePercent: toNumber(item?.coverage_percent ?? item?.coverage),
+      firstSeen: item?.first_seen || '-',
+      lastSeen: item?.last_seen || '-',
+      spanMinutes: item?.span_minutes ?? '-',
+      requestsPerMinute: item?.requests_per_minute ?? '-',
+      requestsPerHour: item?.requests_per_hour ?? '-',
+    }))
+    .filter((row) => row.ip !== '-' && row.requestCount > 0);
+};
+
+const buildIpRequestFrequencyFromMatrix = (rows) => {
+  if (!Array.isArray(rows) || !rows.length) return [];
+
+  const grouped = new Map();
+
+  for (const row of rows) {
+    const ip = String(row?.ip || row?.client_ip || row?.remote_addr || row?.host || '-').trim();
+    if (!ip || ip === '-') continue;
+
+    const requestedAt = String(row?.requestedAt || row?.requested_at || row?.timestamp || row?.time || row?.date || '').trim();
+    const existing = grouped.get(ip) || {
+      id: ip,
+      ip,
+      requestCount: 0,
+      timestampCount: 0,
+      firstSeen: '-',
+      lastSeen: '-',
+      firstSeenDate: null,
+      lastSeenDate: null,
+    };
+
+    existing.requestCount += 1;
+
+    if (requestedAt && requestedAt !== '-') {
+      const parsed = new Date(requestedAt);
+      if (!Number.isNaN(parsed.getTime())) {
+        existing.timestampCount += 1;
+        if (!existing.firstSeenDate || parsed < existing.firstSeenDate) {
+          existing.firstSeenDate = parsed;
+          existing.firstSeen = parsed.toISOString();
+        }
+        if (!existing.lastSeenDate || parsed > existing.lastSeenDate) {
+          existing.lastSeenDate = parsed;
+          existing.lastSeen = parsed.toISOString();
+        }
+      }
+    }
+
+    grouped.set(ip, existing);
+  }
+
+  return Array.from(grouped.values())
+    .map((row) => {
+      const spanMinutes = row.firstSeenDate && row.lastSeenDate
+        ? Math.max((row.lastSeenDate - row.firstSeenDate) / 60000, 0)
+        : null;
+      const requestsPerMinute = spanMinutes !== null
+        ? (spanMinutes > 0 ? row.requestCount / spanMinutes : row.requestCount)
+        : null;
+      const requestsPerHour = spanMinutes !== null
+        ? (spanMinutes > 0 ? row.requestCount / (spanMinutes / 60) : row.requestCount * 60)
+        : null;
+
+      return {
+        ...row,
+        coveragePercent: row.requestCount ? Math.round((row.timestampCount / row.requestCount) * 10000) / 100 : 0,
+        spanMinutes: spanMinutes !== null ? Math.round(spanMinutes * 100) / 100 : '-',
+        requestsPerMinute: requestsPerMinute !== null ? Math.round(requestsPerMinute * 100) / 100 : '-',
+        requestsPerHour: requestsPerHour !== null ? Math.round(requestsPerHour * 100) / 100 : '-',
+      };
+    })
+    .sort((a, b) => b.requestCount - a.requestCount)
+    .slice(0, 15);
+};
+
+const ACCESS_LOG_LINE_PATTERN = /(?<ip>\b(?:\d{1,3}\.){3}\d{1,3}\b|\b(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\b).*?\[(?<timestamp>[^\]]+)\].*?"(?<method>[A-Z]+)\s+(?<path>[^"\s]+)(?:\s+HTTP\/[0-9.]+)?"\s+(?<status>\d{3})/i;
+
+const parseAccessLogText = (text) => {
+  const raw = String(text || '').trim();
+  if (!raw) return null;
+
+  const match = raw.match(ACCESS_LOG_LINE_PATTERN);
+  if (!match?.groups) return { raw };
+
+  return {
+    ip: match.groups.ip || '-',
+    requested_at: match.groups.timestamp || '-',
+    method: match.groups.method || '-',
+    path: match.groups.path || '-',
+    status: match.groups.status || '-',
+    user_agent: '-',
+    referer: '-',
+    raw,
+  };
+};
+
+const buildTopSourceIpBars = (rows) => {
+  if (!Array.isArray(rows) || !rows.length) return [];
+  const maxRequests = rows.reduce((max, row) => Math.max(max, row.requestCount), 0) || 1;
+  return rows.map((row) => ({
+    ...row,
+    barHeight: Math.max(22, Math.round((row.requestCount / maxRequests) * 180)),
+  }));
+};
+
+const normalizeAccessLogMatrixRows = (rows) => {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .map((row, index) => ({
+      id: row?.ip || row?.requested_at || `access-${index}`,
+      ip: row?.ip || row?.client_ip || row?.remote_addr || row?.host || '-',
+      requestedAt: row?.requested_at || row?.timestamp || row?.time || row?.date || '-',
+      method: row?.method || row?.verb || '-',
+      path: row?.path || row?.url || row?.request_path || '-',
+      status: row?.status || row?.status_code || '-',
+      userAgent: row?.user_agent || row?.agent || '-',
+      referer: row?.referer || row?.referrer || '-',
+      raw: row?.raw || '',
+    }))
+    .map((row) => {
+      if (row.ip !== '-' || row.requestedAt !== '-' || row.path !== '-') {
+        return row;
+      }
+
+      const parsed = parseAccessLogText(row.raw);
+      if (!parsed) return row;
+
+      return {
+        ...row,
+        id: parsed.ip || row.id,
+        ip: parsed.ip || row.ip,
+        requestedAt: parsed.requested_at || row.requestedAt,
+        method: parsed.method || row.method,
+        path: parsed.path || row.path,
+        status: parsed.status || row.status,
+        userAgent: parsed.user_agent || row.userAgent,
+        referer: parsed.referer || row.referer,
+        raw: parsed.raw || row.raw,
+      };
+    })
+    .filter((row) => row.ip !== '-' || row.requestedAt !== '-' || row.path !== '-');
+};
+
+const buildWebalizerChartPoints = (rows) => {
+  if (!Array.isArray(rows)) return [];
+  const points = rows
+    .filter((row) => row.period && row.period !== 'Toplamlar')
+    .map((row) => ({
+      period: row.period,
+      visits: toNumber(row.visits ?? row.monthlyVisits),
+      hits: toNumber(row.hits ?? row.monthlyHits),
+    }))
+    .filter((row) => row.visits > 0 || row.hits > 0)
+    .reverse();
+
+  const maxValue = points.reduce((max, row) => Math.max(max, row.visits, row.hits), 0) || 1;
+  return points.map((row) => ({
+    ...row,
+    visitsHeight: Math.max(8, Math.round((row.visits / maxValue) * 120)),
+    hitsHeight: Math.max(8, Math.round((row.hits / maxValue) * 120)),
+  }));
+};
+
+const hasRows = (rows) => Array.isArray(rows) && rows.length > 0;
+
+const isNonEmptyValue = (value) => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') {
+    const normalized = value.trim();
+    return normalized !== '' && normalized !== '-' && normalized !== '{}' && normalized !== '[]';
+  }
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'boolean') return value;
+  return true;
+};
+
+function DataSection({ title, subtitle, rows }) {
+  const shouldRender = hasRows(rows);
+
+  if (!shouldRender) return null;
 
   return (
     <section className="cpanel-data-section">
@@ -182,32 +501,24 @@ function DataSection({ title, subtitle, rows, emptyMessage, raw }) {
         </div>
       </div>
 
-      {hasRows ? (
-        <div className="cpanel-table-shell">
-          <table className="cpanel-table">
-            <thead>
-              <tr>
-                <th>Metric</th>
-                <th>Value</th>
+      <div className="cpanel-table-shell">
+        <table className="cpanel-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={`${title}-${row.label}-${index}`}>
+                <td>{row.label}</td>
+                <td>{row.value}</td>
               </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, index) => (
-                <tr key={`${title}-${row.label}-${index}`}>
-                  <td>{row.label}</td>
-                  <td>{row.value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="cpanel-empty-state">{emptyMessage}</div>
-      )}
-
-      {raw ? (
-        <pre className="cpanel-raw-json">{JSON.stringify(raw, null, 2)}</pre>
-      ) : null}
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
@@ -262,7 +573,6 @@ export default function CPanelData() {
     loadData();
   }, []);
 
-  const summaryRows = useMemo(() => normalizeSummaryRows(snapshot, config), [snapshot, config]);
   const accountRows = useMemo(() => renderObjectTable(snapshot?.account_info), [snapshot]);
   const domainRows = useMemo(() => renderDomainCollection(snapshot?.domains), [snapshot]);
   const domainDetailRows = useMemo(() => buildTableRows(snapshot?.domain_details), [snapshot]);
@@ -284,15 +594,257 @@ export default function CPanelData() {
   const analogSiteRows = useMemo(() => buildTableRows(snapshot?.analog_sites), [snapshot]);
   const analogDomainRows = useMemo(() => buildTableRows(snapshot?.analog_domain_stats), [snapshot]);
   const reportFileRows = useMemo(() => buildTableRows(snapshot?.report_files), [snapshot]);
-  const discoveredLinkRows = useMemo(() => buildTableRows(snapshot?.discovered_metric_links), [snapshot]);
   const warningRows = useMemo(() => buildTableRows(snapshot?.warnings), [snapshot]);
   const webalizerSummaries = useMemo(() => buildWebalizerSummaries(snapshot?.html_reports), [snapshot]);
-  const bandwidthSummaries = useMemo(() => buildBandwidthSummaries(snapshot?.html_reports), [snapshot]);
-  const dailyStatsRows = useMemo(() => {
-    if (Array.isArray(snapshot?.awstats_daily)) return buildTableRows(snapshot.awstats_daily);
-    return renderObjectTable(snapshot?.awstats_daily);
-  }, [snapshot]);
+  const dailyTrafficRows = useMemo(() => normalizeDailyTrafficRows(snapshot?.awstats_daily), [snapshot]);
+  const dailyTrafficKpis = useMemo(() => buildDailyTrafficKpis(dailyTrafficRows), [dailyTrafficRows]);
+  const topSourceIpRows = useMemo(() => normalizeTopSourceIpRows(snapshot?.top_source_ips), [snapshot]);
+  const topSourceIpBars = useMemo(() => buildTopSourceIpBars(topSourceIpRows), [topSourceIpRows]);
   const logSettingsRows = useMemo(() => renderObjectTable(snapshot?.log_settings), [snapshot]);
+  const webalizerKpis = useMemo(() => buildWebalizerKpis(webalizerSummaries), [webalizerSummaries]);
+  const webalizerTrendRows = useMemo(() => buildWebalizerTrendRows(webalizerSummaries), [webalizerSummaries]);
+  const webalizerTrendPoints = useMemo(() => buildWebalizerChartPoints(webalizerTrendRows), [webalizerTrendRows]);
+  const accessLogMatrixRows = useMemo(() => normalizeAccessLogMatrixRows(snapshot?.access_log_matrix || snapshot?.access_log), [snapshot]);
+  const accessLogMatrixFallbackRows = useMemo(() => {
+    if (accessLogMatrixRows.length) return accessLogMatrixRows;
+    return normalizeTopSourceIpRows(snapshot?.top_source_ips).map((row, index) => ({
+      id: row.id || `fallback-${index}`,
+      ip: row.ip,
+      requestedAt: '-',
+      method: '-',
+      path: '-',
+      status: '-',
+      userAgent: '-',
+      referer: '-',
+      raw: '',
+    }));
+  }, [accessLogMatrixRows, snapshot]);
+  const ipRequestFrequencyRows = useMemo(() => {
+    const fromSnapshot = normalizeIpRequestFrequencyRows(snapshot?.ip_request_frequency);
+    if (fromSnapshot.length) return fromSnapshot;
+    return buildIpRequestFrequencyFromMatrix(accessLogMatrixRows);
+  }, [snapshot, accessLogMatrixRows]);
+
+  const socInsightCards = useMemo(() => {
+    const cards = [
+      {
+        label: 'Warning Count',
+        value: warningRows.length,
+        tone: warningRows.length > 0 ? 'warn' : 'success',
+      },
+      {
+        label: 'Error Log Entries',
+        value: errorRows.length,
+        tone: errorRows.length > 0 ? 'warn' : 'success',
+      },
+      {
+        label: 'Access Log Entries',
+        value: accessLogRows.length,
+        tone: accessLogRows.length > 0 ? 'info' : 'neutral',
+      },
+      {
+        label: 'Resource Peak',
+        value: `${snapshot?.resource_peak_percent || 0}%`,
+        tone: (snapshot?.resource_peak_percent || 0) >= 80 ? 'warn' : 'success',
+      },
+    ];
+    return cards;
+  }, [warningRows, errorRows, accessLogRows, snapshot]);
+
+  const ipFrequencyCards = useMemo(() => {
+    if (!ipRequestFrequencyRows.length) return [];
+
+    const top = ipRequestFrequencyRows[0];
+    const highestRate = ipRequestFrequencyRows.reduce((best, row) => {
+      const currentRate = Number(row.requestsPerMinute) || 0;
+      const bestRate = Number(best.requestsPerMinute) || 0;
+      return currentRate > bestRate ? row : best;
+    }, top);
+
+    return [
+      {
+        label: 'Top IP',
+        value: top.ip,
+        tone: 'info',
+      },
+      {
+        label: 'Top IP Requests',
+        value: top.requestCount,
+        tone: 'warn',
+      },
+      {
+        label: 'Coverage',
+        value: `${top.timestampCount}/${top.requestCount} (${top.coveragePercent}%)`,
+        tone: 'neutral',
+      },
+      {
+        label: 'Fastest IP',
+        value: `${highestRate.ip} / ${highestRate.requestsPerMinute || 0} rpm`,
+        tone: 'success',
+      },
+    ];
+  }, [ipRequestFrequencyRows]);
+
+  const visibleSections = useMemo(
+    () => [
+      {
+        key: 'account',
+        title: 'Account Info',
+        subtitle: 'Hesap metadata ve temel cPanel alanlari.',
+        rows: accountRows,
+      },
+      {
+        key: 'domains',
+        title: 'Domain Inventory',
+        subtitle: 'Ana/addon/parked/subdomain listeleri.',
+        rows: domainRows,
+      },
+      {
+        key: 'domain-details',
+        title: 'Domain Details',
+        subtitle: 'Domain bazli hosting ayrintilari.',
+        rows: domainDetailRows,
+      },
+      {
+        key: 'quota',
+        title: 'Quota',
+        subtitle: 'Disk quota ve limit metrikleri.',
+        rows: quotaRows,
+      },
+      {
+        key: 'local-quota',
+        title: 'Local Quota',
+        subtitle: 'Lokal quota detaylari.',
+        rows: localQuotaRows,
+      },
+      {
+        key: 'php-versions',
+        title: 'PHP Versions',
+        subtitle: 'Kurulu PHP surumleri.',
+        rows: phpVersionRows,
+      },
+      {
+        key: 'php-default',
+        title: 'PHP Default',
+        subtitle: 'Varsayilan PHP ve ayarlar.',
+        rows: phpDefaultRows,
+      },
+      {
+        key: 'php-vhosts',
+        title: 'PHP vHosts',
+        subtitle: 'Vhost bazli PHP atamalari.',
+        rows: phpVhostRows,
+      },
+      {
+        key: 'email',
+        title: 'Email Accounts',
+        subtitle: 'Mail kutulari ve hesap listesi.',
+        rows: emailRows,
+      },
+      {
+        key: 'db',
+        title: 'MySQL Databases',
+        subtitle: 'Veritabani envanteri.',
+        rows: databaseRows,
+      },
+      {
+        key: 'web-domains',
+        title: 'Web Domains',
+        subtitle: 'Web vhost tarafindaki domainler.',
+        rows: webDomainRows,
+      },
+      {
+        key: 'stats-bar',
+        title: 'StatsBar',
+        subtitle: 'Kisa panel metrikleri.',
+        rows: statsBarRows,
+      },
+      {
+        key: 'resource',
+        title: 'Resource Usage',
+        subtitle: 'CPU/memory/entry process kayitlari.',
+        rows: resourceRows,
+      },
+      {
+        key: 'errors',
+        title: 'Error Logs',
+        subtitle: 'Hata satirlari.',
+        rows: errorRows,
+      },
+      {
+        key: 'access',
+        title: 'Access Log',
+        subtitle: 'Erisim loglari.',
+        rows: accessLogRows,
+      },
+      {
+        key: 'webalizer-sites',
+        title: 'Webalizer Sites',
+        subtitle: 'Webalizer kaynak siteleri.',
+        rows: webalizerRows,
+      },
+      {
+        key: 'analog-sites',
+        title: 'Analog Sites',
+        subtitle: 'Analog engine site listesi.',
+        rows: analogSiteRows,
+      },
+      {
+        key: 'analog-domains',
+        title: 'Analog Domain Stats',
+        subtitle: 'Domain bazli analog metrikleri.',
+        rows: analogDomainRows,
+      },
+      {
+        key: 'archives',
+        title: 'Raw Log Archives',
+        subtitle: 'Raw log arsiv dosyalari.',
+        rows: archiveRows,
+      },
+      {
+        key: 'report-files',
+        title: 'Discovered Report Files',
+        subtitle: 'Kesfedilen rapor dosyalari.',
+        rows: reportFileRows,
+      },
+      {
+        key: 'warnings',
+        title: 'cPanel Warnings',
+        subtitle: 'Eksik/hatali endpoint cevaplari.',
+        rows: warningRows,
+      },
+      {
+        key: 'log-settings',
+        title: 'Log Settings',
+        subtitle: 'Log arsivleme ve raw log ayarlari.',
+        rows: logSettingsRows,
+      },
+    ].filter((section) => hasRows(section.rows) && section.rows.some((row) => isNonEmptyValue(row.value))),
+    [
+      accountRows,
+      domainRows,
+      domainDetailRows,
+      quotaRows,
+      localQuotaRows,
+      phpVersionRows,
+      phpDefaultRows,
+      phpVhostRows,
+      emailRows,
+      databaseRows,
+      webDomainRows,
+      statsBarRows,
+      resourceRows,
+      errorRows,
+      accessLogRows,
+      webalizerRows,
+      analogSiteRows,
+      analogDomainRows,
+      archiveRows,
+      reportFileRows,
+      warningRows,
+      logSettingsRows,
+    ]
+  );
 
   if (loading) {
     return (
@@ -350,217 +902,82 @@ export default function CPanelData() {
           </div>
         ) : null}
 
-        {config?.has_token && !error && user?.role === 'analyst' ? (
-          <>
-            <div className="cpanel-overview-grid">
-              {summaryRows.map((row) => (
-                <div className="cpanel-summary-card" key={row.label}>
-                  <span>{row.label}</span>
-                  <strong>{row.value}</strong>
+        {ipFrequencyCards.length ? (
+          <section className="cpanel-data-section cpanel-insight-panel">
+            <div className="cpanel-data-section-header">
+              <div>
+                <h2>IP Frequency Snapshot</h2>
+                <p>IP bazinda request yogunlugu. Bu kartlar alttaki tabloda da ayni verinin ozetini verir.</p>
+              </div>
+            </div>
+
+            <div className="cpanel-insight-grid">
+              {ipFrequencyCards.map((card) => (
+                <div key={card.label} className={`cpanel-insight-card ${card.tone}`}>
+                  <span>{card.label}</span>
+                  <strong>{card.value}</strong>
                 </div>
               ))}
             </div>
+          </section>
+        ) : null}
 
-            <DataSection
-              title="Connection Config"
-              subtitle="Frontend'in backend'den aldigi cPanel configuration cevabi."
-              rows={renderObjectTable(config)}
-              emptyMessage="Config bilgisi donmedi."
-              raw={config}
-            />
-
-            <DataSection
-              title="Account Info"
-              subtitle="cPanel account metadata ve kullaniciya ait temel ayarlar."
-              rows={accountRows}
-              emptyMessage="Account info donmedi."
-              raw={snapshot?.account_info}
-            />
-
-            <DataSection
-              title="Domain Inventory"
-              subtitle="Ana domain, addon domain, parked domain ve subdomain listeleri."
-              rows={domainRows}
-              emptyMessage="Domain listesi donmedi."
-              raw={snapshot?.domains}
-            />
-
-            <DataSection
-              title="Domain Details"
-              subtitle="DomainInfo tarafindan donen domain bazli hosting detaylari."
-              rows={domainDetailRows}
-              emptyMessage="Domain details donmedi."
-              raw={snapshot?.domain_details}
-            />
-
-            <DataSection
-              title="Quota"
-              subtitle="Disk quota ve benzeri limit bilgileri."
-              rows={quotaRows}
-              emptyMessage="Quota bilgisi donmedi."
-              raw={snapshot?.quota}
-            />
-
-            <DataSection
-              title="Local Quota"
-              subtitle="Lokal disk quota detaylari."
-              rows={localQuotaRows}
-              emptyMessage="Local quota bilgisi donmedi."
-              raw={snapshot?.local_quota}
-            />
-
-            <DataSection
-              title="PHP Versions"
-              subtitle="Sunucuda kurulu PHP surumleri."
-              rows={phpVersionRows}
-              emptyMessage="PHP version bilgisi donmedi."
-              raw={snapshot?.php_versions}
-            />
-
-            <DataSection
-              title="PHP Default"
-              subtitle="Varsayilan PHP surumu ve iliskili ayarlar."
-              rows={phpDefaultRows}
-              emptyMessage="Varsayilan PHP bilgisi donmedi."
-              raw={snapshot?.php_default}
-            />
-
-            <DataSection
-              title="PHP vHosts"
-              subtitle="Vhost bazli PHP surum atamalari."
-              rows={phpVhostRows}
-              emptyMessage="PHP vhost bilgisi donmedi."
-              raw={snapshot?.php_vhosts}
-            />
-
-            <DataSection
-              title="Email Accounts"
-              subtitle="cPanel altindaki mail kutulari."
-              rows={emailRows}
-              emptyMessage="Email account listesi donmedi."
-              raw={snapshot?.email_accounts}
-            />
-
-            <DataSection
-              title="MySQL Databases"
-              subtitle="Token ile gorulebilen veritabani listesi."
-              rows={databaseRows}
-              emptyMessage="Database listesi donmedi."
-              raw={snapshot?.mysql_databases}
-            />
-
-            <DataSection
-              title="Web Domains"
-              subtitle="Web vhost tarafinda gorunen domainler."
-              rows={webDomainRows}
-              emptyMessage="Web domain listesi donmedi."
-              raw={snapshot?.web_domains}
-            />
-
-            <DataSection
-              title="StatsBar"
-              subtitle="cPanel ana istatistik kutusundan donen kisa ozetler."
-              rows={statsBarRows}
-              emptyMessage="StatsBar tarafinda kayit donmedi."
-              raw={statsBarRows.length ? null : snapshot?.stats_bar}
-            />
-
-            <DataSection
-              title="Resource Usage"
-              subtitle="CPU, memory, entry process ve benzeri kaynak kullanimi kayitlari."
-              rows={resourceRows}
-              emptyMessage="Resource Usage verisi donmedi."
-              raw={resourceRows.length ? null : snapshot?.resource_usage}
-            />
-
-            <DataSection
-              title="Bandwidth"
-              subtitle="Metrics > Bandwidth tarafindaki kayitlar."
-              rows={bandwidthRows}
-              emptyMessage="Bandwidth tarafinda kayit donmedi."
-              raw={snapshot?.bandwidth}
-            />
-
-            <DataSection
-              title="Error Logs"
-              subtitle="Metrics > Errors tarafindaki satirlar."
-              rows={errorRows}
-              emptyMessage="Error log satiri donmedi."
-              raw={snapshot?.errors}
-            />
-
-            <DataSection
-              title="Access Log"
-              subtitle="Access log veya raw erisim kayitlari donerse burada gorunur."
-              rows={accessLogRows}
-              emptyMessage="Access log kaydi donmedi."
-              raw={snapshot?.access_log}
-            />
-
-            <DataSection
-              title="AWStats / Daily Stats"
-              subtitle="Stats gunluk ozetleri veya AWStats benzeri cPanel verisi."
-              rows={dailyStatsRows}
-              emptyMessage="AWStats / daily stats verisi donmedi."
-              raw={snapshot?.awstats_daily}
-            />
-
-            <DataSection
-              title="Webalizer Sites"
-              subtitle="Webalizer tarafinda listelenen siteler ve hazir istatistik setleri."
-              rows={webalizerRows}
-              emptyMessage="Webalizer site kaydi donmedi."
-              raw={snapshot?.webalizer_sites}
-            />
-
-            <DataSection
-              title="Analog Sites"
-              subtitle="cPanel analog engine uzerinden gorunen site listesi."
-              rows={analogSiteRows}
-              emptyMessage="Analog site kaydi donmedi."
-              raw={snapshot?.analog_sites}
-            />
-
-            <DataSection
-              title="Analog Domain Stats"
-              subtitle="Domain bazli analog tablo ciktilari."
-              rows={analogDomainRows}
-              emptyMessage="Analog domain stats donmedi."
-              raw={snapshot?.analog_domain_stats}
-            />
-
-            <DataSection
-              title="Raw Log Archives"
-              subtitle="LogManager uzerinden listelenen raw arsiv dosyalari."
-              rows={archiveRows}
-              emptyMessage="Log archive listesi donmedi."
-              raw={snapshot?.log_archives}
-            />
-
-            <DataSection
-              title="Discovered Report Files"
-              subtitle="Fileman ile logs ve tmp altinda bulunan AWStats, Webalizer, Analog veya log rapor dosyalari."
-              rows={reportFileRows}
-              emptyMessage="Rapor dosyasi bulunamadi."
-              raw={snapshot?.report_files}
-            />
-
-            <DataSection
-              title="Discovered Metric Links"
-              subtitle="cPanel ana sayfasindan kesfedilen metrics linkleri."
-              rows={discoveredLinkRows}
-              emptyMessage="Metrics linki kesfedilemedi."
-              raw={snapshot?.discovered_metric_links}
-            />
-
-            <section className="cpanel-data-section">
+        {config?.has_token && !error && user?.role === 'analyst' ? (
+          <>
+            <section className="cpanel-data-section cpanel-trend-spotlight">
               <div className="cpanel-data-section-header">
                 <div>
-                  <h2>Webalizer Data</h2>
-                  <p>Session login ile cekilen ve parse edilen Webalizer raporlari.</p>
+                  <h2>Monthly Trend</h2>
+                  <p>Sayfa geneline yayilan genel trafik trendi.</p>
                 </div>
               </div>
-              {webalizerSummaries.length ? (
+
+              {webalizerKpis.length ? (
+                <div className="cpanel-insight-grid cpanel-trend-kpi-grid">
+                  {webalizerKpis.map((kpi) => (
+                    <div key={kpi.label} className={`cpanel-insight-card ${kpi.tone}`}>
+                      <span>{kpi.label}</span>
+                      <strong>{kpi.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {webalizerTrendPoints.length ? (
+                <div className="cpanel-trend-chart-shell">
+                  <div className="cpanel-webalizer-chart-header">
+                    <span>Trend by Month</span>
+                    <div className="cpanel-webalizer-chart-legend">
+                      <span><i className="legend-dot visits" />Visits</span>
+                      <span><i className="legend-dot hits" />Hits</span>
+                    </div>
+                  </div>
+                  <div className="cpanel-trend-chart">
+                    {webalizerTrendPoints.map((point) => (
+                      <div key={`trend-${point.period}`} className="cpanel-trend-group">
+                        <div className="cpanel-trend-bars">
+                          <div className="cpanel-trend-bar visits" style={{ height: `${Math.max(18, point.visitsHeight * 1.8)}px` }} title={`Visits: ${point.visits.toLocaleString('tr-TR')}`} />
+                          <div className="cpanel-trend-bar hits" style={{ height: `${Math.max(18, point.hitsHeight * 1.8)}px` }} title={`Hits: ${point.hits.toLocaleString('tr-TR')}`} />
+                        </div>
+                        <div className="cpanel-trend-label">{point.period}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="cpanel-empty-state">Webalizer trend verisi bulunamadi.</div>
+              )}
+            </section>
+
+            {webalizerSummaries.length ? (
+              <section className="cpanel-data-section cpanel-webalizer-matrix-spotlight">
+                <div className="cpanel-data-section-header">
+                  <div>
+                    <h2>Webalizer Matrix</h2>
+                    <p>Standart raporun matrix gorunumu.</p>
+                  </div>
+                </div>
+
                 <div className="cpanel-webalizer-grid">
                   {webalizerSummaries.map((summary) => (
                     <div className="cpanel-webalizer-card" key={summary.id}>
@@ -571,6 +988,7 @@ export default function CPanelData() {
                         </div>
                         <span className="cpanel-webalizer-badge">{summary.reportType}</span>
                       </div>
+
                       <div className="cpanel-table-shell">
                         <table className="cpanel-table">
                           <thead>
@@ -614,76 +1032,88 @@ export default function CPanelData() {
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="cpanel-empty-state">Webalizer raporu bulundu ama parse edilebilir veri cikmadi.</div>
-              )}
-            </section>
+              </section>
+            ) : null}
 
-            <section className="cpanel-data-section">
-              <div className="cpanel-data-section-header">
-                <div>
-                  <h2>Bandwidth Data</h2>
-                  <p>Session login ile cekilen bandwidth sayfalari ve parse edilen icerik.</p>
+            {accessLogMatrixFallbackRows.length || (snapshot?.access_log_records || snapshot?.top_source_ip_count) ? (
+              <section className="cpanel-data-section cpanel-ip-matrix-spotlight">
+                <div className="cpanel-data-section-header">
+                  <div>
+                    <h2>IP Log Matrix</h2>
+                    <p>Kim, ne zaman, ne istemiş: parse edilen access log matrisi.</p>
+                  </div>
                 </div>
-              </div>
-              {bandwidthSummaries.length ? (
-                <div className="cpanel-webalizer-grid">
-                  {bandwidthSummaries.map((summary) => (
-                    <div className="cpanel-webalizer-card" key={summary.id}>
-                      <div className="cpanel-webalizer-card-head">
-                        <div>
-                          <h3>{summary.title}</h3>
-                          <p>{summary.path}</p>
-                        </div>
-                        <span className="cpanel-webalizer-badge">Bandwidth</span>
-                      </div>
-                      {summary.rows.length ? (
-                        <div className="cpanel-table-shell">
-                          <table className="cpanel-table">
-                            <thead>
-                              <tr>
-                                <th>Metric</th>
-                                <th>Value</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {summary.rows.flatMap((row, rowIndex) => (
-                                Object.entries(row).map(([key, value], valueIndex) => (
-                                  <tr key={`${summary.id}-${rowIndex}-${valueIndex}`}>
-                                    <td>{key}</td>
-                                    <td>{formatValue(value)}</td>
-                                  </tr>
-                                ))
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <pre className="cpanel-raw-json">{summary.preview}</pre>
-                      )}
-                    </div>
-                  ))}
+
+                <div className="cpanel-table-shell cpanel-ip-matrix-shell">
+                  <table className="cpanel-table cpanel-ip-matrix-table">
+                    <thead>
+                      <tr>
+                        <th>IP</th>
+                        <th>Requested At</th>
+                        <th>Method</th>
+                        <th>Path</th>
+                        <th>Status</th>
+                        <th>User Agent</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accessLogMatrixFallbackRows.map((row) => (
+                        <tr key={row.id}>
+                          <td>{row.ip}</td>
+                          <td>{row.requestedAt}</td>
+                          <td>{row.method}</td>
+                          <td>{row.path}</td>
+                          <td>{row.status}</td>
+                          <td>{row.userAgent}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ) : (
-                <div className="cpanel-empty-state">Bandwidth sayfasi henuz bulunamadi.</div>
-              )}
-            </section>
+              </section>
+            ) : null}
 
-            <DataSection
-              title="cPanel Warnings"
-              subtitle="Hangi endpoint veya dosya okuma denemesi bos ya da hatali dondu burada gorunur."
-              rows={warningRows}
-              emptyMessage="Ek warning donmedi."
-              raw={snapshot?.warnings}
-            />
+            {ipRequestFrequencyRows.length ? (
+              <section className="cpanel-data-section cpanel-ip-frequency-spotlight">
+                <div className="cpanel-data-section-header">
+                  <div>
+                    <h2>IP Request Frequency</h2>
+                    <p>IP bazinda sayim, zaman kapsami ve dakika/saat hizlari.</p>
+                  </div>
+                </div>
 
-            <DataSection
-              title="Log Settings"
-              subtitle="cPanel log arsivleme ve raw log ayarlari."
-              rows={logSettingsRows}
-              emptyMessage="Log settings bilgisi donmedi."
-              raw={snapshot?.log_settings}
-            />
+                <div className="cpanel-table-shell cpanel-ip-frequency-shell">
+                  <table className="cpanel-table cpanel-ip-frequency-table">
+                    <thead>
+                      <tr>
+                        <th>IP</th>
+                        <th>Requests</th>
+                        <th>Timestamp Coverage</th>
+                        <th>First Seen</th>
+                        <th>Last Seen</th>
+                        <th>Span (min)</th>
+                        <th>Req / Min</th>
+                        <th>Req / Hour</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ipRequestFrequencyRows.map((row) => (
+                        <tr key={row.id}>
+                          <td>{row.ip}</td>
+                          <td>{row.requestCount}</td>
+                          <td>{row.timestampCount ? `${row.timestampCount} (${row.coveragePercent}%)` : '-'}</td>
+                          <td>{row.firstSeen}</td>
+                          <td>{row.lastSeen}</td>
+                          <td>{row.spanMinutes}</td>
+                          <td>{row.requestsPerMinute}</td>
+                          <td>{row.requestsPerHour}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ) : null}
           </>
         ) : null}
       </div>

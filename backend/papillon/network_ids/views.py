@@ -3,6 +3,9 @@ import json
 import time
 import socket
 import hashlib
+import re
+from datetime import datetime, timezone as dt_timezone
+from collections import Counter
 import requests
 import numpy as np
 from django.utils import timezone
@@ -119,6 +122,331 @@ def _cpanel_auth_mode(credential):
     if credential.get_token():
         return 'token'
     return 'none'
+
+
+_IPV4_PATTERN = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b')
+_IPV6_PATTERN = re.compile(r'\b(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\b')
+_COMMON_LOG_PATTERN = re.compile(
+    r'(?P<ip>\b(?:\d{1,3}\.){3}\d{1,3}\b|\b(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\b)'
+    r'.*?\[(?P<timestamp>[^\]]+)\]'
+    r'.*?"(?P<method>[A-Z]+)\s+(?P<path>[^"\s]+)(?:\s+HTTP/[0-9.]+)?"'
+    r'.*?(?P<status>\d{3})',
+    re.IGNORECASE,
+)
+
+
+def _extract_ip_from_access_log_entry(entry):
+    if entry is None:
+        return ''
+
+    if isinstance(entry, dict):
+        for key in ('client_ip', 'ip', 'remote_ip', 'remote_addr', 'host', 'source_ip'):
+            value = entry.get(key)
+            if value:
+                return str(value).strip()
+
+        candidate_parts = []
+        for key in ('line', 'entry', 'raw', 'log', 'value', 'request', 'text'):
+            value = entry.get(key)
+            if value:
+                candidate_parts.append(str(value))
+        if candidate_parts:
+            entry = ' '.join(candidate_parts)
+        else:
+            entry = ' '.join(str(value) for value in entry.values() if value not in (None, ''))
+
+    text = str(entry).strip()
+    if not text:
+        return ''
+
+    ipv4_match = _IPV4_PATTERN.search(text)
+    if ipv4_match:
+        return ipv4_match.group(0)
+
+    ipv6_match = _IPV6_PATTERN.search(text)
+    if ipv6_match:
+        return ipv6_match.group(0)
+
+    return ''
+
+
+def _collect_ip_candidates(value, counter):
+    if value is None:
+        return
+
+    if isinstance(value, dict):
+        for nested_value in value.values():
+            _collect_ip_candidates(nested_value, counter)
+        return
+
+    if isinstance(value, (list, tuple, set)):
+        for item in value:
+            _collect_ip_candidates(item, counter)
+        return
+
+    text = str(value)
+    if not text:
+        return
+
+    for match in _IPV4_PATTERN.findall(text):
+        counter[match] += 1
+
+    for match in _IPV6_PATTERN.findall(text):
+        counter[match] += 1
+
+
+def _parse_access_log_timestamp(value):
+    if not value:
+        return ''
+    text = str(value).strip()
+    if not text:
+        return ''
+
+    for fmt in (
+        '%d/%b/%Y:%H:%M:%S %z',
+        '%d/%b/%Y:%H:%M:%S',
+        '%Y-%m-%d %H:%M:%S',
+        '%Y-%m-%dT%H:%M:%S.%f%z',
+        '%Y-%m-%dT%H:%M:%S%z',
+        '%Y-%m-%dT%H:%M:%S.%f',
+        '%Y-%m-%dT%H:%M:%S',
+    ):
+        try:
+            parsed = datetime.strptime(text, fmt)
+            return parsed.isoformat()
+        except Exception:
+            continue
+    return text
+
+
+def _coerce_access_log_datetime(value):
+    if not value:
+        return None
+
+    text = str(value).strip()
+    if not text or text == '-':
+        return None
+
+    for fmt in (
+        '%d/%b/%Y:%H:%M:%S %z',
+        '%d/%b/%Y:%H:%M:%S',
+        '%Y-%m-%d %H:%M:%S',
+        '%Y-%m-%dT%H:%M:%S.%f%z',
+        '%Y-%m-%dT%H:%M:%S%z',
+        '%Y-%m-%dT%H:%M:%S.%f',
+        '%Y-%m-%dT%H:%M:%S',
+    ):
+        try:
+            parsed = datetime.strptime(text, fmt)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=dt_timezone.utc)
+            return parsed
+        except Exception:
+            continue
+
+    try:
+        parsed = datetime.fromisoformat(text)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=dt_timezone.utc)
+        return parsed
+    except Exception:
+        return None
+
+
+def _parse_access_log_entry(entry):
+    if entry is None:
+        return None
+
+    if isinstance(entry, dict):
+        raw_text = ''
+        for key in ('line', 'entry', 'raw', 'log', 'value', 'request', 'text', 'content'):
+            value = entry.get(key)
+            if value:
+                raw_text = str(value)
+                break
+
+        ip = ''
+        for key in ('client_ip', 'ip', 'remote_ip', 'remote_addr', 'host', 'source_ip'):
+            value = entry.get(key)
+            if value:
+                ip = str(value).strip()
+                break
+
+        timestamp = _parse_access_log_timestamp(
+            entry.get('requested_at') or entry.get('timestamp') or entry.get('time') or entry.get('date') or entry.get('created_at')
+        )
+        method = str(entry.get('method') or entry.get('verb') or '').strip().upper()
+        path = str(entry.get('path') or entry.get('url') or entry.get('request_path') or '').strip()
+        status = entry.get('status_code') or entry.get('status') or entry.get('code') or ''
+        user_agent = str(entry.get('user_agent') or entry.get('agent') or '').strip()
+        referer = str(entry.get('referer') or entry.get('referrer') or '').strip()
+
+        if raw_text and (not ip or not timestamp or not method or not path or not status):
+            parsed = _COMMON_LOG_PATTERN.search(raw_text)
+            if parsed:
+                ip = ip or parsed.group('ip')
+                timestamp = timestamp or _parse_access_log_timestamp(parsed.group('timestamp'))
+                method = method or parsed.group('method').upper()
+                path = path or parsed.group('path')
+                status = status or parsed.group('status')
+
+            if not user_agent:
+                agent_match = re.search(r'"[^"]*"\s+\d{3}\s+\S+\s+"[^"]*"\s+"(?P<agent>[^"]+)"', raw_text)
+                if agent_match:
+                    user_agent = agent_match.group('agent')
+
+        return {
+            'ip': ip or '-',
+            'requested_at': timestamp or '-',
+            'method': method or '-',
+            'path': path or '-',
+            'status': str(status) if status not in (None, '') else '-',
+            'user_agent': user_agent or '-',
+            'referer': referer or '-',
+            'raw': raw_text or str(entry),
+        }
+
+    raw_text = str(entry).strip()
+    if not raw_text:
+        return None
+
+    parsed = _COMMON_LOG_PATTERN.search(raw_text)
+    if parsed:
+        return {
+            'ip': parsed.group('ip'),
+            'requested_at': _parse_access_log_timestamp(parsed.group('timestamp')),
+            'method': parsed.group('method').upper(),
+            'path': parsed.group('path'),
+            'status': parsed.group('status'),
+            'user_agent': '-',
+            'referer': '-',
+            'raw': raw_text,
+        }
+
+    ip = _extract_ip_from_access_log_entry(raw_text) or '-'
+    return {
+        'ip': ip,
+        'requested_at': '-',
+        'method': '-',
+        'path': '-',
+        'status': '-',
+        'user_agent': '-',
+        'referer': '-',
+        'raw': raw_text,
+    }
+
+
+def _build_access_log_matrix(access_log, limit=50):
+    if not access_log:
+        return []
+
+    matrix = []
+    for entry in access_log[:limit]:
+        parsed = _parse_access_log_entry(entry)
+        if parsed:
+            matrix.append(parsed)
+    return matrix
+
+
+def _build_ip_request_frequency(access_log_matrix, limit=15):
+    if not access_log_matrix:
+        return []
+
+    grouped = {}
+
+    for row in access_log_matrix:
+        ip = str(row.get('ip') or '-').strip()
+        if not ip or ip == '-':
+            continue
+
+        entry = grouped.setdefault(ip, {
+            'ip': ip,
+            'request_count': 0,
+            'first_seen': None,
+            'last_seen': None,
+            'timestamp_count': 0,
+        })
+
+        entry['request_count'] += 1
+        parsed_at = _coerce_access_log_datetime(row.get('requested_at'))
+        if not parsed_at:
+            continue
+
+        entry['timestamp_count'] += 1
+        if entry['first_seen'] is None or parsed_at < entry['first_seen']:
+            entry['first_seen'] = parsed_at
+        if entry['last_seen'] is None or parsed_at > entry['last_seen']:
+            entry['last_seen'] = parsed_at
+
+    frequency_rows = []
+    for entry in grouped.values():
+        span_minutes = None
+        requests_per_minute = None
+        requests_per_hour = None
+
+        if entry['first_seen'] and entry['last_seen']:
+            span_seconds = max((entry['last_seen'] - entry['first_seen']).total_seconds(), 0.0)
+            span_minutes = round(span_seconds / 60.0, 2)
+            if span_seconds > 0:
+                requests_per_minute = round(entry['request_count'] / max(span_seconds / 60.0, 1 / 60), 2)
+                requests_per_hour = round(entry['request_count'] / max(span_seconds / 3600.0, 1 / 3600), 2)
+            else:
+                requests_per_minute = float(entry['request_count'])
+                requests_per_hour = round(entry['request_count'] * 60, 2)
+
+        frequency_rows.append({
+            'ip': entry['ip'],
+            'request_count': entry['request_count'],
+            'timestamp_count': entry['timestamp_count'],
+            'coverage_percent': round((entry['timestamp_count'] / entry['request_count']) * 100, 2) if entry['request_count'] else 0.0,
+            'first_seen': entry['first_seen'].isoformat() if entry['first_seen'] else '-',
+            'last_seen': entry['last_seen'].isoformat() if entry['last_seen'] else '-',
+            'span_minutes': span_minutes if span_minutes is not None else '-',
+            'requests_per_minute': requests_per_minute if requests_per_minute is not None else '-',
+            'requests_per_hour': requests_per_hour if requests_per_hour is not None else '-',
+        })
+
+    frequency_rows.sort(key=lambda row: (row['request_count'], row.get('timestamp_count', 0)), reverse=True)
+    return frequency_rows[:limit]
+
+
+def _build_top_source_ips(snapshot, limit=10):
+    if not snapshot:
+        return []
+
+    counter = Counter()
+
+    access_log = snapshot.get('access_log') or []
+    for entry in access_log:
+        ip = _extract_ip_from_access_log_entry(entry)
+        if ip:
+            counter[ip] += 1
+
+    for preview in snapshot.get('report_previews') or []:
+        _collect_ip_candidates(preview, counter)
+
+    for report in snapshot.get('html_reports') or []:
+        _collect_ip_candidates(report, counter)
+
+    for report_file in snapshot.get('report_files') or []:
+        _collect_ip_candidates(report_file, counter)
+
+    if not counter:
+        return []
+
+    total = sum(counter.values())
+    if not total:
+        return []
+
+    top_ips = []
+    for rank, (ip, count) in enumerate(counter.most_common(limit), start=1):
+        top_ips.append({
+            'rank': rank,
+            'ip': ip,
+            'request_count': count,
+            'share_percent': round((count / total) * 100, 2),
+        })
+    return top_ips
 
 
 @require_http_methods(["GET"])
@@ -407,6 +735,9 @@ def _summarize_cpanel_snapshot(snapshot):
     bandwidth = snapshot.get('bandwidth') or []
     error_entries = snapshot.get('errors') or []
     access_log = snapshot.get('access_log') or []
+    access_log_matrix = _build_access_log_matrix(access_log)
+    ip_request_frequency = _build_ip_request_frequency(access_log_matrix)
+    top_source_ips = _build_top_source_ips(snapshot)
     webalizer_sites = snapshot.get('webalizer_sites') or []
     analog_sites = snapshot.get('analog_sites') or []
     analog_domain_stats = snapshot.get('analog_domain_stats') or []
@@ -436,6 +767,12 @@ def _summarize_cpanel_snapshot(snapshot):
         'bandwidth_records': len(bandwidth),
         'error_log_entries': len(error_entries),
         'access_log_records': len(access_log),
+        'access_log_matrix': access_log_matrix,
+        'access_log_matrix_count': len(access_log_matrix),
+        'ip_request_frequency': ip_request_frequency,
+        'ip_request_frequency_count': len(ip_request_frequency),
+        'top_source_ips': top_source_ips,
+        'top_source_ip_count': len(top_source_ips),
         'awstats_daily': snapshot.get('awstats_daily') or {},
         'bandwidth': bandwidth,
         'errors': error_entries,
@@ -468,6 +805,9 @@ def _summarize_cpanel_snapshot(snapshot):
             or bandwidth
             or error_entries
             or access_log
+            or access_log_matrix
+            or ip_request_frequency
+            or top_source_ips
             or webalizer_sites
             or analog_sites
             or analog_domain_stats
