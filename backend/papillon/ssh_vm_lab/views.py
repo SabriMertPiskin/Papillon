@@ -26,11 +26,14 @@ def start_instance_view(request):
 @require_http_methods(['GET'])
 @require_role('admin', 'analyst')
 def download_aws_key(request):
-    if not AWS_KEY_PATH.exists():
+    if not AWS_KEY_PATH.exists() or not AWS_KEY_PATH.is_file():
         return JsonResponse({'success': False, 'detail': 'awskey.pem not found.'}, status=404)
 
-    return FileResponse(
-        AWS_KEY_PATH.open('rb'),
-        as_attachment=True,
-        filename=AWS_KEY_FILENAME,
-    )
+    try:
+        return FileResponse(
+            AWS_KEY_PATH.open('rb'),
+            as_attachment=True,
+            filename=AWS_KEY_FILENAME,
+        )
+    except OSError:
+        return JsonResponse({'success': False, 'detail': 'awskey.pem not found.'}, status=404)

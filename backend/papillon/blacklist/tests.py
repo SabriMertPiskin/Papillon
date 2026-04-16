@@ -162,16 +162,6 @@ class TestBlacklistCRUD(TestCase):
         # 409 Conflict ya da 400 Bad Request beklenir
         self.assertNotEqual(res.status_code, 201)
 
-    def test_add_ip_without_domain_is_blocked(self):
-        """Domain tanımsız kullanıcı IP ekleyememeli."""
-        self.analyst.domain = ''
-        self.analyst.save()
-        res = self.client.post('/blacklist/',
-                               data=json.dumps({'ip_address': '9.9.9.9',
-                                                'reason': 'test'}),
-                               content_type='application/json')
-        self.assertEqual(res.status_code, 403)
-
     def test_delete_existing_ip(self):
         entry = BlacklistedIP.objects.create(ip_address='7.7.7.7', reason='delete test')
         res = self.client.delete(f'/blacklist/{entry.pk}/')

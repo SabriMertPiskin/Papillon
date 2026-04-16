@@ -12,6 +12,9 @@ NOT: View, kullanıcının POST body'sinden target almaz.
 """
 import json
 import socket
+import sys
+from contextlib import contextmanager
+from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
 from django.test import TestCase, Client
 from attack_surface.views import _normalize_domain, _is_allowed_target
@@ -37,6 +40,35 @@ def set_session(client, username):
     session = client.session
     session['user_id'] = username
     session.save()
+
+
+@contextmanager
+def mocked_attack_surface_tools(overrides=None):
+    modules = {
+        'dns_records': SimpleNamespace(get_records=lambda domain: [{'type': 'A', 'value': '93.184.216.34'}]),
+        'subdomain_finder': SimpleNamespace(get_subdomains=lambda domain: [f'www.{domain}']),
+        'whois_search': SimpleNamespace(get_whois=lambda domain: [{'domain': domain}]),
+        'ssl_scanner': SimpleNamespace(scan_ssl_cert=lambda domain: ({'issuer': 'test-ca'}, True)),
+        'port_scanner': SimpleNamespace(scan_ports=lambda ip: [(80, 'http'), (443, 'https')]),
+        'email_harvester': SimpleNamespace(harvest_emails=lambda domain: [f'admin@{domain}']),
+        'admin_panel_scanner': SimpleNamespace(find_admin_panels=lambda domain: []),
+        'robots_parser': SimpleNamespace(get_robots_txt=lambda domain: 'User-agent: *'),
+        'ip_address': SimpleNamespace(get_ip=lambda domain: {'ip': '93.184.216.34'}),
+    }
+    if overrides:
+        modules.update(overrides)
+
+    sentinel = object()
+    original = {name: sys.modules.get(name, sentinel) for name in modules}
+    sys.modules.update(modules)
+    try:
+        yield
+    finally:
+        for name, value in original.items():
+            if value is sentinel:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = value
 
 
 # ---------------------------------------------------------------------------
@@ -168,7 +200,8 @@ class TestAttackSurfaceScanEndpoint(TestCase):
         """TC-10: Domain tanımsız analyst, body'de domain yoksa tarama yapamaz → 400."""
         self.analyst.domain = ''
         self.analyst.save()
-        res = self.client.post(self.url)
+        with mocked_attack_surface_tools():
+            res = self.client.post(self.url)
         self.assertEqual(res.status_code, 400)
         self.assertFalse(res.json()['success'])
 
@@ -178,11 +211,12 @@ class TestAttackSurfaceScanEndpoint(TestCase):
         self.analyst.domain = ''
         self.analyst.save()
 
-        res = self.client.post(
-            self.url,
-            data=json.dumps({'domain': 'google.com'}),
-            content_type='application/json'
-        )
+        with mocked_attack_surface_tools():
+            res = self.client.post(
+                self.url,
+                data=json.dumps({'domain': 'google.com'}),
+                content_type='application/json'
+            )
 
         self.assertEqual(res.status_code, 200)
         body = res.json()
@@ -195,11 +229,12 @@ class TestAttackSurfaceScanEndpoint(TestCase):
         self.analyst.domain = 'drfatmarar.com'
         self.analyst.save()
 
-        res = self.client.post(
-            self.url,
-            data=json.dumps({'domain': 'google.com'}),
-            content_type='application/json'
-        )
+        with mocked_attack_surface_tools():
+            res = self.client.post(
+                self.url,
+                data=json.dumps({'domain': 'google.com'}),
+                content_type='application/json'
+            )
 
         self.assertEqual(res.status_code, 200)
         body = res.json()
@@ -209,7 +244,8 @@ class TestAttackSurfaceScanEndpoint(TestCase):
     @patch('attack_surface.views.socket.gethostbyname', return_value='93.184.216.34')
     def test_analyst_with_domain_can_trigger_scan(self, mock_dns):
         """TC-10: Domain'i olan analyst scan başlatabilmeli — auth/403 hatası almaz."""
-        res = self.client.post(self.url)
+        with mocked_attack_surface_tools():
+            res = self.client.post(self.url)
         # Tools başarısız olsa bile 401/403 dönmemeli
         self.assertNotEqual(res.status_code, 401)
         self.assertNotEqual(res.status_code, 403)
@@ -218,13 +254,15 @@ class TestAttackSurfaceScanEndpoint(TestCase):
            side_effect=socket.gaierror('DNS resolution failed'))
     def test_invalid_domain_dns_failure_returns_400(self, mock_dns):
         """TC-10: Çözülemeyen domain → 400."""
-        res = self.client.post(self.url)
+        with mocked_attack_surface_tools():
+            res = self.client.post(self.url)
         self.assertEqual(res.status_code, 400)
 
     @patch('attack_surface.views.socket.gethostbyname', return_value='93.184.216.34')
     def test_scan_response_contains_domain_and_ip(self, mock_dns):
         """TC-10: Başarılı scan sonucu domain ve IP içermeli."""
-        res = self.client.post(self.url)
+        with mocked_attack_surface_tools():
+            res = self.client.post(self.url)
         if res.status_code == 200:
             body = res.json()
             # Response: {'success': True, 'results': {'domain': ..., 'ip': ..., ...}}
@@ -259,8 +297,9 @@ class TestAttackSurfaceScanEndpoint(TestCase):
         admin = make_admin()
         client_admin = Client()
         set_session(client_admin, admin.username)
-        res = client_admin.post(
-            self.url + f'?for_analyst={self.analyst.username}')
+        with mocked_attack_surface_tools():
+            res = client_admin.post(
+                self.url + f'?for_analyst={self.analyst.username}')
         # 401/403 dönmemeli
         self.assertNotEqual(res.status_code, 401)
         self.assertNotEqual(res.status_code, 403)
@@ -268,7 +307,10 @@ class TestAttackSurfaceScanEndpoint(TestCase):
     @patch('attack_surface.views.socket.gethostbyname', return_value='93.184.216.34')
     def test_scan_tool_errors_handled_gracefully(self, mock_dns):
         """TC-10: Tool importları başarısız olsa bile response yapısı korunmalı."""
-        res = self.client.post(self.url)
+        with mocked_attack_surface_tools({
+            'dns_records': SimpleNamespace(get_records=MagicMock(side_effect=RuntimeError('boom'))),
+        }):
+            res = self.client.post(self.url)
         if res.status_code == 200:
             body = res.json()
             results = body.get('results', body)
