@@ -267,19 +267,135 @@
 }
 
 .cpanel-ip-matrix-table td:nth-child(1),
-.cpanel-ip-matrix-table td:nth-child(2),
-.cpanel-ip-matrix-table td:nth-child(3),
-.cpanel-ip-matrix-table td:nth-child(5) {
+.cpanel-ip-matrix-table td:nth-child(2) {
   white-space: nowrap;
 }
 
-.cpanel-ip-matrix-table td:nth-child(4),
-.cpanel-ip-matrix-table td:nth-child(6) {
+.cpanel-ip-matrix-table td:nth-child(3) {
   word-break: break-word;
 }
 
 .cpanel-ip-matrix-table td:first-child {
   width: auto;
+}
+
+.cpanel-inline-status {
+  margin-top: 14px;
+  color: var(--auth-text-secondary, #8899b4);
+  font-size: 0.86rem;
+}
+
+.cpanel-ip-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cpanel-blacklist-btn {
+  border: 1px solid rgba(255, 99, 71, 0.45);
+  background: rgba(140, 25, 18, 0.4);
+  color: #ffd9d1;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.cpanel-blacklist-btn:hover:not(:disabled) {
+  background: rgba(171, 35, 25, 0.5);
+  border-color: rgba(255, 99, 71, 0.65);
+}
+
+.cpanel-blacklist-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.cpanel-abuse-btn {
+  border: 1px solid rgba(0, 188, 212, 0.45);
+  background: rgba(7, 72, 84, 0.42);
+  color: #d5fbff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.cpanel-abuse-btn:hover:not(:disabled) {
+  background: rgba(10, 98, 115, 0.52);
+  border-color: rgba(0, 188, 212, 0.7);
+}
+
+.cpanel-abuse-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.cpanel-abuse-card {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 188, 212, 0.2);
+  background: rgba(7, 24, 36, 0.7);
+}
+
+.cpanel-abuse-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.cpanel-abuse-card-head h3 {
+  margin: 0 0 4px;
+  color: var(--auth-text-primary, #e8edf5);
+}
+
+.cpanel-abuse-card-head p {
+  margin: 0;
+  color: var(--auth-text-muted, #5a6d8a);
+  font-size: 0.82rem;
+}
+
+.cpanel-abuse-score {
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: #08121d;
+  background: linear-gradient(135deg, #4dd0e1, #80deea);
+  font-weight: 800;
+}
+
+.cpanel-abuse-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.cpanel-abuse-item {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cpanel-abuse-item span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--auth-text-muted, #5a6d8a);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cpanel-abuse-item strong {
+  color: var(--auth-text-primary, #e8edf5);
+  font-size: 0.92rem;
+  word-break: break-word;
 }
 
 .cpanel-source-ip-spotlight {

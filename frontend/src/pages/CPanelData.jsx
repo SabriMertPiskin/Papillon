@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
-import { getCpanelConfig, getCpanelLiveSnapshot } from '../services/api';
+import { addBlacklist, getCpanelConfig, getCpanelLiveSnapshot, lookupAbuseIpdb } from '../services/api';
 import '../styles/CPanelData.css';
 
 const formatLabel = (value) => {
@@ -530,6 +530,11 @@ export default function CPanelData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState(null);
+  const [blacklistBusyIp, setBlacklistBusyIp] = useState('');
+  const [blacklistStatus, setBlacklistStatus] = useState('');
+  const [abuseBusyIp, setAbuseBusyIp] = useState('');
+  const [abuseStatus, setAbuseStatus] = useState('');
+  const [abuseResult, setAbuseResult] = useState(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -684,6 +689,61 @@ export default function CPanelData() {
       },
     ];
   }, [ipRequestFrequencyRows]);
+
+  const ipActionRows = useMemo(() => {
+    if (ipRequestFrequencyRows.length) {
+      return ipRequestFrequencyRows.map((row) => ({
+        id: row.id || row.ip,
+        ip: row.ip,
+        requestCount: row.requestCount,
+      }));
+    }
+
+    const uniqueIps = new Map();
+    for (const row of accessLogMatrixFallbackRows) {
+      const ip = String(row?.ip || '-').trim();
+      if (!ip || ip === '-') continue;
+      if (!uniqueIps.has(ip)) {
+        uniqueIps.set(ip, { id: ip, ip, requestCount: 0 });
+      }
+      uniqueIps.get(ip).requestCount += 1;
+    }
+
+    return Array.from(uniqueIps.values()).sort((a, b) => b.requestCount - a.requestCount);
+  }, [ipRequestFrequencyRows, accessLogMatrixFallbackRows]);
+
+  const handleAddBlacklist = async (ip) => {
+    if (!ip || ip === '-' || blacklistBusyIp) return;
+
+    setBlacklistBusyIp(ip);
+    setBlacklistStatus('');
+    try {
+      await addBlacklist(ip, 'Added from cPanel IP action matrix');
+      setBlacklistStatus(`${ip} blacklist listesine eklendi.`);
+    } catch (requestError) {
+      setBlacklistStatus(requestError.response?.data?.detail || 'IP blacklist ekleme islemi basarisiz oldu.');
+    } finally {
+      setBlacklistBusyIp('');
+    }
+  };
+
+  const handleAbuseLookup = async (ip) => {
+    if (!ip || ip === '-' || abuseBusyIp) return;
+
+    setAbuseBusyIp(ip);
+    setAbuseStatus('');
+    setAbuseResult(null);
+
+    try {
+      const response = await lookupAbuseIpdb(ip);
+      setAbuseResult(response.data?.result || null);
+      setAbuseStatus(`${ip} için AbuseIPDB sonucu hazır.`);
+    } catch (requestError) {
+      setAbuseStatus(requestError.response?.data?.detail || 'AbuseIPDB sorgusu basarisiz oldu.');
+    } finally {
+      setAbuseBusyIp('');
+    }
+  };
 
   const visibleSections = useMemo(
     () => [
@@ -1039,37 +1099,90 @@ export default function CPanelData() {
               <section className="cpanel-data-section cpanel-ip-matrix-spotlight">
                 <div className="cpanel-data-section-header">
                   <div>
-                    <h2>IP Log Matrix</h2>
-                    <p>Kim, ne zaman, ne istemiş: parse edilen access log matrisi.</p>
+                    <h2>IP Action Matrix</h2>
+                    <p>Request detay kolonlari kaldirildi, IP bazli blacklist aksiyonu eklendi.</p>
                   </div>
                 </div>
+
+                {blacklistStatus ? <div className="cpanel-inline-status">{blacklistStatus}</div> : null}
+                {abuseStatus ? <div className="cpanel-inline-status">{abuseStatus}</div> : null}
 
                 <div className="cpanel-table-shell cpanel-ip-matrix-shell">
                   <table className="cpanel-table cpanel-ip-matrix-table">
                     <thead>
                       <tr>
                         <th>IP</th>
-                        <th>Requested At</th>
-                        <th>Method</th>
-                        <th>Path</th>
-                        <th>Status</th>
-                        <th>User Agent</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {accessLogMatrixFallbackRows.map((row) => (
+                      {ipActionRows.map((row) => (
                         <tr key={row.id}>
                           <td>{row.ip}</td>
-                          <td>{row.requestedAt}</td>
-                          <td>{row.method}</td>
-                          <td>{row.path}</td>
-                          <td>{row.status}</td>
-                          <td>{row.userAgent}</td>
+                          <td>
+                            <div className="cpanel-ip-action-group">
+                              <button
+                                type="button"
+                                className="cpanel-blacklist-btn"
+                                disabled={blacklistBusyIp === row.ip}
+                                onClick={() => handleAddBlacklist(row.ip)}
+                              >
+                                {blacklistBusyIp === row.ip ? 'Ekleniyor...' : "Blacklist'e Ekle"}
+                              </button>
+                              <button
+                                type="button"
+                                className="cpanel-abuse-btn"
+                                disabled={abuseBusyIp === row.ip}
+                                onClick={() => handleAbuseLookup(row.ip)}
+                              >
+                                {abuseBusyIp === row.ip ? 'Sorgulanıyor...' : 'AbuseIPDB'}
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+
+                {abuseResult ? (
+                  <div className="cpanel-abuse-card">
+                    <div className="cpanel-abuse-card-head">
+                      <div>
+                        <h3>{abuseResult.ip_address}</h3>
+                        <p>AbuseIPDB yaniti</p>
+                      </div>
+                      <span className="cpanel-abuse-score">{abuseResult.abuse_confidence_score || 0}%</span>
+                    </div>
+
+                    <div className="cpanel-abuse-grid">
+                      <div className="cpanel-abuse-item">
+                        <span>Total Reports</span>
+                        <strong>{abuseResult.total_reports ?? '-'}</strong>
+                      </div>
+                      <div className="cpanel-abuse-item">
+                        <span>Distinct Users</span>
+                        <strong>{abuseResult.num_distinct_users ?? '-'}</strong>
+                      </div>
+                      <div className="cpanel-abuse-item">
+                        <span>Country</span>
+                        <strong>{abuseResult.country_code || '-'}</strong>
+                      </div>
+                      <div className="cpanel-abuse-item">
+                        <span>Usage Type</span>
+                        <strong>{abuseResult.usage_type || '-'}</strong>
+                      </div>
+                      <div className="cpanel-abuse-item">
+                        <span>ISP</span>
+                        <strong>{abuseResult.isp || '-'}</strong>
+                      </div>
+                      <div className="cpanel-abuse-item">
+                        <span>Last Reported</span>
+                        <strong>{abuseResult.last_reported_at || '-'}</strong>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </section>
             ) : null}
 

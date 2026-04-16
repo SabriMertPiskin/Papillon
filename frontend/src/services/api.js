@@ -185,4 +185,7 @@ export const addBlacklist = (ip_address, reason = '') =>
   API.post('/blacklist/', { ip_address, reason });
 export const deleteBlacklist = (id) => API.delete(`/blacklist/${id}/`);
 
+export const lookupAbuseIpdb = (ip_address, max_age_days = 90) =>
+  API.post('/blacklist/abuseipdb/', { ip_address, max_age_days });
+
 export default API;
