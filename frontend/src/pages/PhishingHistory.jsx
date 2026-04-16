@@ -167,7 +167,7 @@ export default function PhishingHistory() {
       <div className="phishing-page-container">
         <div className="phishing-header">
           <div className="phishing-title-section">
-            <h1>🎣 AI Phishing Alert History</h1>
+            <h1>AI Phishing Alert History</h1>
             <p>Recent email analysis reports scanned and scored by our AI models.</p>
           </div>
           

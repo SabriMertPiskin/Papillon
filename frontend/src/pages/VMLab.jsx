@@ -145,9 +145,15 @@ export default function VMLab() {
   if (!hasAccess) {
     return (
       <DashboardLayout>
-        <div className="vm-page">
+        <div className="vm-layout">
           <div className="vm-header">
-            <h1>🖥️ VM Attack Lab</h1>
+            <div className="vm-header-title-group">
+              <div className="vm-header-icon">🖥️</div>
+              <div className="vm-header-title">
+                <h1>VM Attack Lab</h1>
+                <p>TryHackMe-style lab skeleton. Start a machine and run attack simulation workflows.</p>
+              </div>
+            </div>
           </div>
           <div className="vm-alert error">
             <strong>Access Denied</strong><br />
@@ -162,15 +168,21 @@ export default function VMLab() {
   if (missingOwnVmLabPath) {
     return (
       <DashboardLayout>
-        <div className="vm-page">
+        <div className="vm-layout">
           <div className="vm-header">
-            <h1>🖥️ VM Attack Lab</h1>
+            <div className="vm-header-title-group">
+              <div className="vm-header-icon">🖥️</div>
+              <div className="vm-header-title">
+                <h1>VM Attack Lab</h1>
+                <p>TryHackMe-style lab skeleton. Start a machine and run attack simulation workflows.</p>
+              </div>
+            </div>
           </div>
           <div className="vm-alert error">
             <strong>Module Locked</strong><br />
             Please add your VM Lab path in <strong>Profile & Account</strong> before opening this module.
           </div>
-          <div className="vm-actions" style={{ marginTop: '14px' }}>
+          <div className="vm-actions">
             <button className="vm-btn start" onClick={() => { window.location.href = '/profile'; }}>
               Go to Profile & Account
             </button>
@@ -182,11 +194,14 @@ export default function VMLab() {
 
   return (
     <DashboardLayout>
-      <div className="vm-page">
+      <div className="vm-layout">
         <div className="vm-header">
-          <div>
-            <h1>🖥️ VM Attack Lab</h1>
-            <p>TryHackMe-style lab skeleton. Start a machine and run attack simulation workflows.</p>
+          <div className="vm-header-title-group">
+            <div className="vm-header-icon">🖥️</div>
+            <div className="vm-header-title">
+              <h1>VM Attack Lab</h1>
+              <p>TryHackMe-style lab skeleton. Start a machine and run attack simulation workflows.</p>
+            </div>
           </div>
           <button className="vm-refresh-btn" onClick={() => refreshStatus()} disabled={loading || actionLoading || (isAdminUser && !selectedAnalyst)}>
             {loading ? 'Refreshing...' : 'Refresh Status'}
@@ -194,17 +209,8 @@ export default function VMLab() {
         </div>
 
         {isAdminUser && (
-          <div style={{
-            background: 'rgba(63,81,181,0.08)',
-            border: '1px solid rgba(63,81,181,0.3)',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
-            <label style={{ fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--auth-text-primary)' }}>👤 Monitoring for Analyst:</label>
+          <div className="vm-selector-card">
+            <label className="vm-selector-label">👤 Monitoring for Analyst:</label>
               <input
                 type="text"
                 value={analystInput}
@@ -216,41 +222,23 @@ export default function VMLab() {
                   }
                 }}
                 placeholder="Enter analyst username (e.g., analyst1)"
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  border: '1px solid rgba(150,150,150,0.3)',
-                  borderRadius: '6px',
-                  background: 'var(--auth-input-bg)',
-                  color: 'var(--auth-text-primary)',
-                  fontSize: '0.9rem'
-                }}
+                className="vm-selector-input"
               />
               <button
                 type="button"
                 onClick={handleApplyAnalyst}
                 disabled={selectorLoading}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  border: '1px solid rgba(76, 175, 80, 0.4)',
-                  background: 'rgba(76, 175, 80, 0.2)',
-                  color: '#81c784',
-                  minWidth: '56px'
-                }}
+                className="vm-selector-btn"
               >
                 {selectorLoading ? '...' : '➜'}
               </button>
             {selectedAnalyst && (
-              <div style={{ marginTop: '10px', color: 'var(--auth-text-muted)', fontSize: '0.85rem' }}>
+              <div className="vm-selector-meta">
                 Using analyst: <strong>{selectedAnalyst}</strong> ({selectedAnalystDomain})
               </div>
             )}
             {selectorMessage.text && (
-              <div style={{ marginTop: '10px', color: selectorMessage.type === 'error' ? '#ef5350' : '#81c784', fontSize: '0.9rem' }}>
+              <div className={`vm-selector-message ${selectorMessage.type}`}>
                 {selectorMessage.text}
               </div>
             )}
@@ -265,7 +253,7 @@ export default function VMLab() {
 
         {message.text && <div className={`vm-alert ${message.type}`}>{message.text}</div>}
 
-        <div className="vm-card" style={isAdminUser && !selectedAnalyst ? { opacity: 0.55, pointerEvents: 'none' } : {}}>
+        <div className={`vm-card ${isAdminUser && !selectedAnalyst ? 'is-disabled' : ''}`}>
           <div className="vm-status-row">
             <span className={`vm-chip ${isRunning ? 'running' : 'stopped'}`}>
               {isRunning ? '● Running' : '○ Stopped'}

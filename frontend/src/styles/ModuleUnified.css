@@ -1,0 +1,269 @@
+/* Global module shell normalization: makes all module pages share the same structure rhythm */
+
+:is(
+  .attack-layout,
+  .blacklist-layout,
+  .cve-layout,
+  .encryption-layout,
+  .ps-layout,
+  .outlook-page,
+  .network-page-container,
+  .malware-page-container,
+  .phishing-page-container,
+  .vuln-map-container,
+  .profile-layout,
+  .cpanel-data-page,
+  .vm-layout,
+  .ssh-vm-layout
+) {
+  min-height: 100vh;
+  padding: 32px 40px;
+  position: relative;
+  overflow-x: hidden;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+:is(
+  .attack-layout,
+  .blacklist-layout,
+  .cve-layout,
+  .encryption-layout,
+  .ps-layout,
+  .outlook-page,
+  .network-page-container,
+  .malware-page-container,
+  .phishing-page-container,
+  .vuln-map-container,
+  .profile-layout,
+  .cpanel-data-page,
+  .vm-layout,
+  .ssh-vm-layout
+)::before,
+:is(
+  .attack-layout,
+  .blacklist-layout,
+  .cve-layout,
+  .encryption-layout,
+  .ps-layout,
+  .outlook-page,
+  .network-page-container,
+  .malware-page-container,
+  .phishing-page-container,
+  .vuln-map-container,
+  .profile-layout,
+  .cpanel-data-page,
+  .vm-layout,
+  .ssh-vm-layout
+)::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.12;
+}
+
+:is(
+  .attack-layout,
+  .blacklist-layout,
+  .cve-layout,
+  .encryption-layout,
+  .ps-layout,
+  .outlook-page,
+  .network-page-container,
+  .malware-page-container,
+  .phishing-page-container,
+  .vuln-map-container,
+  .profile-layout,
+  .cpanel-data-page,
+  .vm-layout,
+  .ssh-vm-layout
+)::before {
+  top: -5%;
+  left: -10%;
+  width: 600px;
+  height: 600px;
+  background: var(--auth-accent, #1e88e5);
+}
+
+:is(
+  .attack-layout,
+  .blacklist-layout,
+  .cve-layout,
+  .encryption-layout,
+  .ps-layout,
+  .outlook-page,
+  .network-page-container,
+  .malware-page-container,
+  .phishing-page-container,
+  .vuln-map-container,
+  .profile-layout,
+  .cpanel-data-page,
+  .vm-layout,
+  .ssh-vm-layout
+)::after {
+  bottom: -5%;
+  right: -5%;
+  width: 500px;
+  height: 500px;
+  background: var(--auth-teal, #00bcd4);
+}
+
+:is(
+  .attack-header,
+  .blacklist-header,
+  .cve-header,
+  .encryption-header,
+  .ps-header,
+  .outlook-page-header,
+  .network-header,
+  .malware-header,
+  .phishing-header,
+  .vuln-header,
+  .profile-header,
+  .vm-header,
+  .ssh-vm-header,
+  .cpanel-hero
+) {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--auth-glass-border, rgba(30, 136, 229, 0.15));
+}
+
+:is(
+  .attack-header h1,
+  .blacklist-header h1,
+  .cve-header h1,
+  .encryption-header h1,
+  .ps-header h1,
+  .outlook-page-header h1,
+  .network-header h1,
+  .malware-header h1,
+  .phishing-header h1,
+  .vuln-header h1,
+  .profile-header h1,
+  .vm-header h1,
+  .ssh-vm-header h1,
+  .cpanel-hero h1
+) {
+  margin: 0 0 4px;
+  font-size: 1.8rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--auth-heading-gradient-start, #fff) 0%, var(--auth-heading-gradient-end, #8899b4) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+:is(
+  .attack-header p,
+  .blacklist-header p,
+  .cve-header p,
+  .encryption-header p,
+  .ps-header p,
+  .outlook-page-header p,
+  .network-header p,
+  .malware-header p,
+  .phishing-header p,
+  .vuln-header p,
+  .profile-header p,
+  .vm-header p,
+  .ssh-vm-header p,
+  .cpanel-hero p
+) {
+  margin: 0;
+  color: var(--auth-text-secondary, #8899b4);
+  line-height: 1.6;
+  font-size: 0.92rem;
+}
+
+:is(
+  .attack-content,
+  .blacklist-content,
+  .cve-content,
+  .encryption-grid,
+  .outlook-status-card,
+  .vuln-layout,
+  .profile-content
+) {
+  position: relative;
+  z-index: 10;
+}
+
+/* Shared soft panel surface to reduce harsh content/background separation */
+:is(
+  .scan-card,
+  .ps-card,
+  .vm-card,
+  .ssh-vm-card,
+  .blacklist-card,
+  .crypto-card,
+  .net-panel-card,
+  .outlook-status-card,
+  .latest-mail-box,
+  .phishing-actions-card,
+  .p-card,
+  .vuln-map-visual,
+  .vuln-details-panel,
+  .cve-card,
+  .cpanel-data-section,
+  .scan-container,
+  .result-container
+) {
+  background: linear-gradient(180deg, rgba(16, 33, 58, 0.62), rgba(11, 25, 45, 0.52));
+  border-color: rgba(30, 136, 229, 0.12);
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.22),
+    0 2px 0 rgba(255, 255, 255, 0.02) inset,
+    0 0 0 1px rgba(8, 28, 56, 0.24);
+  backdrop-filter: blur(14px);
+}
+
+@media (max-width: 768px) {
+  :is(
+    .attack-layout,
+    .blacklist-layout,
+    .cve-layout,
+    .encryption-layout,
+    .ps-layout,
+    .outlook-page,
+    .network-page-container,
+    .malware-page-container,
+    .phishing-page-container,
+    .vuln-map-container,
+    .profile-layout,
+    .cpanel-data-page,
+    .vm-layout,
+    .ssh-vm-layout
+  ) {
+    padding: 24px 18px;
+  }
+
+  :is(
+    .attack-header,
+    .blacklist-header,
+    .cve-header,
+    .encryption-header,
+    .ps-header,
+    .outlook-page-header,
+    .network-header,
+    .malware-header,
+    .phishing-header,
+    .vuln-header,
+    .profile-header,
+    .vm-header,
+    .ssh-vm-header,
+    .cpanel-hero
+  ) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

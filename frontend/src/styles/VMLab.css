@@ -1,21 +1,80 @@
-.vm-page {
-  padding: 12px 4px 30px;
+.vm-layout {
+  min-height: 100vh;
+  background: var(--auth-bg-primary, #0a1628);
+  color: var(--auth-text-primary, #e8edf5);
+  padding: 32px 40px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.vm-layout::before,
+.vm-layout::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.12;
+}
+
+.vm-layout::before {
+  top: -5%;
+  left: -10%;
+  width: 600px;
+  height: 600px;
+  background: var(--auth-accent, #1e88e5);
+}
+
+.vm-layout::after {
+  bottom: -5%;
+  right: -5%;
+  width: 500px;
+  height: 500px;
+  background: var(--auth-teal, #00bcd4);
 }
 
 .vm-header {
+  position: relative;
+  z-index: 10;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--auth-glass-border, rgba(30, 136, 229, 0.15));
 }
 
-.vm-header h1 {
-  margin: 0 0 6px;
-  color: var(--auth-text-primary, #e8edf5);
+.vm-header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.vm-header p {
+.vm-header-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0, 188, 212, 0.2), rgba(0, 188, 212, 0.05));
+  border: 1px solid rgba(0, 188, 212, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.vm-header-title h1 {
+  margin: 0 0 4px;
+  font-size: 1.8rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--auth-heading-gradient-start, #fff) 0%, var(--auth-heading-gradient-end, #8899b4) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.vm-header-title p {
   margin: 0;
   color: var(--auth-text-secondary, #8899b4);
 }
@@ -30,18 +89,84 @@
   font-weight: 700;
 }
 
+.vm-selector-card,
+.vm-card,
+.vm-alert {
+  position: relative;
+  z-index: 10;
+}
+
+.vm-selector-card,
 .vm-card {
   background: var(--auth-glass, rgba(15, 25, 50, 0.45));
+  backdrop-filter: blur(16px);
   border: 1px solid var(--auth-glass-border, rgba(30,136,229,0.15));
-  border-radius: 14px;
-  padding: 18px;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.vm-selector-card {
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vm-selector-label {
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--auth-text-primary, #e8edf5);
+}
+
+.vm-selector-input {
+  flex: 1;
+  min-width: 240px;
+  padding: 10px 12px;
+  border: 1px solid rgba(150,150,150,0.3);
+  border-radius: 10px;
+  background: var(--auth-input-bg, rgba(10, 22, 40, 0.6));
+  color: var(--auth-text-primary, #e8edf5);
+  font-size: 0.95rem;
+}
+
+.vm-selector-btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  background: rgba(76, 175, 80, 0.2);
+  color: #81c784;
+}
+
+.vm-selector-meta,
+.vm-selector-message {
+  width: 100%;
+  color: var(--auth-text-secondary, #8899b4);
+  font-size: 0.88rem;
+}
+
+.vm-selector-message.success {
+  color: #81c784;
+}
+
+.vm-selector-message.error {
+  color: #ef5350;
+}
+
+.vm-card.is-disabled {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .vm-status-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -124,10 +249,21 @@
 }
 
 .vm-alert {
-  margin-bottom: 12px;
-  border-radius: 10px;
-  padding: 11px 13px;
+  margin: 0 0 12px;
+  border-radius: 12px;
+  padding: 12px 14px;
   font-weight: 600;
+}
+
+.vm-page {
+  position: relative;
+  z-index: 10;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.vm-actions {
+  margin-top: 16px;
 }
 
 .vm-alert.success {
@@ -140,4 +276,19 @@
   background: rgba(244, 67, 54, 0.1);
   color: #ef5350;
   border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+@media (max-width: 768px) {
+  .vm-layout {
+    padding: 24px 18px;
+  }
+
+  .vm-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vm-selector-card {
+    align-items: stretch;
+  }
 }

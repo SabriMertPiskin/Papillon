@@ -4,12 +4,6 @@ import socket
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-import os
-import sys
-import socket
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 import json
 from users.models import CustomUser
 
@@ -51,11 +45,36 @@ def _get_authenticated_user(request):
 def _get_target_domain(request, user):
     """
     Get the target domain based on user role.
-    - Analyst: Returns their own domain
-    - Admin: Returns specified analyst's domain via ?for_analyst=username
+    Priority: request payload/query domain -> role-based fallback domain.
+    - Analyst: Uses provided domain first, otherwise own configured domain.
+    - Admin: Requires for_analyst, uses provided domain first, otherwise selected analyst domain.
     """
+    requested_domain = ''
+
+    try:
+        body = json.loads(request.body or '{}')
+        requested_domain = _normalize_domain(body.get('domain'))
+    except (json.JSONDecodeError, TypeError):
+        requested_domain = ''
+
+    if not requested_domain:
+        requested_domain = _normalize_domain(
+            request.GET.get('domain')
+            or request.POST.get('domain')
+        )
+
     if user.role == 'analyst':
-        return user.domain
+        if requested_domain:
+            return requested_domain
+
+        user_domain = _normalize_domain(user.domain)
+        if user_domain:
+            return user_domain
+
+        return JsonResponse(
+            {'success': False, 'detail': 'Please provide a domain to scan or configure your domain in Profile & Account.'},
+            status=400
+        )
     
     elif user.role == 'admin':
         analyst_username = request.GET.get('for_analyst') or request.POST.get('for_analyst')
@@ -67,14 +86,34 @@ def _get_target_domain(request, user):
         
         try:
             analyst = CustomUser.objects.get(username=analyst_username, role='analyst')
-            return analyst.domain
+            if requested_domain:
+                return requested_domain
+
+            analyst_domain = _normalize_domain(analyst.domain)
+            if analyst_domain:
+                return analyst_domain
+
+            return JsonResponse(
+                {'success': False, 'detail': f'Analyst user "{analyst_username}" has no configured domain. Provide "domain" in request body.'},
+                status=400
+            )
         except CustomUser.DoesNotExist:
             return JsonResponse(
                 {'success': False, 'detail': f'Analyst user "{analyst_username}" not found'},
                 status=404
             )
-    
-    return user.domain
+
+    if requested_domain:
+        return requested_domain
+
+    fallback_domain = _normalize_domain(user.domain)
+    if fallback_domain:
+        return fallback_domain
+
+    return JsonResponse(
+        {'success': False, 'detail': 'Please provide a domain to scan.'},
+        status=400
+    )
 
 
 @csrf_exempt

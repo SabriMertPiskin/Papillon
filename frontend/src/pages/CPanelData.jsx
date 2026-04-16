@@ -92,6 +92,116 @@ const renderDomainCollection = (objectValue) => {
   }));
 };
 
+const WEBALIZER_MONTH_LOOKUP = {
+  jan: 1,
+  january: 1,
+  oca: 1,
+  ocak: 1,
+  feb: 2,
+  february: 2,
+  sub: 2,
+  subat: 2,
+  mar: 3,
+  march: 3,
+  nis: 4,
+  april: 4,
+  apr: 4,
+  may: 5,
+  haz: 6,
+  june: 6,
+  jun: 6,
+  tem: 7,
+  jul: 7,
+  july: 7,
+  agu: 8,
+  aug: 8,
+  august: 8,
+  eyl: 9,
+  sep: 9,
+  september: 9,
+  eki: 10,
+  oct: 10,
+  october: 10,
+  kas: 11,
+  nov: 11,
+  november: 11,
+  ara: 12,
+  dec: 12,
+  december: 12,
+};
+
+const normalizeWebalizerPeriodText = (period) => String(period || '')
+  .trim()
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[’']/g, '')
+  .replace(/[.,]+/g, ' ')
+  .replace(/\s+/g, ' ');
+
+const parseWebalizerPeriod = (period) => {
+  const text = normalizeWebalizerPeriodText(period);
+  if (!text || text === 'toplamlar' || text === 'ay' || text === 'hitler') return null;
+
+  let year = null;
+  let month = null;
+
+  const patterns = [
+    text.match(/^(\d{4})[-/](0?[1-9]|1[0-2])$/),
+    text.match(/^(0?[1-9]|1[0-2])[-/](\d{4})$/),
+    text.match(/^(\d{4})\s+(0?[1-9]|1[0-2])$/),
+    text.match(/^(0?[1-9]|1[0-2])\s+(\d{4})$/),
+  ];
+
+  for (const match of patterns) {
+    if (!match) continue;
+    if (match[1].length === 4) {
+      year = Number(match[1]);
+      month = Number(match[2]);
+    } else {
+      month = Number(match[1]);
+      year = Number(match[2]);
+    }
+    break;
+  }
+
+  if (year === null || month === null) {
+    for (const token of text.split(' ')) {
+      if (/^(19|20)\d{2}$/.test(token)) {
+        year = Number(token);
+      } else if (WEBALIZER_MONTH_LOOKUP[token]) {
+        month = WEBALIZER_MONTH_LOOKUP[token];
+      }
+    }
+  }
+
+  if (year === null || month === null) return null;
+
+  return { year, month, sortValue: year * 12 + month };
+};
+
+const limitWebalizerRowsToLatestMonths = (rows, limit = 12) => {
+  if (!Array.isArray(rows) || !rows.length) return [];
+
+  const monthlyRows = rows
+    .map((row, index) => {
+      const parsed = parseWebalizerPeriod(row?.period);
+      if (!parsed) return null;
+      return {
+        ...row,
+        _index: index,
+        _sortValue: parsed.sortValue,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b._sortValue - a._sortValue || a._index - b._index)
+    .slice(0, limit)
+    .map(({ _index, _sortValue, ...row }) => row);
+
+  const totalRows = rows.filter((row) => row?.period === 'Toplamlar');
+  return [...monthlyRows, ...totalRows];
+};
+
 const buildWebalizerSummaries = (reports) => {
   if (!Array.isArray(reports)) return [];
   return reports
@@ -105,44 +215,45 @@ const buildWebalizerSummaries = (reports) => {
       const titleMatch = titleText.match(/<TITLE>([\s\S]*?)<\/TITLE>/i);
       const extractedTitle = (titleMatch?.[1] || String(report?.title || '')).trim();
       const reportType = String(report?.path || '').includes('/ssl/') ? 'SSL' : 'Standard';
+      const normalizedRows = rows
+        .filter((row) => row["Ay'a Gore Ozet"] && row["Ay'a Gore Ozet"] !== 'Ay' && row["Ay'a Gore Ozet"] !== "HIT'ler")
+        .map((row) => {
+          const period = row["Ay'a Gore Ozet"] || '-';
+          if (period === 'Toplamlar') {
+            return {
+              period,
+              dailyHits: '-',
+              dailyFiles: '-',
+              dailyPages: '-',
+              dailyVisits: '-',
+              dailyClients: '-',
+              kbytes: row["Column 2"] || '-',
+              monthlyVisits: row["Column 3"] || '-',
+              monthlyPages: row["Column 4"] || '-',
+              monthlyFiles: row["Column 5"] || '-',
+              monthlyHits: row["Column 6"] || '-',
+            };
+          }
+          return {
+            period,
+            dailyHits: row["Column 2"] || '-',
+            dailyFiles: row["Column 3"] || '-',
+            dailyPages: row["Column 4"] || '-',
+            dailyVisits: row["Column 5"] || '-',
+            dailyClients: row["Column 6"] || '-',
+            kbytes: row["Column 7"] || '-',
+            monthlyVisits: row["Column 8"] || '-',
+            monthlyPages: row["Column 9"] || '-',
+            monthlyFiles: row["Column 10"] || '-',
+            monthlyHits: row["Column 11"] || '-',
+          };
+        });
       return {
         id: `${report?.path || 'webalizer'}-${index}`,
         title: extractedTitle || reportType,
         reportType,
         path: report?.path || '-',
-        rows: rows
-          .filter((row) => row["Ay'a Gore Ozet"] && row["Ay'a Gore Ozet"] !== 'Ay' && row["Ay'a Gore Ozet"] !== "HIT'ler")
-          .map((row) => {
-            const period = row["Ay'a Gore Ozet"] || '-';
-            if (period === 'Toplamlar') {
-              return {
-                period,
-                dailyHits: '-',
-                dailyFiles: '-',
-                dailyPages: '-',
-                dailyVisits: '-',
-                dailyClients: '-',
-                kbytes: row["Column 2"] || '-',
-                monthlyVisits: row["Column 3"] || '-',
-                monthlyPages: row["Column 4"] || '-',
-                monthlyFiles: row["Column 5"] || '-',
-                monthlyHits: row["Column 6"] || '-',
-              };
-            }
-            return {
-              period,
-              dailyHits: row["Column 2"] || '-',
-              dailyFiles: row["Column 3"] || '-',
-              dailyPages: row["Column 4"] || '-',
-              dailyVisits: row["Column 5"] || '-',
-              dailyClients: row["Column 6"] || '-',
-              kbytes: row["Column 7"] || '-',
-              monthlyVisits: row["Column 8"] || '-',
-              monthlyPages: row["Column 9"] || '-',
-              monthlyFiles: row["Column 10"] || '-',
-              monthlyHits: row["Column 11"] || '-',
-            };
-          }),
+        rows: limitWebalizerRowsToLatestMonths(normalizedRows, 12),
         raw: report,
       };
     });
@@ -229,7 +340,15 @@ const buildWebalizerTrendRows = (webalizerSummaries) => {
     }
   }
 
-  return Array.from(aggregated.values());
+  return Array.from(aggregated.values())
+    .map((row) => ({
+      ...row,
+      _parsed: parseWebalizerPeriod(row.period),
+    }))
+    .filter((row) => row._parsed)
+    .sort((a, b) => b._parsed.sortValue - a._parsed.sortValue)
+    .slice(0, 12)
+    .map(({ _parsed, ...row }) => row);
 };
 
 const pickDailyMetric = (item, keys) => {
@@ -548,7 +667,7 @@ export default function CPanelData() {
       if (nextUser?.role !== 'analyst') {
         setConfig(null);
         setSnapshot(null);
-        setError('Bu sayfa su anda analyst hesabinin bagli cPanel verisini gosteriyor.');
+        setError('This page currently shows the linked cPanel data for analyst accounts.');
         return;
       }
 
@@ -565,10 +684,10 @@ export default function CPanelData() {
       if (snapshotResponse.data?.success) {
         setSnapshot(snapshotResponse.data.snapshot || null);
       } else {
-        setError('cPanel verisi alinamadi.');
+        setError('Failed to fetch cPanel data.');
       }
     } catch (requestError) {
-      setError(requestError.response?.data?.detail || 'cPanel verisi alinirken hata olustu.');
+      setError(requestError.response?.data?.detail || 'An error occurred while loading cPanel data.');
     } finally {
       setLoading(false);
     }
@@ -719,9 +838,9 @@ export default function CPanelData() {
     setBlacklistStatus('');
     try {
       await addBlacklist(ip, 'Added from cPanel IP action matrix');
-      setBlacklistStatus(`${ip} blacklist listesine eklendi.`);
+      setBlacklistStatus(`${ip} was added to the blacklist.`);
     } catch (requestError) {
-      setBlacklistStatus(requestError.response?.data?.detail || 'IP blacklist ekleme islemi basarisiz oldu.');
+      setBlacklistStatus(requestError.response?.data?.detail || 'Failed to add IP to blacklist.');
     } finally {
       setBlacklistBusyIp('');
     }
@@ -737,9 +856,9 @@ export default function CPanelData() {
     try {
       const response = await lookupAbuseIpdb(ip);
       setAbuseResult(response.data?.result || null);
-      setAbuseStatus(`${ip} için AbuseIPDB sonucu hazır.`);
+      setAbuseStatus(`AbuseIPDB result is ready for ${ip}.`);
     } catch (requestError) {
-      setAbuseStatus(requestError.response?.data?.detail || 'AbuseIPDB sorgusu basarisiz oldu.');
+      setAbuseStatus(requestError.response?.data?.detail || 'AbuseIPDB lookup failed.');
     } finally {
       setAbuseBusyIp('');
     }
@@ -750,19 +869,19 @@ export default function CPanelData() {
       {
         key: 'account',
         title: 'Account Info',
-        subtitle: 'Hesap metadata ve temel cPanel alanlari.',
+        subtitle: 'Account metadata and core cPanel fields.',
         rows: accountRows,
       },
       {
         key: 'domains',
         title: 'Domain Inventory',
-        subtitle: 'Ana/addon/parked/subdomain listeleri.',
+        subtitle: 'Main, addon, parked and subdomain lists.',
         rows: domainRows,
       },
       {
         key: 'domain-details',
         title: 'Domain Details',
-        subtitle: 'Domain bazli hosting ayrintilari.',
+        subtitle: 'Domain-level hosting details.',
         rows: domainDetailRows,
       },
       {
@@ -780,13 +899,13 @@ export default function CPanelData() {
       {
         key: 'php-versions',
         title: 'PHP Versions',
-        subtitle: 'Kurulu PHP surumleri.',
+        subtitle: 'Installed PHP versions.',
         rows: phpVersionRows,
       },
       {
         key: 'php-default',
         title: 'PHP Default',
-        subtitle: 'Varsayilan PHP ve ayarlar.',
+        subtitle: 'Default PHP version and settings.',
         rows: phpDefaultRows,
       },
       {
@@ -798,49 +917,49 @@ export default function CPanelData() {
       {
         key: 'email',
         title: 'Email Accounts',
-        subtitle: 'Mail kutulari ve hesap listesi.',
+        subtitle: 'Mailbox and account inventory.',
         rows: emailRows,
       },
       {
         key: 'db',
         title: 'MySQL Databases',
-        subtitle: 'Veritabani envanteri.',
+        subtitle: 'Database inventory.',
         rows: databaseRows,
       },
       {
         key: 'web-domains',
         title: 'Web Domains',
-        subtitle: 'Web vhost tarafindaki domainler.',
+        subtitle: 'Domains available on web vhosts.',
         rows: webDomainRows,
       },
       {
         key: 'stats-bar',
         title: 'StatsBar',
-        subtitle: 'Kisa panel metrikleri.',
+        subtitle: 'Quick panel metrics.',
         rows: statsBarRows,
       },
       {
         key: 'resource',
         title: 'Resource Usage',
-        subtitle: 'CPU/memory/entry process kayitlari.',
+        subtitle: 'CPU, memory, and entry process records.',
         rows: resourceRows,
       },
       {
         key: 'errors',
         title: 'Error Logs',
-        subtitle: 'Hata satirlari.',
+        subtitle: 'Error log lines.',
         rows: errorRows,
       },
       {
         key: 'access',
         title: 'Access Log',
-        subtitle: 'Erisim loglari.',
+        subtitle: 'Access logs.',
         rows: accessLogRows,
       },
       {
         key: 'webalizer-sites',
         title: 'Webalizer Sites',
-        subtitle: 'Webalizer kaynak siteleri.',
+        subtitle: 'Webalizer source sites.',
         rows: webalizerRows,
       },
       {
@@ -864,19 +983,19 @@ export default function CPanelData() {
       {
         key: 'report-files',
         title: 'Discovered Report Files',
-        subtitle: 'Kesfedilen rapor dosyalari.',
+        subtitle: 'Discovered report files.',
         rows: reportFileRows,
       },
       {
         key: 'warnings',
         title: 'cPanel Warnings',
-        subtitle: 'Eksik/hatali endpoint cevaplari.',
+        subtitle: 'Missing or failed endpoint responses.',
         rows: warningRows,
       },
       {
         key: 'log-settings',
         title: 'Log Settings',
-        subtitle: 'Log arsivleme ve raw log ayarlari.',
+        subtitle: 'Log archive and raw log settings.',
         rows: logSettingsRows,
       },
     ].filter((section) => hasRows(section.rows) && section.rows.some((row) => isNonEmptyValue(row.value))),
@@ -913,10 +1032,10 @@ export default function CPanelData() {
           <div className="cpanel-hero">
             <div>
               <h1>cPanel Data</h1>
-              <p>Turhost ve cPanel kaynaklarini yukluyorum.</p>
+              <p>Loading Turhost and cPanel resources.</p>
             </div>
           </div>
-          <div className="cpanel-loading">cPanel telemetry yukleniyor...</div>
+          <div className="cpanel-loading">Loading cPanel telemetry...</div>
         </div>
       </DashboardLayout>
     );
@@ -929,7 +1048,7 @@ export default function CPanelData() {
           <div>
             <h1>cPanel Data</h1>
             <p>
-              Turhost/cPanel metrikleri, log kayitlari ve AWStats-Webalizer benzeri tablolar burada toplanir.
+              Turhost/cPanel metrics, log records and AWStats/Webalizer-style reports are collected here.
             </p>
             <div className={`cpanel-auth-badge ${config?.auth_mode || 'unknown'}`}>
               Auth Mode: {config?.auth_mode || 'unknown'}
@@ -940,24 +1059,24 @@ export default function CPanelData() {
               Dashboard
             </button>
             <button className="cpanel-action-btn secondary" onClick={loadData}>
-              Yenile
+              Refresh
             </button>
             <button className="cpanel-action-btn" onClick={() => navigate('/profile')}>
-              cPanel Ayarlari
+              cPanel Settings
             </button>
           </div>
         </div>
 
         {!config?.has_token ? (
           <div className="cpanel-empty-panel">
-            <h2>cPanel baglantisi kurulmamis</h2>
-            <p>Once Profile & Account sayfasindan cPanel host, username ve API token bilgilerini kaydet.</p>
+            <h2>cPanel connection is not configured</h2>
+            <p>Save your cPanel host, username, and API token first in Profile & Account.</p>
           </div>
         ) : null}
 
         {error ? (
           <div className="cpanel-error-panel">
-            <strong>Baglanti hatasi</strong>
+            <strong>Connection error</strong>
             <span>{error}</span>
           </div>
         ) : null}
@@ -967,7 +1086,7 @@ export default function CPanelData() {
             <div className="cpanel-data-section-header">
               <div>
                 <h2>IP Frequency Snapshot</h2>
-                <p>IP bazinda request yogunlugu. Bu kartlar alttaki tabloda da ayni verinin ozetini verir.</p>
+                <p>IP-based request density. These cards summarize the same data shown in the table below.</p>
               </div>
             </div>
 
@@ -988,7 +1107,7 @@ export default function CPanelData() {
               <div className="cpanel-data-section-header">
                 <div>
                   <h2>Monthly Trend</h2>
-                  <p>Sayfa geneline yayilan genel trafik trendi.</p>
+                  <p>Overall traffic trend across the selected reporting window.</p>
                 </div>
               </div>
 
@@ -1025,7 +1144,7 @@ export default function CPanelData() {
                   </div>
                 </div>
               ) : (
-                <div className="cpanel-empty-state">Webalizer trend verisi bulunamadi.</div>
+                <div className="cpanel-empty-state">No Webalizer trend data found.</div>
               )}
             </section>
 
@@ -1034,7 +1153,7 @@ export default function CPanelData() {
                 <div className="cpanel-data-section-header">
                   <div>
                     <h2>Webalizer Matrix</h2>
-                    <p>Standart raporun matrix gorunumu.</p>
+                    <p>Matrix view of the standard report.</p>
                   </div>
                 </div>
 
@@ -1100,7 +1219,7 @@ export default function CPanelData() {
                 <div className="cpanel-data-section-header">
                   <div>
                     <h2>IP Action Matrix</h2>
-                    <p>Request detay kolonlari kaldirildi, IP bazli blacklist aksiyonu eklendi.</p>
+                    <p>Request detail columns were removed and an IP-level blacklist action was added.</p>
                   </div>
                 </div>
 
@@ -1127,7 +1246,7 @@ export default function CPanelData() {
                                 disabled={blacklistBusyIp === row.ip}
                                 onClick={() => handleAddBlacklist(row.ip)}
                               >
-                                {blacklistBusyIp === row.ip ? 'Ekleniyor...' : "Blacklist'e Ekle"}
+                                {blacklistBusyIp === row.ip ? 'Adding...' : 'Add to Blacklist'}
                               </button>
                               <button
                                 type="button"
@@ -1135,7 +1254,7 @@ export default function CPanelData() {
                                 disabled={abuseBusyIp === row.ip}
                                 onClick={() => handleAbuseLookup(row.ip)}
                               >
-                                {abuseBusyIp === row.ip ? 'Sorgulanıyor...' : 'AbuseIPDB'}
+                                {abuseBusyIp === row.ip ? 'Querying...' : 'AbuseIPDB'}
                               </button>
                             </div>
                           </td>
@@ -1150,7 +1269,7 @@ export default function CPanelData() {
                     <div className="cpanel-abuse-card-head">
                       <div>
                         <h3>{abuseResult.ip_address}</h3>
-                        <p>AbuseIPDB yaniti</p>
+                        <p>AbuseIPDB response</p>
                       </div>
                       <span className="cpanel-abuse-score">{abuseResult.abuse_confidence_score || 0}%</span>
                     </div>
@@ -1191,7 +1310,7 @@ export default function CPanelData() {
                 <div className="cpanel-data-section-header">
                   <div>
                     <h2>IP Request Frequency</h2>
-                    <p>IP bazinda sayim, zaman kapsami ve dakika/saat hizlari.</p>
+                    <p>IP-based counts, time coverage, and per-minute/per-hour request rates.</p>
                   </div>
                 </div>
 

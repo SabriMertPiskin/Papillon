@@ -1,25 +1,99 @@
-.ssh-vm-page {
-  max-width: 980px;
+.ssh-vm-layout {
+  min-height: 100vh;
+  background: var(--auth-bg-primary, #0a1628);
+  color: var(--auth-text-primary, #e8edf5);
+  padding: 32px 40px;
+  position: relative;
+  overflow-x: hidden;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 8px 4px 20px;
 }
 
-.ssh-vm-header h1 {
-  margin: 0 0 8px;
-  font-size: 2rem;
-  color: var(--auth-text-primary);
+.ssh-vm-layout::before,
+.ssh-vm-layout::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.12;
 }
 
-.ssh-vm-header p {
-  margin: 0 0 18px;
-  color: var(--auth-text-secondary);
+.ssh-vm-layout::before {
+  top: -5%;
+  left: -10%;
+  width: 600px;
+  height: 600px;
+  background: var(--auth-accent, #1e88e5);
+}
+
+.ssh-vm-layout::after {
+  bottom: -5%;
+  right: -5%;
+  width: 500px;
+  height: 500px;
+  background: var(--auth-teal, #00bcd4);
+}
+
+.ssh-vm-header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--auth-glass-border, rgba(30, 136, 229, 0.15));
+}
+
+.ssh-vm-header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ssh-vm-header-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0, 188, 212, 0.2), rgba(0, 188, 212, 0.05));
+  border: 1px solid rgba(0, 188, 212, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.ssh-vm-header-title h1 {
+  margin: 0 0 4px;
+  font-size: 1.8rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--auth-heading-gradient-start, #fff) 0%, var(--auth-heading-gradient-end, #8899b4) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ssh-vm-header-title p {
+  margin: 0;
+  color: var(--auth-text-secondary, #8899b4);
+}
+
+.ssh-vm-card,
+.ssh-vm-alert {
+  position: relative;
+  z-index: 10;
 }
 
 .ssh-vm-card {
-  border: 1px solid rgba(130, 130, 130, 0.25);
-  border-radius: 12px;
-  background: var(--auth-surface);
-  padding: 18px;
+  background: var(--auth-glass, rgba(15, 25, 50, 0.45));
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--auth-glass-border, rgba(30, 136, 229, 0.15));
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .ssh-vm-actions {
@@ -31,9 +105,9 @@
 
 .ssh-vm-btn {
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 10px 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -43,9 +117,8 @@
 }
 
 .ssh-vm-btn.primary {
-  background: rgba(76, 175, 80, 0.2);
-  color: #81c784;
-  border-color: rgba(76, 175, 80, 0.4);
+  background: linear-gradient(135deg, var(--auth-accent, #1e88e5), var(--auth-teal, #00bcd4));
+  color: #fff;
 }
 
 .ssh-vm-btn.secondary {
@@ -61,24 +134,27 @@
   min-width: 95px;
 }
 
-.ssh-vm-ip-box label {
+.ssh-vm-ip-box label,
+.ssh-vm-instruction label {
   display: block;
   margin-bottom: 8px;
   color: var(--auth-text-primary);
-  font-weight: 600;
+  font-weight: 700;
 }
 
-.ssh-vm-ip-row {
+.ssh-vm-ip-row,
+.ssh-vm-cmd-row {
   display: flex;
   gap: 10px;
+  align-items: center;
 }
 
 .ssh-vm-ip-row input {
   width: 100%;
-  background: var(--auth-input-bg);
+  background: var(--auth-input-bg, rgba(10, 22, 40, 0.6));
   color: var(--auth-text-primary);
   border: 1px solid rgba(130, 130, 130, 0.3);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 10px 12px;
 }
 
@@ -94,28 +170,15 @@
   padding: 12px;
   background: rgba(76, 175, 80, 0.08);
   border: 1px solid rgba(76, 175, 80, 0.3);
-  border-radius: 8px;
-}
-
-.ssh-vm-instruction label {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--auth-text-primary);
-  font-weight: 600;
-}
-
-.ssh-vm-cmd-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
+  border-radius: 12px;
 }
 
 .ssh-vm-cmd {
   flex: 1;
-  background: var(--auth-input-bg);
+  background: var(--auth-input-bg, rgba(10, 22, 40, 0.6));
   color: #81c784;
   padding: 10px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid rgba(76, 175, 80, 0.3);
   font-family: 'Courier New', monospace;
   font-size: 0.9rem;
@@ -123,9 +186,9 @@
 }
 
 .ssh-vm-alert {
-  margin-bottom: 14px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
   border: 1px solid transparent;
 }
 
@@ -141,9 +204,20 @@
   color: #ef9a9a;
 }
 
-@media (max-width: 640px) {
-  .ssh-vm-ip-row {
+@media (max-width: 768px) {
+  .ssh-vm-layout {
+    padding: 24px 18px;
+  }
+
+  .ssh-vm-header {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ssh-vm-ip-row,
+  .ssh-vm-cmd-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .ssh-vm-btn.copy {

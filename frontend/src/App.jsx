@@ -21,6 +21,7 @@ import VulnerabilityMap from './pages/VulnerabilityMap';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
+import './styles/ModuleUnified.css';
 
 function App() {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';

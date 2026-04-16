@@ -295,57 +295,57 @@ export default function OutlookIntegration() {
         {showHelpModal && (
           <div className="modal-overlay" onClick={() => setShowHelpModal(false)}>
             <div className="modal-content wide" onClick={(e) => e.stopPropagation()}>
-              <h2>Client ID ve Secret Nasıl Alınır?</h2>
+              <h2>How to Get Client ID and Secret</h2>
 
-              <h4>Adım 1: Azure Portal'a Girin</h4>
-              <p>Tarayıcınızda şu adresi açın: <strong>https://portal.azure.com</strong></p>
+              <h4>Step 1: Open Azure Portal</h4>
+              <p>Open this address in your browser: <strong>https://portal.azure.com</strong></p>
               <p>
-                Microsoft hesabınız ile giriş yapın. Eğer hesabınız yoksa, Outlook hesabınızla oturum açabilirsiniz.
+                Sign in with your Microsoft account. If you do not have one, you can sign in with your Outlook account.
               </p>
 
-              <h4>Adım 2: "App registrations" Bulun</h4>
+              <h4>Step 2: Find "App registrations"</h4>
               <ol>
-                <li>Azure Portal'da arama çubuğundan <strong>"App registrations"</strong> yazıp arayın.</li>
-                <li>Sol menüden <strong>"App registrations"</strong> seçeneğine tıklayın.</li>
+                <li>In Azure Portal, search for <strong>"App registrations"</strong> using the search bar.</li>
+                <li>Click <strong>"App registrations"</strong> in the left menu.</li>
               </ol>
 
-              <h4>Adım 3: Yeni Uygulama Kaydedin</h4>
+              <h4>Step 3: Register a New Application</h4>
               <ol>
-                <li><strong>"+ New registration"</strong> butonuna tıklayın.</li>
-                <li><strong>Name:</strong> alanına uygulamanızın adını yazın (örn: "Papillon Mail").</li>
+                <li>Click <strong>"+ New registration"</strong>.</li>
+                <li>Enter your application name in <strong>Name:</strong> (example: "Papillon Mail").</li>
                 <li>
-                  <strong>Supported account types:</strong> kısmında
-                  <strong> "Accounts in any organizational directory (Any Microsoft Entra ID tenant - Multitenant) and personal Microsoft accounts (e.g. Skype, Xbox)"</strong> seçin.
+                  Under <strong>Supported account types:</strong>, select
+                  <strong> "Accounts in any organizational directory (Any Microsoft Entra ID tenant - Multitenant) and personal Microsoft accounts (e.g. Skype, Xbox)"</strong>.
                 </li>
-                <li><strong>Redirect URI:</strong> alanında <strong>Web</strong> seçin.</li>
+                <li>In <strong>Redirect URI:</strong>, select <strong>Web</strong>.</li>
                 {/* TODO ileride localhost olmayacak? */}
-                <li>URI'ye şunu yazın: <strong>http://localhost:8000/outlook/callback</strong></li>
-                <li><strong>Register</strong> butonuna tıklayın.</li>
+                <li>Enter this URI: <strong>http://localhost:8000/outlook/callback</strong></li>
+                <li>Click <strong>Register</strong>.</li>
               </ol>
 
-              <h4>Adım 4: Client ID'yi Kopyalayın</h4>
+              <h4>Step 4: Copy the Client ID</h4>
               <ol>
-                <li>Yeni oluşturulan uygulamanın detay sayfasında olacaksınız.</li>
-                <li><strong>"Application (client) ID"</strong> etiketinin yanında uzun bir kod göreceksiniz.</li>
-                <li>O kodu kopyalayıp yukarıdaki <strong>"Client ID"</strong> alanına yapıştırın.</li>
+                <li>You will be on the details page of the newly created app.</li>
+                <li>You will see a long code next to <strong>"Application (client) ID"</strong>.</li>
+                <li>Copy that code and paste it into the <strong>"Client ID"</strong> field above.</li>
               </ol>
 
-              <h4>Adım 5: Client Secret'i Alın</h4>
+              <h4>Step 5: Generate and Copy the Client Secret</h4>
               <ol>
-                <li>Sol menüde <strong>"Certificates & secrets"</strong> seçeneğine tıklayın.</li>
-                <li><strong>"Client secrets"</strong> bölümünde <strong>"+ New client secret"</strong> butonuna tıklayın.</li>
-                <li><strong>Description</strong> alanına "Mail Access" yazabilirsiniz (opsiyonel).</li>
-                <li><strong>Expires</strong> olarak <strong>"24 months"</strong> seçin.</li>
-                <li><strong>Add</strong> butonuna tıklayın.</li>
-                <li>Oluşturulan secret'in <strong>"Value"</strong> sütunundaki uzun kodu kopyalayın.</li>
-                <li><strong>DİKKAT:</strong> Bu kodu bir yerde saklayın, tekrar erişilemez olacaktır.</li>
-                <li>O kodu yukarıdaki <strong>"Client Secret"</strong> alanına yapıştırın.</li>
+                <li>Click <strong>"Certificates & secrets"</strong> in the left menu.</li>
+                <li>Under <strong>"Client secrets"</strong>, click <strong>"+ New client secret"</strong>.</li>
+                <li>In <strong>Description</strong>, you can enter "Mail Access" (optional).</li>
+                <li>Select <strong>"24 months"</strong> for <strong>Expires</strong>.</li>
+                <li>Click <strong>Add</strong>.</li>
+                <li>Copy the long code in the <strong>"Value"</strong> column for the created secret.</li>
+                <li><strong>IMPORTANT:</strong> Save this value securely, it will not be shown again.</li>
+                <li>Paste that code into the <strong>"Client Secret"</strong> field above.</li>
               </ol>
 
-              <h4>Adım 6: İzinleri Ayarlayın (Opsiyonel)</h4>
+              <h4>Step 6: Configure Permissions (Optional)</h4>
               <ol>
-                <li>Sol menüde <strong>"API permissions"</strong> seçeneğine tıklayın.</li>
-                <li>İçeride <strong>"Mail.Read"</strong> ve <strong>"User.Read"</strong> izinlerinin olduğunu kontrol edin.</li>
+                <li>Click <strong>"API permissions"</strong> from the left menu.</li>
+                <li>Verify that <strong>"Mail.Read"</strong> and <strong>"User.Read"</strong> permissions are present.</li>
               </ol>
 
               <button className="modal-btn primary full-width" onClick={() => setShowHelpModal(false)}>Close</button>
@@ -392,7 +392,7 @@ export default function OutlookIntegration() {
                 <button className="modal-btn" onClick={runPhishingScan} disabled={scanLoading}>
                   {scanLoading ? 'Scanning...' : 'Run AI Phishing Scan'}
                 </button>
-                <button className="modal-btn primary" onClick={() => { setShowMailModal(false); setScanResult(null); }}>Kapat</button>
+                <button className="modal-btn primary" onClick={() => { setShowMailModal(false); setScanResult(null); }}>Close</button>
               </div>
             </div>
           </div>

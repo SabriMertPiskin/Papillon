@@ -6,7 +6,8 @@ Unit:  domain normalization, access control logic
 Integration: /attack-surface/scan/ endpoint (socket + tools mocked)
 
 NOT: View, kullanıcının POST body'sinden target almaz.
-     Her zaman kullanıcının DB'deki kayıtlı domain'ini tarar.
+    Body'de domain gönderilirse onu kullanır.
+    Domain body'de yoksa kullanıcının kayıtlı domain'ine fallback yapar.
      Admin ise ?for_analyst=username parametresi zorunludur.
 """
 import json
@@ -145,7 +146,8 @@ class TestAttackSurfaceScanEndpoint(TestCase):
     """
     TC-10: Attack surface scan endpoint — socket ve tool importları mocked.
 
-    View'da target POST body'den değil, kullanıcının kayıtlı domain'inden gelir.
+    View, body'deki domain değerini önceliklendirir.
+    Body'de domain yoksa kullanıcının kayıtlı domain'ini kullanır.
     Tool importları (dns_records, ssl_scanner vb.) lazy import ile yapılır;
     başarısız olsa bile view graceful hata döndürür.
     """
@@ -163,12 +165,46 @@ class TestAttackSurfaceScanEndpoint(TestCase):
         self.assertEqual(res.status_code, 401)
 
     def test_analyst_without_domain_gets_400(self):
-        """TC-10: Domain tanımsız analyst tarama yapamaz → 400."""
+        """TC-10: Domain tanımsız analyst, body'de domain yoksa tarama yapamaz → 400."""
         self.analyst.domain = ''
         self.analyst.save()
         res = self.client.post(self.url)
         self.assertEqual(res.status_code, 400)
         self.assertFalse(res.json()['success'])
+
+    @patch('attack_surface.views.socket.gethostbyname', return_value='142.250.186.14')
+    def test_analyst_without_domain_can_scan_when_body_domain_given(self, mock_dns):
+        """TC-10: Domain tanımsız analyst, body'de domain verirse tarama yapabilir."""
+        self.analyst.domain = ''
+        self.analyst.save()
+
+        res = self.client.post(
+            self.url,
+            data=json.dumps({'domain': 'google.com'}),
+            content_type='application/json'
+        )
+
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertTrue(body.get('success'))
+        self.assertEqual(body.get('results', {}).get('domain'), 'google.com')
+
+    @patch('attack_surface.views.socket.gethostbyname', return_value='142.250.186.14')
+    def test_body_domain_overrides_registered_domain(self, mock_dns):
+        """TC-10: Body'de domain verilirse kayıtlı domain yerine o domain taranmalı."""
+        self.analyst.domain = 'drfatmarar.com'
+        self.analyst.save()
+
+        res = self.client.post(
+            self.url,
+            data=json.dumps({'domain': 'google.com'}),
+            content_type='application/json'
+        )
+
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body.get('results', {}).get('domain'), 'google.com')
+        mock_dns.assert_called_with('google.com')
 
     @patch('attack_surface.views.socket.gethostbyname', return_value='93.184.216.34')
     def test_analyst_with_domain_can_trigger_scan(self, mock_dns):

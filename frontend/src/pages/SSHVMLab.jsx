@@ -94,7 +94,16 @@ export default function SSHVMLab() {
   if (!hasAccess) {
     return (
       <DashboardLayout>
-        <div className="ssh-vm-page">
+        <div className="ssh-vm-layout">
+          <div className="ssh-vm-header">
+            <div className="ssh-vm-header-title-group">
+              <div className="ssh-vm-header-icon">🖥️</div>
+              <div className="ssh-vm-header-title">
+                <h1>SSH VM Lab</h1>
+                <p>Start an AWS instance, get the public IP, and download your awskey.pem for SSH connection.</p>
+              </div>
+            </div>
+          </div>
           <div className="ssh-vm-alert error">
             <strong>Access Denied</strong><br />
             Only Security Analysts and Administrators can access SSH VM Lab.
@@ -106,12 +115,17 @@ export default function SSHVMLab() {
 
   return (
     <DashboardLayout>
-      <div className="ssh-vm-page">
+      <div className="ssh-vm-layout">
         <div className="ssh-vm-header">
-          <h1>SSH VM Lab</h1>
-          <p>
-            Start an AWS instance, get the public IP, and download your <strong>awskey.pem</strong> for SSH connection.
-          </p>
+          <div className="ssh-vm-header-title-group">
+            <div className="ssh-vm-header-icon">🖥️</div>
+            <div className="ssh-vm-header-title">
+              <h1>SSH VM Lab</h1>
+              <p>
+                Start an AWS instance, get the public IP, and download your <strong>awskey.pem</strong> for SSH connection.
+              </p>
+            </div>
+          </div>
         </div>
 
         {message.text && <div className={`ssh-vm-alert ${message.type}`}>{message.text}</div>}

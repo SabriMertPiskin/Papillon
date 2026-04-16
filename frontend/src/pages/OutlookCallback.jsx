@@ -4,7 +4,7 @@ import axios from 'axios';
 
 export default function OutlookCallback() {
   const navigate = useNavigate();
-  const [status, setStatus] = useState('İşleniyor...');
+  const [status, setStatus] = useState('Processing...');
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -13,34 +13,34 @@ export default function OutlookCallback() {
       const error = params.get('error');
 
       if (error) {
-        setStatus(`Hata: ${error}`);
+        setStatus(`Error: ${error}`);
         setTimeout(() => navigate('/login'), 2000);
         return;
       }
 
       if (!code) {
-        setStatus('Yetki kodu alınamadı');
+        setStatus('Authorization code could not be retrieved.');
         setTimeout(() => navigate('/login'), 2000);
         return;
       }
 
       try {
-        // Backend callback endpoint'ine gönder
+        // Send code to backend callback endpoint
         const response = await axios.get(`http://localhost:8000/outlook/callback?code=${code}`, {
           withCredentials: true
         });
 
         if (response.data.success) {
-          setStatus("Outlook bağlantısı başarılı. Dashboard'a yönlendiriliyorsunuz...");
-          // Direkt yönlendir
+          setStatus("Outlook connected successfully. Redirecting to Dashboard...");
+          // Redirect immediately
           window.location.href = '/dashboard';
         } else {
-          setStatus(`Hata: ${response.data.detail}`);
+          setStatus(`Error: ${response.data.detail}`);
           setTimeout(() => navigate('/login'), 2000);
         }
       } catch (error) {
         console.error('Callback error:', error);
-        setStatus('Bağlantı hatası. Tekrar deneyin.');
+        setStatus('Connection error. Please try again.');
         setTimeout(() => navigate('/login'), 2000);
       }
     };

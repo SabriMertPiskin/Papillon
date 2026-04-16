@@ -198,7 +198,7 @@ export default function NetworkTraffic() {
         <div className="network-page-container">
           <div className="network-header">
             <div>
-              <h1>🌐 Network Traffic & IDS Analysis</h1>
+              <h1>Network Traffic & IDS Analysis</h1>
               <p>Real-time attack detection and packet analysis powered by AI (XGBoost IDS Model).</p>
             </div>
           </div>
@@ -230,7 +230,7 @@ export default function NetworkTraffic() {
       <div className="network-page-container">
         <div className="network-header">
           <div>
-            <h1>🌐 Network Traffic & IDS Analysis</h1>
+            <h1>Network Traffic & IDS Analysis</h1>
             <p>
               Monitoring domain traffic with AI intrusion detection: <strong>{isAdmin() ? (selectedAnalystDomain || 'select analyst') : monitoredDomain}</strong>
             </p>
