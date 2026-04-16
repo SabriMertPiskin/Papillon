@@ -13,6 +13,7 @@ import Blacklist from './pages/Blacklist';
 import UserProfile from './pages/UserProfile';
 import NetworkTraffic from './pages/NetworkTraffic';
 import CPanelData from './pages/CPanelData';
+import AsyncTaskExample from './pages/AsyncTaskExample';
 import VMLab from './pages/VMLab';
 import SSHVMLab from './pages/SSHVMLab';
 import MalwareAnalysis from './pages/MalwareAnalysis';
@@ -20,6 +21,7 @@ import PhishingHistory from './pages/PhishingHistory';
 import VulnerabilityMap from './pages/VulnerabilityMap';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
+import { AsyncEventBusProvider } from './contexts/AsyncEventBus';
 import './App.css';
 import './styles/ModuleUnified.css';
 
@@ -28,11 +30,12 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <Router>
-      <Routes>
-        {/* Auth routes */}
-        <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />} />
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <AsyncEventBusProvider>
+        <Router>
+          <Routes>
+            {/* Auth routes */}
+            <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />} />
+            <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
 
         {/* Protected routes */}
         <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />} />
@@ -50,6 +53,9 @@ function App() {
         <Route path="/malware-analysis" element={isAuthenticated ? <MalwareAnalysis /> : <Navigate to="/login" replace />} />
         <Route path="/phishing-history" element={isAuthenticated ? <PhishingHistory /> : <Navigate to="/login" replace />} />
         <Route path="/vulnerability-map" element={isAuthenticated ? <VulnerabilityMap /> : <Navigate to="/login" replace />} />
+        
+        {/* Async Task Example / Demo */}
+        <Route path="/async-demo" element={isAuthenticated ? <AsyncTaskExample /> : <Navigate to="/login" replace />} />
 
         {/* Redirect MFA settings to profile */}
         <Route path="/mfa-settings" element={<Navigate to="/profile" replace />} />
@@ -61,7 +67,8 @@ function App() {
         <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </Router>
+        </Router>
+      </AsyncEventBusProvider>
     </ErrorBoundary>
   );
 }

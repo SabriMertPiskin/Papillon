@@ -10,6 +10,12 @@ const API = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+const FASTAPI = axios.create({
+  baseURL: 'http://localhost:8001',
+  withCredentials: false,
+  headers: { 'Content-Type': 'application/json' },
+});
+
 // --- Global 401 Interceptor (Auto Logout) ---
 API.interceptors.response.use(
   (response) => response,
@@ -130,6 +136,12 @@ export const sshVmLabDownloadKey = () =>
 // =========================================
 export const predictPasswordStrength = (password) =>
   API.post('/ai/password-strength/predict/', { password });
+
+export const predictPasswordStrengthFastApi = (password) =>
+  FASTAPI.post('/password-strength/predict', { password });
+
+export const fastApiHealth = () =>
+  FASTAPI.get('/health');
 
 export const predictPhishing = (email_text, sender = '', subject = '') =>
   API.post('/ai/phishing/predict/', { email_text, sender, subject });

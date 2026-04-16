@@ -59,6 +59,15 @@ python .\manage.py makemigrations
 python .\manage.py runserver # For running backend with KMS vault, check the "For the KMS Vault" section!!
 ```
 
+### Run FastAPI Bridge (Optional but used in project)
+```bash
+cd backend
+.\venv\Scripts\activate
+uvicorn fastapi_app.main:app --reload --port 8001
+```
+
+Open docs: `http://localhost:8001/docs`
+
 Do not forget to check MySQL Workbench that Papillon Database has been created or not.
 
 ### Verify DB <-> Backend Connection

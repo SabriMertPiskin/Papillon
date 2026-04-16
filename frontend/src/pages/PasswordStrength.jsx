@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { predictPasswordStrength } from '../services/api';
+import { predictPasswordStrength, predictPasswordStrengthFastApi } from '../services/api';
 import DashboardLayout from '../components/DashboardLayout';
 import '../styles/PasswordStrength.css';
 
@@ -9,6 +9,7 @@ export default function PasswordStrength() {
   const [strength, setStrength] = useState(null);
   const [criteria, setCriteria] = useState([]);
   const [aiResult, setAiResult] = useState(null);
+  const [aiSource, setAiSource] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
@@ -84,6 +85,7 @@ export default function PasswordStrength() {
     setPassword(val);
     analyzePassword(val);
     setAiResult(null);
+    setAiSource(null);
   };
 
   const handleAiCheck = async () => {
@@ -91,17 +93,35 @@ export default function PasswordStrength() {
 
     setLoading(true);
     setAiResult(null);
+    setAiSource(null);
 
     try {
-      const response = await predictPasswordStrength(password);
-
-      if (response.data.success) {
-        setAiResult(response.data);
-      } else {
-        setAiResult({ error: response.data.detail || 'Analysis failed' });
+      // Primary path: FastAPI bridge endpoint
+      const fastApiResponse = await predictPasswordStrengthFastApi(password);
+      if (fastApiResponse.data.success) {
+        setAiResult(fastApiResponse.data);
+        setAiSource('FastAPI');
+        return;
       }
-    } catch (err) {
-      setAiResult({ error: err.response?.data?.detail || 'Server error. AI model could not be reached.' });
+      setAiResult({ error: fastApiResponse.data.detail || 'Analysis failed' });
+    } catch (fastApiErr) {
+      // Fallback path: existing Django endpoint
+      try {
+        const djangoResponse = await predictPasswordStrength(password);
+        if (djangoResponse.data.success) {
+          setAiResult(djangoResponse.data);
+          setAiSource('Django fallback');
+        } else {
+          setAiResult({ error: djangoResponse.data.detail || 'Analysis failed' });
+        }
+      } catch (djangoErr) {
+        setAiResult({
+          error:
+            djangoErr.response?.data?.detail ||
+            fastApiErr.response?.data?.detail ||
+            'Server error. FastAPI and Django endpoints could not be reached.',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -203,6 +223,7 @@ export default function PasswordStrength() {
               ) : (
                 <div className="ps-suggestions">
                   <h4>🤖 AI Assessment: {aiResult.prediction}</h4>
+                  {aiSource && <p style={{ marginTop: 0, opacity: 0.8 }}>Source: {aiSource}</p>}
                   <ul>
                     {(aiResult.suggestions || []).map((s, i) => (
                       <li key={i}>{s}</li>
