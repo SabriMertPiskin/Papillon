@@ -60,8 +60,6 @@ export default function Dashboard() {
         setOutlookStatus(response.data);
       }
     } catch (error) {
-      // Analyst users will get 403, which is fine - they can't access Outlook
-      // Just log non-403 errors
       if (error.response?.status !== 403) {
         console.error('Error fetching Outlook status:', error);
       }
@@ -93,7 +91,6 @@ export default function Dashboard() {
     }
   };
 
-  // Get time-based greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 6) return 'Good Night';
@@ -102,7 +99,6 @@ export default function Dashboard() {
     return 'Good Evening';
   };
 
-  // Generate simulated chart bars
   const generateBars = (count, maxHeight, colorClass) => {
     return [...Array(count)].map((_, i) => {
       const height = Math.random() * maxHeight * 0.6 + maxHeight * 0.2;
@@ -116,7 +112,6 @@ export default function Dashboard() {
     });
   };
 
-  // Categorized module cards data
   const moduleCategories = [
     {
       category: 'General Tools',
@@ -162,11 +157,11 @@ export default function Dashboard() {
           path: '/attack-surface'
         },
         {
-          icon: '🌐',
+          icon: '📊',
           iconClass: 'blue',
-          title: 'Network Traffic Analysis',
-          desc: 'Real-time network traffic analysis and anomaly/attack detection with AI models.',
-          path: '/network-traffic'
+          title: 'cPanel Data',
+          desc: 'View cPanel logs, Webalizer stats, and hosting telemetry in one place.',
+          path: '/cpanel-data'
         },
         ...(canManageVM() ? [{
           icon: '🖥️',
@@ -348,103 +343,105 @@ export default function Dashboard() {
         )}
 
         {showReadOnly && (
-          <div className="dashboard-charts">
-            <h2>Read-only Monitoring Overview</h2>
-            <div className="charts-grid">
-              <div className="chart-card">
-                <div className="chart-card-header">
-                  <span className="chart-card-title">Network Traffic Graph</span>
-                  <span className="chart-card-badge" style={{ background: 'rgba(76, 175, 80, 0.15)', color: '#4caf50' }}>
-                    Read-only
-                  </span>
-                </div>
-                <div className="chart-bars">{generateBars(22, 140, 'bar-blue')}</div>
+          <>
+            <h2 style={{ marginTop: '36px', marginBottom: '16px', fontSize: '1.4rem', color: 'var(--auth-text-primary)' }}>
+              Monitoring Summary
+            </h2>
+            <div className="modules-grid">
+              {/* Quick Access Links */}
+              <div 
+                className="module-card" 
+                onClick={() => navigate('/attack-surface')}
+              >
+                <div className="module-card-icon analysis-icon">🔍</div>
+                <div className="module-card-title">Attack Surface <span className="module-arrow">→</span></div>
+                <div className="module-card-desc">Scan domains for vulnerabilities and exposed services</div>
               </div>
-              <div className="chart-card">
-                <div className="chart-card-header">
-                  <span className="chart-card-title">Phishing History Graph</span>
-                  <span className="chart-card-badge" style={{ background: 'rgba(255, 152, 0, 0.15)', color: '#ff9800' }}>
-                    Read-only
-                  </span>
-                </div>
-                <div className="chart-bars">{generateBars(22, 140, 'bar-teal')}</div>
+              
+              <div 
+                className="module-card" 
+                onClick={() => navigate('/cpanel-data')}
+              >
+                <div className="module-card-icon monitor-icon">📊</div>
+                <div className="module-card-title">Network Traffic <span className="module-arrow">→</span></div>
+                <div className="module-card-desc">Monitor cPanel server activity and performance metrics</div>
+              </div>
+
+              <div 
+                className="module-card" 
+                onClick={() => navigate('/phishing')}
+              >
+                <div className="module-card-icon threat-icon">⚠️</div>
+                <div className="module-card-title">Threat Detection <span className="module-arrow">→</span></div>
+                <div className="module-card-desc">Review phishing emails and malware detection logs</div>
+              </div>
+
+              <div 
+                className="module-card" 
+                onClick={() => navigate('/cve')}
+              >
+                <div className="module-card-icon vuln-icon">🛡️</div>
+                <div className="module-card-title">Vulnerabilities <span className="module-arrow">→</span></div>
+                <div className="module-card-desc">Check for CVEs and security advisories</div>
               </div>
             </div>
-          </div>
+
+            {/* Monitoring Status Overview */}
+            <h2 style={{ marginTop: '36px', marginBottom: '16px', fontSize: '1.4rem', color: 'var(--auth-text-primary)' }}>
+              Active Monitoring
+            </h2>
+            <div className="monitoring-status" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '16px',
+              marginBottom: '32px'
+            }}>
+              <div style={{
+                padding: '16px',
+                border: '1px solid var(--auth-border)',
+                borderRadius: '8px',
+                background: 'var(--auth-bg-secondary)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontWeight: '600', color: 'var(--auth-text-primary)' }}>Attack Surface</span>
+                  <span style={{ fontSize: '0.9rem', padding: '4px 12px', borderRadius: '4px', background: 'rgba(76, 175, 80, 0.15)', color: '#4caf50' }}>Active</span>
+                </div>
+                <p style={{ margin: 0, color: 'var(--auth-text-secondary)', fontSize: '0.95rem' }}>Regular domain and service scans enabled</p>
+              </div>
+
+              <div style={{
+                padding: '16px',
+                border: '1px solid var(--auth-border)',
+                borderRadius: '8px',
+                background: 'var(--auth-bg-secondary)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontWeight: '600', color: 'var(--auth-text-primary)' }}>Network Monitoring</span>
+                  <span style={{ fontSize: '0.9rem', padding: '4px 12px', borderRadius: '4px', background: cpanelConfig ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)', color: cpanelConfig ? '#4caf50' : '#f44336' }}>
+                    {cpanelConfig ? 'Connected' : 'Inactive'}
+                  </span>
+                </div>
+                <p style={{ margin: 0, color: 'var(--auth-text-secondary)', fontSize: '0.95rem' }}>
+                  {cpanelConfig ? 'cPanel server data is being tracked' : 'Configure cPanel to enable monitoring'}
+                </p>
+              </div>
+
+              <div style={{
+                padding: '16px',
+                border: '1px solid var(--auth-border)',
+                borderRadius: '8px',
+                background: 'var(--auth-bg-secondary)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontWeight: '600', color: 'var(--auth-text-primary)' }}>Threat Analysis</span>
+                  <span style={{ fontSize: '0.9rem', padding: '4px 12px', borderRadius: '4px', background: 'rgba(76, 175, 80, 0.15)', color: '#4caf50' }}>Active</span>
+                </div>
+                <p style={{ margin: 0, color: 'var(--auth-text-secondary)', fontSize: '0.95rem' }}>Phishing and malware detection running</p>
+              </div>
+            </div>
+          </>
         )}
 
-        {/* Chart Placeholders */}
-        {!showReadOnly && (
-          <div className="dashboard-charts">
-          <h2>Monitoring & Analysis</h2>
-          <div className="charts-grid">
-            <div className="chart-card clickable" onClick={() => navigate('/network-traffic')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
-              <div className="chart-card-header">
-                <span className="chart-card-title">Network Traffic Analysis & IDS</span>
-                <span style={{ fontSize: '0.8rem', color: '#4caf50', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span className="live-indicator"></span> Live Analysis
-                </span>
-              </div>
-              <div className="chart-bars">
-                {generateBars(18, 130, 'bar-blue')}
-              </div>
-            </div>
-            <div
-              className="chart-card clickable"
-              onClick={() => navigate('/cpanel-data')}
-              style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
-            >
-              <div className="chart-card-header">
-                <span className="chart-card-title">cPanel Telemetry</span>
-                <span className="chart-card-badge" style={{ background: 'rgba(0, 188, 212, 0.15)', color: '#00bcd4' }}>
-                  {cpanelConfig?.has_token ? 'Live cPanel Data' : 'Needs Setup'}
-                </span>
-              </div>
-              <div className="chart-bars">
-                {generateBars(18, 130, 'bar-teal')}
-              </div>
-              <div className="chart-placeholder" style={{ background: 'transparent', border: 'none', height: 'auto', minHeight: 'unset', alignItems: 'flex-start' }}>
-                <span className="chart-placeholder-text">
-                  {cpanelConfig?.has_token
-                    ? `Open /cpanel-data to inspect Metrics, AWStats, Webalizer, errors, bandwidth, and raw log data from ${cpanelConfig.host}.`
-                    : 'Open Profile & Account to add cPanel host, username, and API token.'}
-                </span>
-              </div>
-            </div>
-            {user.role === 'analyst' && (
-              <div className="chart-card clickable" onClick={() => navigate('/malware-analysis')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
-              <div className="chart-card-header">
-                <span className="chart-card-title">Threat Detection (Malware)</span>
-                <span className="chart-card-badge" style={{ background: 'rgba(211, 47, 47, 0.15)', color: '#f44336' }}>Comprehensive Analysis</span>
-              </div>
-              <div className="chart-bars">
-                {generateBars(18, 130, 'bar-teal')}
-              </div>
-              </div>
-            )}
-            <div className="chart-card clickable" onClick={() => navigate('/vulnerability-map')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
-              <div className="chart-card-header">
-                <span className="chart-card-title">Vulnerability Map</span>
-                <span className="chart-card-badge" style={{ background: 'rgba(0, 198, 255, 0.15)', color: '#00c6ff' }}>Active Monitoring</span>
-              </div>
-              <div className="chart-placeholder" style={{ background: 'transparent', border: 'none' }}>
-                <span className="chart-placeholder-icon">🗺️</span>
-                <span className="chart-placeholder-text">View system topology and vulnerabilities</span>
-              </div>
-            </div>
-            <div className="chart-card clickable" onClick={() => navigate('/phishing-history')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
-              <div className="chart-card-header">
-                <span className="chart-card-title">Phishing Alert History</span>
-                <span className="chart-card-badge" style={{ background: 'rgba(255, 152, 0, 0.15)', color: '#ff9800' }}>AI Analyzed</span>
-              </div>
-              <div className="chart-placeholder" style={{ background: 'transparent', border: 'none' }}>
-                <span className="chart-placeholder-icon">🎣</span>
-                <span className="chart-placeholder-text">View past email analyses</span>
-              </div>
-            </div>
-          </div>
-          </div>
-        )}
       </main>
     </div>
   );

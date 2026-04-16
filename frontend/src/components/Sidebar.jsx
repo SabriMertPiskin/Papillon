@@ -28,7 +28,6 @@ export default function Sidebar({ user, onLogout }) {
       section: 'Network Tools',
       items: [
         { icon: '🎯', label: 'Attack Surface', path: '/attack-surface' },
-        { icon: '🌐', label: 'Network Traffic', path: '/network-traffic' },
         { icon: '📊', label: 'cPanel Data', path: '/cpanel-data' },
         ...(canManageVM()
           ? [
